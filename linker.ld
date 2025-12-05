@@ -4,8 +4,8 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* Kernel loads at 1MB physical address */
-    . = 1M;
+    /* Kernel loads at 2MB physical address */
+    . = 2M;
 
     /* Multiboot header section (must be at the beginning) */
     .boot :
@@ -49,12 +49,4 @@ SECTIONS
 
     /* Define kernel end */
     kernel_end = .;
-
-    /* Discard unnecessary sections */
-    /DISCARD/ :
-    {
-        *(.comment)
-        *(.eh_frame)
-        *(.note.*)
-    }
 }

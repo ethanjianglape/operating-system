@@ -18,16 +18,6 @@ void vga::initialize() {
 
     double_buffer_row = 0;
     double_buffer_col = 0;
-
-    const auto blank = vga_entry(' ', vga::Color::LIGHT_GREY);
-
-    for (int row = 0; row < DOUBLE_BUFFER_ROWS; row++) {
-        for (int col = 0; col < DOUBLE_BUFFER_COLS; col++) {
-            vga::double_buffer[row][col] = blank;
-        }
-    }
-
-    write_double_buffer();
 }
 
 void vga::clear_screen() {
@@ -43,12 +33,13 @@ void vga::clear_screen() {
     cursor_y = 0;
 }
 
-void vga::write_double_buffer() {
-    for (int row = 0; row < vga::BUFFER_ROWS; row++) {
+void vga::scroll() {
+    for (int row = 0; row < vga::BUFFER_ROWS - 1; row++) {
         for (int col = 0; col < vga::BUFFER_COLS; col++) {
-            const int index = row * vga::BUFFER_COLS + col;
+            const int from = (row + 1) * vga::BUFFER_COLS + col;
+            const int to = row * vga::BUFFER_COLS + col;
 
-            vga::buffer[index] = vga::double_buffer[double_buffer_row + row][col];
+            vga::buffer[to] = vga::buffer[from];
         }
     }
 }
@@ -81,24 +72,28 @@ void vga::print_int(int n, const Color color) {
 }
 
 void vga::newline() {
-    double_buffer_col = 0;
-    double_buffer_row++;
+    cursor_x = 0;
+    cursor_y++;
+
+    if (cursor_y >= vga::BUFFER_ROWS) {
+        vga::scroll();
+        cursor_y = vga::BUFFER_ROWS - 1;
+    }
 }
 
 void vga::print_char(const char c, const Color color) {
     if (c == '\n') {
-        double_buffer_col = 0;
-        double_buffer_row++;
+        vga::newline();
     } else {
-        vga::double_buffer[double_buffer_row][double_buffer_col] = vga_entry(c, color);
-        double_buffer_col++;
+        const int index = cursor_y * vga::BUFFER_COLS + cursor_x;
 
-        if (double_buffer_col >= vga::DOUBLE_BUFFER_COLS) {
+        vga::buffer[index] = vga_entry(c, color);
+        cursor_x++;
+
+        if (cursor_x >= vga::BUFFER_COLS) {
             vga::newline();
         }
     }
-
-    vga::write_double_buffer();
 }
 
 void vga::print_str(const char* str, const Color color) {

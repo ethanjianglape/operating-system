@@ -22,7 +22,7 @@ cd build
 
 # Configure with CMake
 echo -e "${YELLOW}Configuring with CMake...${NC}"
-cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DCMAKE_C_COMPILER=i686-elf-gcc -DCMAKE_ASM_COMPILER=i686-elf-as -DCMAKE_BUILD_TYPE=Debug
 
 # Build
 echo -e "${YELLOW}Building kernel...${NC}"
