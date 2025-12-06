@@ -42,6 +42,12 @@ void vga::scroll() {
             vga::buffer[to] = vga::buffer[from];
         }
     }
+
+    for (int col = 0; col < vga::BUFFER_COLS; col++) {
+        const int index = (vga::BUFFER_ROWS - 1) * vga::BUFFER_COLS + col;
+
+        vga::buffer[index] = vga_entry(' ', vga::Color::BLACK);
+    }
 }
 
 void vga::print_int(int n, const Color color) {

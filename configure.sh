@@ -18,6 +18,11 @@ if [ ! -d "build" ]; then
     mkdir build
 fi
 
+if [ ! -d "sysroot" ]; then
+    echo "Creating sysroot directory..."
+    mkdir sysroot
+fi
+
 cd build
 
 # Configure with CMake
@@ -29,25 +34,33 @@ echo -e "${YELLOW}Building kernel...${NC}"
 make -j$(nproc)
 
 # Check if build was successful
-if [ -f "kernel.elf" ]; then
-    echo -e "${GREEN}Build successful!${NC}"
-    echo -e "${GREEN}Kernel binary: build/kernel.elf${NC}"
-    echo -e "${GREEN}Raw binary: build/kernel.bin${NC}"
-    echo ""
+if [ ! -f "../sysroot/boot/kernel.elf" ]; then
+    echo -e "${RED}Build failed!${NC}"
+    exit 1
+fi
 
-    # Create bootable ISO
-    echo -e "${YELLOW}Creating bootable ISO...${NC}"
+echo -e "${GREEN}Build successful!${NC}"
+echo -e "${GREEN}Kernel binary: sysroot/boot/kernel.elf${NC}"
+echo -e "${GREEN}Raw binary: sysroot/boot/kernel.bin${NC}"
+echo ""
 
-    # Check for grub-mkrescue
-    if command -v grub-mkrescue &> /dev/null; then
-        # Create ISO directory structure
-        mkdir -p iso/boot/grub
+# Create bootable ISO using sysroot
+echo -e "${YELLOW}Creating bootable ISO from sysroot...${NC}"
 
-        # Copy kernel
-        cp kernel.elf iso/boot/kernel.elf
+# Check for grub-mkrescue
+if command -v grub-mkrescue &> /dev/null; then
+    # Create ISO directory structure using sysroot as base
+    mkdir -p isodir
 
-        # Create GRUB configuration
-        cat > iso/boot/grub/grub.cfg << 'EOF'
+    # Copy entire sysroot to isodir
+    echo "Copying sysroot to ISO directory..."
+    cp -R ../sysroot/* isodir/ 2>/dev/null || true
+
+    # Create GRUB directory
+    mkdir -p isodir/boot/grub
+
+    # Create GRUB configuration
+    cat > isodir/boot/grub/grub.cfg << 'EOF'
 set timeout=0
 set default=0
 
@@ -58,29 +71,29 @@ menuentry "MyOS" {
 }
 EOF
 
-        # Create ISO
-        grub-mkrescue -o myos.iso iso 2>&1 | grep -v "warning: 'xorriso'" || true
+    # Create ISO in project root
+    rm ../myos.iso
+    grub-mkrescue -o ../myos.iso isodir 2>&1 | grep -v "warning: 'xorriso'" || true
 
-        if [ -f "myos.iso" ]; then
-            echo -e "${GREEN}ISO created: build/myos.iso${NC}"
-            echo ""
-            echo "To run with QEMU:"
-            echo "  qemu-system-x86_64 -cdrom build/myos.iso"
-        else
-            echo -e "${YELLOW}Warning: Failed to create ISO${NC}"
-            echo "You can still run the kernel directly (may show warnings on newer QEMU):"
-            echo "  qemu-system-x86_64 -kernel build/kernel.elf"
-        fi
-    else
-        echo -e "${YELLOW}Warning: grub-mkrescue not found. Skipping ISO creation.${NC}"
-        echo "Install it with:"
-        echo "  Ubuntu/Debian: sudo apt install grub-pc-bin xorriso"
-        echo "  Arch Linux: sudo pacman -S grub xorriso"
+    if [ -f "../myos.iso" ]; then
+        echo -e "${GREEN}ISO created: myos.iso${NC}"
         echo ""
-        echo "To run kernel directly (may show warnings on newer QEMU):"
-        echo "  qemu-system-x86_64 -kernel build/kernel.elf"
+        echo "To run with QEMU:"
+        echo "  qemu-system-x86_64 -cdrom myos.iso"
+    else
+        echo -e "${YELLOW}Warning: Failed to create ISO${NC}"
+        echo "You can still run the kernel directly:"
+        echo "  qemu-system-x86_64 -kernel ../sysroot/boot/kernel.elf"
     fi
+
+    # Clean up ISO directory
+    rm -rf isodir
 else
-    echo -e "${RED}Build failed!${NC}"
-    exit 1
+    echo -e "${YELLOW}Warning: grub-mkrescue not found. Skipping ISO creation.${NC}"
+    echo "Install it with:"
+    echo "  Ubuntu/Debian: sudo apt install grub-pc-bin xorriso"
+    echo "  Arch Linux: sudo pacman -S grub xorriso"
+    echo ""
+    echo "To run kernel directly:"
+    echo "  qemu-system-x86_64 -kernel ../sysroot/boot/kernel.elf"
 fi
