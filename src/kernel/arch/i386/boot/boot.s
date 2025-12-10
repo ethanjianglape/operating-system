@@ -1,8 +1,5 @@
 # Multiboot2 header for GRUB bootloader
 # This allows the kernel to be loaded by GRUB
-
-.intel_syntax noprefix
-
 .section .multiboot
 .align 8
 multiboot_start:
@@ -18,42 +15,44 @@ multiboot_start:
 multiboot_end:
 
 .section .rodata
-#gdt64:
-#    .quad 0
-#.set gdt64_code, . - gdt64
-#    .quad (1 << 43) | (1 << 44) | (1 << 47) | (1 << 53)
-#gdt64_pointer:
-#    .word . - gdt64 - 1
-#    .quad gdt64
 
 .section .text
 .code32
 .global _start
 .extern kernel_main
-#.extern long_mode_start
 
 _start:
+    # GRUB has already put us in 32-bit protected mode
     # Set up stack
-    mov esp, offset stack_top
+    movl $stack_top, %esp
 
-    # Copy multiboot info pointer to edi to use in kernel_main later on
-    mov edi, ebx 
+    # Save multiboot info pointer (ebx contains multiboot info from GRUB)
+    movl %ebx, %edi
 
+    # Verify we were loaded by a multiboot2 bootloader
     call check_multiboot
-    call check_cpuid
-    call check_long_mode
 
-    call setup_page_tables
-    call enable_paging
+    # Load our own GDT (GRUB's GDT is minimal and may be overwritten)
+    cli
+    lgdt gdt32_ptr
 
+    # Far jump to reload CS with our code selector (0x08)
+    # This also ensures we're using our GDT
+    ljmp $0x08, $reload_segments
+
+reload_segments:
+    # Set all data segment registers to our data selector (0x10)
+    movw $0x10, %ax
+    movw %ax, %ds
+    movw %ax, %ss
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+
+    # Call the kernel main function
     call kernel_main
 
-    #lgdt [gdt64_pointer]
-
-    # Far jump to 64-bit code
-    #push gdt64_code
-    #push offset long_mode_start
-    #retf
+    # hang if kernel_main ever returns
 .hang:
     hlt
     jmp .hang
@@ -62,18 +61,18 @@ _start:
 # Prints `ERR: ` and the given error code to screen and hangs.
 # parameter: error code (in ascii) in al
 error:
-    mov dword ptr [0xb8000], 0x4f524f45
-    mov dword ptr [0xb8004], 0x4f3a4f52
-    mov dword ptr [0xb8008], 0x4f204f20
-    mov byte ptr  [0xb800a], al
+    movl $0x4f524f45, 0xb8000
+    movl $0x4f3a4f52, 0xb8004
+    movl $0x4f204f20, 0xb8008
+    movb %al, 0xb800a
     hlt
 
 check_multiboot:
-    cmp eax, 0x36d76289
+    cmpl $0x36d76289, %eax
     jne .no_multiboot
     ret
 .no_multiboot:
-    mov al, '0'
+    movb $'0', %al
     jmp error
 
 check_cpuid:
@@ -81,98 +80,126 @@ check_cpuid:
     # in the FLAGS register. If we can flip it, CPUID is available.
 
     # Copy FLAGS in to EAX via stack
-    pushfd
-    pop eax
+    pushfl
+    popl %eax
 
     # Copy to ECX as well for comparing later on
-    mov ecx, eax
+    movl %eax, %ecx
 
     # Flip the ID bit
-    xor eax, 1 << 21
+    xorl $(1 << 21), %eax
 
     # Copy EAX to FLAGS via the stack
-    push eax
-    popfd
+    pushl %eax
+    popfl
 
     # Copy FLAGS back to EAX (with the flipped bit if CPUID is supported)
-    pushfd
-    pop eax
+    pushfl
+    popl %eax
 
     # Restore FLAGS from the old version stored in ECX (i.e. flipping the
     # ID bit back if it was ever flipped).
-    push ecx
-    popfd
+    pushl %ecx
+    popfl
 
     # Compare EAX and ECX. If they are equal then that means the bit
     # wasn't flipped, and CPUID isn't supported.
-    cmp eax, ecx
+    cmpl %ecx, %eax
     je .no_cpuid
     ret
 .no_cpuid:
-    mov al, '1'
+    movb $'1', %al
     jmp error
 
 check_long_mode:
     # test if extended processor info in available
-    mov eax, 0x80000000    # implicit argument for cpuid
-    cpuid                  # get highest supported argument
-    cmp eax, 0x80000001    # it needs to be at least 0x80000001
-    jb .no_long_mode       # if its less, the CPU is too old for long mode
+    movl $0x80000000, %eax    # implicit argument for cpuid
+    cpuid                     # get highest supported argument
+    cmpl $0x80000001, %eax    # it needs to be at least 0x80000001
+    jb .no_long_mode          # if its less, the CPU is too old for long mode
 
     # use extended info to test if long mode is available
-    mov eax, 0x80000001    # argument for extended processor info
-    cpuid                  # returns various feature bits in ecx and edx
-    test edx, 1 << 29      # test if the LM-bit is set in the D-register
-    jz .no_long_mode       # If its not set, there is no long mode
+    movl $0x80000001, %eax    # argument for extended processor info
+    cpuid                     # returns various feature bits in ecx and edx
+    testl $(1 << 29), %edx    # test if the LM-bit is set in the D-register
+    jz .no_long_mode          # If its not set, there is no long mode
     ret
 .no_long_mode:
-    mov al, '2'
+    movb $'2', %al
     jmp error
 
 setup_page_tables:
-    mov eax, offset p3_table
-    or eax, 0b11
-    mov [p4_table], eax
+    movl $p3_table, %eax
+    orl $0b11, %eax
+    movl %eax, p4_table
 
-    mov eax, offset p2_table
-    or eax, 0b11
-    mov [p3_table], eax
+    movl $p2_table, %eax
+    orl $0b11, %eax
+    movl %eax, p3_table
 
-    mov ecx, 0
+    movl $0, %ecx
 
 .map_p2_table:
-    mov eax, 0x200000 # 2MiB
-    mul ecx
-    or eax, 0b10000011  # present, writable, huge
-    mov [p2_table + ecx * 8], eax
+    movl $0x200000, %eax # 2MiB
+    mull %ecx
+    orl $0b10000011, %eax  # present, writable, huge
+    movl %eax, p2_table(,%ecx,8)
 
-    inc ecx
-    cmp ecx, 512
+    incl %ecx
+    cmpl $512, %ecx
     jne .map_p2_table
 
     ret
 
 enable_paging:
     # CPU looks for page table in cr3 register
-    mov eax, offset p4_table
-    mov cr3, eax
+    movl $p4_table, %eax
+    movl %eax, %cr3
 
     # Enable PAE-flag in cr4 (Physical Address Extension)
-    mov eax, cr4
-    or eax, 1 << 5
-    mov cr4, eax
+    movl %cr4, %eax
+    orl $(1 << 5), %eax
+    movl %eax, %cr4
 
     # Set the long mode bit in the EFER MSR (Model Specific Register)
-    mov ecx, 0xC0000080
+    movl $0xC0000080, %ecx
     rdmsr
-    or eax, 1 << 8
+    orl $(1 << 8), %eax
     wrmsr
 
-    mov eax, cr0
-    or eax, 1 << 31
-    mov cr0, eax
+    movl %cr0, %eax
+    orl $(1 << 31), %eax
+    movl %eax, %cr0
 
     ret
+
+gdt32:
+    # gdt[0] null entry, never used
+    .long 0
+    .long 0
+
+    # gdt[1] executable, read-only code, base address 0, limit of 0xFFFFF
+    # 11111111 11111111 00000000 00000000 00000000 10011010 11001111 00000000
+    .word 0xFFFF
+    .word 0x0000
+    .byte 0x00
+    .byte 0b10011010
+    .byte 0b11001111
+    .byte 0x00
+
+    #gdt[2] writable data segment
+    # 11111111 11111111 00000000 00000000 00000000 10010010 11001111 00000000
+    .word 0xFFFF
+    .word 0x0000
+    .byte 0x00
+    .byte 0b10010010
+    .byte 0b11001111
+    .byte 0x00
+
+gdt32_ptr:
+    .word . - gdt32 - 1 # length of gdt32 section
+    .long gdt32
+
 
 .section .bss
 .align 4096

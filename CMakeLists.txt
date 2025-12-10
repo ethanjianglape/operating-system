@@ -71,8 +71,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Create the kernel using a custom command with explicit link order
 # Note: boot_objs, crti_obj, crtn_obj, and kernel_objs are all defined in src/kernel/
+file(MAKE_DIRECTORY ${SYSROOT}/boot)
+
+# Force kernel to always be considered out of date to ensure sysroot updates
 add_custom_command(
-    OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map
+    OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
     COMMAND ${CMAKE_CXX_COMPILER}
         -T ${CMAKE_SOURCE_DIR}/src/kernel/arch/i386/linker.ld
         -nostdlib
@@ -83,34 +86,29 @@ add_custom_command(
         ${CRTBEGIN_OBJ}
         "$<TARGET_OBJECTS:boot_objs>"
         "$<TARGET_OBJECTS:kernel_objs>"
+        "$<TARGET_FILE:libk>"
         ${CRTEND_OBJ}
         "$<TARGET_OBJECTS:crtn_obj>"
-        "$<TARGET_FILE:libk>"
         -lgcc
+    COMMAND ${CMAKE_OBJCOPY} -O binary kernel.elf kernel.bin
+    COMMAND ${CMAKE_COMMAND} -E remove -f ${SYSROOT}/boot/kernel.elf
+    COMMAND ${CMAKE_COMMAND} -E remove -f ${SYSROOT}/boot/kernel.bin
+    COMMAND ${CMAKE_COMMAND} -E copy kernel.elf ${SYSROOT}/boot/kernel.elf
+    COMMAND ${CMAKE_COMMAND} -E copy kernel.bin ${SYSROOT}/boot/kernel.bin
+    COMMAND ${CMAKE_COMMAND} -E touch .kernel_stamp
     DEPENDS boot_objs kernel_objs crti_obj crtn_obj libk
+        $<TARGET_OBJECTS:boot_objs>
+        $<TARGET_OBJECTS:kernel_objs>
+        $<TARGET_OBJECTS:crti_obj>
+        $<TARGET_OBJECTS:crtn_obj>
+        $<TARGET_FILE:libk>
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Linking kernel.elf with CRT objects: crti -> crtbegin -> [boot] -> [kernel] -> crtend -> crtn"
+    COMMENT "Linking kernel, creating binary, and copying to sysroot"
     COMMAND_EXPAND_LISTS
     VERBATIM
 )
 
 add_custom_target(kernel ALL DEPENDS ${CMAKE_BINARY_DIR}/kernel.elf)
-
-# Custom command to create kernel binary
-add_custom_command(TARGET kernel POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O binary kernel.elf kernel.bin
-    COMMENT "Creating kernel binary"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-)
-
-# Copy kernel to sysroot/boot
-file(MAKE_DIRECTORY ${SYSROOT}/boot)
-add_custom_command(TARGET kernel POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy kernel.elf ${SYSROOT}/boot/kernel.elf
-    COMMAND ${CMAKE_COMMAND} -E copy kernel.bin ${SYSROOT}/boot/kernel.bin
-    COMMENT "Copying kernel to sysroot/boot"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-)
 
 # Print build information
 message(STATUS "Building kernel for i686-elf (32-bit) architecture")

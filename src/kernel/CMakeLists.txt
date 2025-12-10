@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 project(kernel C CXX ASM)
 
 # Architecture-specific settings
@@ -8,13 +10,19 @@ set(ARCH_DIR "arch/${KERNEL_ARCH}")
 
 # Kernel source files
 set(KERNEL_SOURCES
-    kernel.c
-    vga.cpp
+    kernel.cpp
 )
 
 # Architecture-specific kernel sources
 set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/tty/tty.c
+    ${ARCH_DIR}/pic/pic.cpp
+    ${ARCH_DIR}/apic/apic.cpp
+    ${ARCH_DIR}/interrupts/idt.cpp
+    ${ARCH_DIR}/interrupts/irq.cpp
+    ${ARCH_DIR}/interrupts/isr.s
+    ${ARCH_DIR}/timers/pit.cpp
+    ${ARCH_DIR}/timers/timer.cpp
 )
 
 # Architecture-specific boot files
@@ -49,6 +57,7 @@ endforeach()
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/i386/..." includes
     ${SYSROOT}/usr/include
     ${CMAKE_SOURCE_DIR}/include
 )
@@ -71,11 +80,11 @@ target_compile_options(boot_objs PRIVATE
 
 # Kernel-specific compile options
 target_compile_options(kernel_objs PRIVATE
-    -ffreestanding
-    -fno-stack-protector
-    -fno-exceptions
-    -fno-rtti
-    -fno-use-cxa-atexit
+    $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-protector>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
 )
 
 # Set C++ standard

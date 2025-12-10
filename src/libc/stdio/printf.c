@@ -61,7 +61,12 @@ int printf(const char* restrict format, ...) {
 			if (!print(str, len))
 				return -1;
 			written += len;
-		} else {
+		} else if (*format == 'd') {
+            format++;
+            int i = va_arg(parameters, int);
+            bool positive = i >= 0;
+            i = positive ? i : -i;
+        } else {
 			format = format_begun_at;
 			size_t len = strlen(format);
 			if (maxrem < len) {

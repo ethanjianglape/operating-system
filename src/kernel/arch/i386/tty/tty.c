@@ -28,6 +28,9 @@ void terminal_clear(void) {
             vga_buffer[index] = entry;
         }
     }
+
+    cursor_x = 0;
+    cursor_y = 0;
 }
 
 void terminal_scroll(void) {
@@ -75,6 +78,35 @@ void terminal_putchar(char c) {
         if (cursor_x >= VGA_WIDTH) {
             terminal_newline();
         }
+    }
+}
+
+void terminal_putint(int num) {
+    if (num == 0) {
+        terminal_putchar('0');
+        return;
+    }
+    
+    const bool positive = num >= 0;
+    num = positive ? num : -num;
+
+    int i = 0;
+    char buff[128];
+
+    while (num > 0) {
+        const int rem = num % 10;
+        const char digit = '0' + rem;
+
+        buff[i] = digit;
+        i++;
+        num /= 10;
+    }
+
+    i--;
+
+    while (i >= 0) {
+        terminal_putchar(buff[i]);
+        i--;
     }
 }
 

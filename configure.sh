@@ -29,7 +29,7 @@ cd build
 echo -e "${YELLOW}Configuring with CMake...${NC}"
 cmake .. -DCMAKE_C_COMPILER=i686-elf-gcc -DCMAKE_ASM_COMPILER=i686-elf-as -DCMAKE_BUILD_TYPE=Debug
 
-# Build
+# Build (CMakeLists.txt handles cleaning and copying to sysroot)
 echo -e "${YELLOW}Building kernel...${NC}"
 make -j$(nproc)
 
@@ -49,6 +49,10 @@ echo -e "${YELLOW}Creating bootable ISO from sysroot...${NC}"
 
 # Check for grub-mkrescue
 if command -v grub-mkrescue &> /dev/null; then
+    # Clean up any previous ISO build artifacts
+    rm -rf isodir
+    rm -f ../myos.iso
+
     # Create ISO directory structure using sysroot as base
     mkdir -p isodir
 
@@ -56,23 +60,11 @@ if command -v grub-mkrescue &> /dev/null; then
     echo "Copying sysroot to ISO directory..."
     cp -R ../sysroot/* isodir/ 2>/dev/null || true
 
-    # Create GRUB directory
+    # Create GRUB directory and copy configuration
     mkdir -p isodir/boot/grub
-
-    # Create GRUB configuration
-    cat > isodir/boot/grub/grub.cfg << 'EOF'
-set timeout=0
-set default=0
-
-menuentry "MyOS" {
-    set gfxpayload=text
-    multiboot2 /boot/kernel.elf
-    boot
-}
-EOF
+    cp ../src/grub/grub.cfg isodir/boot/grub/grub.cfg
 
     # Create ISO in project root
-    rm ../myos.iso
     grub-mkrescue -o ../myos.iso isodir 2>&1 | grep -v "warning: 'xorriso'" || true
 
     if [ -f "../myos.iso" ]; then

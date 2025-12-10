@@ -1,2 +1,6 @@
 CompileFlags:
-    Add: [-I./include]
+    Add:
+        - ffreestanding
+        - fno-exceptions
+        - fno-rtti
+    CompilationDatabase: build/

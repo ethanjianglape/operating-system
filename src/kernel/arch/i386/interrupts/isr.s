@@ -1,0 +1,535 @@
+.global isr_stub_table
+
+.extern interrupt_handler
+
+.macro isr_err_stub num
+isr_stub_\num:
+    pushl $\num
+    call interrupt_handler
+    addl $8, %esp
+    iret
+.endm
+
+.macro isr_no_err_stub num
+isr_stub_\num:
+    pushl $0
+    pushl $\num
+    call interrupt_handler
+    addl $8, %esp
+    iret
+.endm
+
+isr_no_err_stub 0
+isr_no_err_stub 1
+isr_no_err_stub 2
+isr_no_err_stub 3
+isr_no_err_stub 4
+isr_no_err_stub 5
+isr_no_err_stub 6
+isr_no_err_stub 7
+isr_err_stub    8
+isr_no_err_stub 9
+isr_err_stub    10
+isr_err_stub    11
+isr_err_stub    12
+isr_err_stub    13
+isr_err_stub    14
+isr_no_err_stub 15
+isr_no_err_stub 16
+isr_err_stub    17
+isr_no_err_stub 18
+isr_no_err_stub 19
+isr_no_err_stub 20
+isr_no_err_stub 21
+isr_no_err_stub 22
+isr_no_err_stub 23
+isr_no_err_stub 24
+isr_no_err_stub 25
+isr_no_err_stub 26
+isr_no_err_stub 27
+isr_no_err_stub 28
+isr_no_err_stub 29
+isr_err_stub    30
+isr_no_err_stub 31
+isr_no_err_stub 32
+isr_no_err_stub 33
+isr_no_err_stub 34
+isr_no_err_stub 35
+isr_no_err_stub 36
+isr_no_err_stub 37
+isr_no_err_stub 38
+isr_no_err_stub 39
+isr_no_err_stub 40
+isr_no_err_stub 41
+isr_no_err_stub 42
+isr_no_err_stub 43
+isr_no_err_stub 44
+isr_no_err_stub 45
+isr_no_err_stub 46
+isr_no_err_stub 47
+isr_no_err_stub 48
+isr_no_err_stub 49
+isr_no_err_stub 50
+isr_no_err_stub 51
+isr_no_err_stub 52
+isr_no_err_stub 53
+isr_no_err_stub 54
+isr_no_err_stub 55
+isr_no_err_stub 56
+isr_no_err_stub 57
+isr_no_err_stub 58
+isr_no_err_stub 59
+isr_no_err_stub 60
+isr_no_err_stub 61
+isr_no_err_stub 62
+isr_no_err_stub 63
+isr_no_err_stub 64
+isr_no_err_stub 65
+isr_no_err_stub 66
+isr_no_err_stub 67
+isr_no_err_stub 68
+isr_no_err_stub 69
+isr_no_err_stub 70
+isr_no_err_stub 71
+isr_no_err_stub 72
+isr_no_err_stub 73
+isr_no_err_stub 74
+isr_no_err_stub 75
+isr_no_err_stub 76
+isr_no_err_stub 77
+isr_no_err_stub 78
+isr_no_err_stub 79
+isr_no_err_stub 80
+isr_no_err_stub 81
+isr_no_err_stub 82
+isr_no_err_stub 83
+isr_no_err_stub 84
+isr_no_err_stub 85
+isr_no_err_stub 86
+isr_no_err_stub 87
+isr_no_err_stub 88
+isr_no_err_stub 89
+isr_no_err_stub 90
+isr_no_err_stub 91
+isr_no_err_stub 92
+isr_no_err_stub 93
+isr_no_err_stub 94
+isr_no_err_stub 95
+isr_no_err_stub 96
+isr_no_err_stub 97
+isr_no_err_stub 98
+isr_no_err_stub 99
+isr_no_err_stub 100
+isr_no_err_stub 101
+isr_no_err_stub 102
+isr_no_err_stub 103
+isr_no_err_stub 104
+isr_no_err_stub 105
+isr_no_err_stub 106
+isr_no_err_stub 107
+isr_no_err_stub 108
+isr_no_err_stub 109
+isr_no_err_stub 110
+isr_no_err_stub 111
+isr_no_err_stub 112
+isr_no_err_stub 113
+isr_no_err_stub 114
+isr_no_err_stub 115
+isr_no_err_stub 116
+isr_no_err_stub 117
+isr_no_err_stub 118
+isr_no_err_stub 119
+isr_no_err_stub 120
+isr_no_err_stub 121
+isr_no_err_stub 122
+isr_no_err_stub 123
+isr_no_err_stub 124
+isr_no_err_stub 125
+isr_no_err_stub 126
+isr_no_err_stub 127
+isr_no_err_stub 128
+isr_no_err_stub 129
+isr_no_err_stub 130
+isr_no_err_stub 131
+isr_no_err_stub 132
+isr_no_err_stub 133
+isr_no_err_stub 134
+isr_no_err_stub 135
+isr_no_err_stub 136
+isr_no_err_stub 137
+isr_no_err_stub 138
+isr_no_err_stub 139
+isr_no_err_stub 140
+isr_no_err_stub 141
+isr_no_err_stub 142
+isr_no_err_stub 143
+isr_no_err_stub 144
+isr_no_err_stub 145
+isr_no_err_stub 146
+isr_no_err_stub 147
+isr_no_err_stub 148
+isr_no_err_stub 149
+isr_no_err_stub 150
+isr_no_err_stub 151
+isr_no_err_stub 152
+isr_no_err_stub 153
+isr_no_err_stub 154
+isr_no_err_stub 155
+isr_no_err_stub 156
+isr_no_err_stub 157
+isr_no_err_stub 158
+isr_no_err_stub 159
+isr_no_err_stub 160
+isr_no_err_stub 161
+isr_no_err_stub 162
+isr_no_err_stub 163
+isr_no_err_stub 164
+isr_no_err_stub 165
+isr_no_err_stub 166
+isr_no_err_stub 167
+isr_no_err_stub 168
+isr_no_err_stub 169
+isr_no_err_stub 170
+isr_no_err_stub 171
+isr_no_err_stub 172
+isr_no_err_stub 173
+isr_no_err_stub 174
+isr_no_err_stub 175
+isr_no_err_stub 176
+isr_no_err_stub 177
+isr_no_err_stub 178
+isr_no_err_stub 179
+isr_no_err_stub 180
+isr_no_err_stub 181
+isr_no_err_stub 182
+isr_no_err_stub 183
+isr_no_err_stub 184
+isr_no_err_stub 185
+isr_no_err_stub 186
+isr_no_err_stub 187
+isr_no_err_stub 188
+isr_no_err_stub 189
+isr_no_err_stub 190
+isr_no_err_stub 191
+isr_no_err_stub 192
+isr_no_err_stub 193
+isr_no_err_stub 194
+isr_no_err_stub 195
+isr_no_err_stub 196
+isr_no_err_stub 197
+isr_no_err_stub 198
+isr_no_err_stub 199
+isr_no_err_stub 200
+isr_no_err_stub 201
+isr_no_err_stub 202
+isr_no_err_stub 203
+isr_no_err_stub 204
+isr_no_err_stub 205
+isr_no_err_stub 206
+isr_no_err_stub 207
+isr_no_err_stub 208
+isr_no_err_stub 209
+isr_no_err_stub 210
+isr_no_err_stub 211
+isr_no_err_stub 212
+isr_no_err_stub 213
+isr_no_err_stub 214
+isr_no_err_stub 215
+isr_no_err_stub 216
+isr_no_err_stub 217
+isr_no_err_stub 218
+isr_no_err_stub 219
+isr_no_err_stub 220
+isr_no_err_stub 221
+isr_no_err_stub 222
+isr_no_err_stub 223
+isr_no_err_stub 224
+isr_no_err_stub 225
+isr_no_err_stub 226
+isr_no_err_stub 227
+isr_no_err_stub 228
+isr_no_err_stub 229
+isr_no_err_stub 230
+isr_no_err_stub 231
+isr_no_err_stub 232
+isr_no_err_stub 233
+isr_no_err_stub 234
+isr_no_err_stub 235
+isr_no_err_stub 236
+isr_no_err_stub 237
+isr_no_err_stub 238
+isr_no_err_stub 239
+isr_no_err_stub 240
+isr_no_err_stub 241
+isr_no_err_stub 242
+isr_no_err_stub 243
+isr_no_err_stub 244
+isr_no_err_stub 245
+isr_no_err_stub 246
+isr_no_err_stub 247
+isr_no_err_stub 248
+isr_no_err_stub 249
+isr_no_err_stub 250
+isr_no_err_stub 251
+isr_no_err_stub 252
+isr_no_err_stub 253
+isr_no_err_stub 254
+isr_no_err_stub 255
+
+isr_stub_table:
+    .long isr_stub_0
+    .long isr_stub_1
+    .long isr_stub_2
+    .long isr_stub_3
+    .long isr_stub_4
+    .long isr_stub_5
+    .long isr_stub_6
+    .long isr_stub_7
+    .long isr_stub_8
+    .long isr_stub_9
+    .long isr_stub_10
+    .long isr_stub_11
+    .long isr_stub_12
+    .long isr_stub_13
+    .long isr_stub_14
+    .long isr_stub_15
+    .long isr_stub_16
+    .long isr_stub_17
+    .long isr_stub_18
+    .long isr_stub_19
+    .long isr_stub_20
+    .long isr_stub_21
+    .long isr_stub_22
+    .long isr_stub_23
+    .long isr_stub_24
+    .long isr_stub_25
+    .long isr_stub_26
+    .long isr_stub_27
+    .long isr_stub_28
+    .long isr_stub_29
+    .long isr_stub_30
+    .long isr_stub_31
+    .long isr_stub_32
+    .long isr_stub_33
+    .long isr_stub_34
+    .long isr_stub_35
+    .long isr_stub_36
+    .long isr_stub_37
+    .long isr_stub_38
+    .long isr_stub_39
+    .long isr_stub_40
+    .long isr_stub_41
+    .long isr_stub_42
+    .long isr_stub_43
+    .long isr_stub_44
+    .long isr_stub_45
+    .long isr_stub_46
+    .long isr_stub_47
+    .long isr_stub_48
+    .long isr_stub_49
+    .long isr_stub_50
+    .long isr_stub_51
+    .long isr_stub_52
+    .long isr_stub_53
+    .long isr_stub_54
+    .long isr_stub_55
+    .long isr_stub_56
+    .long isr_stub_57
+    .long isr_stub_58
+    .long isr_stub_59
+    .long isr_stub_60
+    .long isr_stub_61
+    .long isr_stub_62
+    .long isr_stub_63
+    .long isr_stub_64
+    .long isr_stub_65
+    .long isr_stub_66
+    .long isr_stub_67
+    .long isr_stub_68
+    .long isr_stub_69
+    .long isr_stub_70
+    .long isr_stub_71
+    .long isr_stub_72
+    .long isr_stub_73
+    .long isr_stub_74
+    .long isr_stub_75
+    .long isr_stub_76
+    .long isr_stub_77
+    .long isr_stub_78
+    .long isr_stub_79
+    .long isr_stub_80
+    .long isr_stub_81
+    .long isr_stub_82
+    .long isr_stub_83
+    .long isr_stub_84
+    .long isr_stub_85
+    .long isr_stub_86
+    .long isr_stub_87
+    .long isr_stub_88
+    .long isr_stub_89
+    .long isr_stub_90
+    .long isr_stub_91
+    .long isr_stub_92
+    .long isr_stub_93
+    .long isr_stub_94
+    .long isr_stub_95
+    .long isr_stub_96
+    .long isr_stub_97
+    .long isr_stub_98
+    .long isr_stub_99
+    .long isr_stub_100
+    .long isr_stub_101
+    .long isr_stub_102
+    .long isr_stub_103
+    .long isr_stub_104
+    .long isr_stub_105
+    .long isr_stub_106
+    .long isr_stub_107
+    .long isr_stub_108
+    .long isr_stub_109
+    .long isr_stub_110
+    .long isr_stub_111
+    .long isr_stub_112
+    .long isr_stub_113
+    .long isr_stub_114
+    .long isr_stub_115
+    .long isr_stub_116
+    .long isr_stub_117
+    .long isr_stub_118
+    .long isr_stub_119
+    .long isr_stub_120
+    .long isr_stub_121
+    .long isr_stub_122
+    .long isr_stub_123
+    .long isr_stub_124
+    .long isr_stub_125
+    .long isr_stub_126
+    .long isr_stub_127
+    .long isr_stub_128
+    .long isr_stub_129
+    .long isr_stub_130
+    .long isr_stub_131
+    .long isr_stub_132
+    .long isr_stub_133
+    .long isr_stub_134
+    .long isr_stub_135
+    .long isr_stub_136
+    .long isr_stub_137
+    .long isr_stub_138
+    .long isr_stub_139
+    .long isr_stub_140
+    .long isr_stub_141
+    .long isr_stub_142
+    .long isr_stub_143
+    .long isr_stub_144
+    .long isr_stub_145
+    .long isr_stub_146
+    .long isr_stub_147
+    .long isr_stub_148
+    .long isr_stub_149
+    .long isr_stub_150
+    .long isr_stub_151
+    .long isr_stub_152
+    .long isr_stub_153
+    .long isr_stub_154
+    .long isr_stub_155
+    .long isr_stub_156
+    .long isr_stub_157
+    .long isr_stub_158
+    .long isr_stub_159
+    .long isr_stub_160
+    .long isr_stub_161
+    .long isr_stub_162
+    .long isr_stub_163
+    .long isr_stub_164
+    .long isr_stub_165
+    .long isr_stub_166
+    .long isr_stub_167
+    .long isr_stub_168
+    .long isr_stub_169
+    .long isr_stub_170
+    .long isr_stub_171
+    .long isr_stub_172
+    .long isr_stub_173
+    .long isr_stub_174
+    .long isr_stub_175
+    .long isr_stub_176
+    .long isr_stub_177
+    .long isr_stub_178
+    .long isr_stub_179
+    .long isr_stub_180
+    .long isr_stub_181
+    .long isr_stub_182
+    .long isr_stub_183
+    .long isr_stub_184
+    .long isr_stub_185
+    .long isr_stub_186
+    .long isr_stub_187
+    .long isr_stub_188
+    .long isr_stub_189
+    .long isr_stub_190
+    .long isr_stub_191
+    .long isr_stub_192
+    .long isr_stub_193
+    .long isr_stub_194
+    .long isr_stub_195
+    .long isr_stub_196
+    .long isr_stub_197
+    .long isr_stub_198
+    .long isr_stub_199
+    .long isr_stub_200
+    .long isr_stub_201
+    .long isr_stub_202
+    .long isr_stub_203
+    .long isr_stub_204
+    .long isr_stub_205
+    .long isr_stub_206
+    .long isr_stub_207
+    .long isr_stub_208
+    .long isr_stub_209
+    .long isr_stub_210
+    .long isr_stub_211
+    .long isr_stub_212
+    .long isr_stub_213
+    .long isr_stub_214
+    .long isr_stub_215
+    .long isr_stub_216
+    .long isr_stub_217
+    .long isr_stub_218
+    .long isr_stub_219
+    .long isr_stub_220
+    .long isr_stub_221
+    .long isr_stub_222
+    .long isr_stub_223
+    .long isr_stub_224
+    .long isr_stub_225
+    .long isr_stub_226
+    .long isr_stub_227
+    .long isr_stub_228
+    .long isr_stub_229
+    .long isr_stub_230
+    .long isr_stub_231
+    .long isr_stub_232
+    .long isr_stub_233
+    .long isr_stub_234
+    .long isr_stub_235
+    .long isr_stub_236
+    .long isr_stub_237
+    .long isr_stub_238
+    .long isr_stub_239
+    .long isr_stub_240
+    .long isr_stub_241
+    .long isr_stub_242
+    .long isr_stub_243
+    .long isr_stub_244
+    .long isr_stub_245
+    .long isr_stub_246
+    .long isr_stub_247
+    .long isr_stub_248
+    .long isr_stub_249
+    .long isr_stub_250
+    .long isr_stub_251
+    .long isr_stub_252
+    .long isr_stub_253
+    .long isr_stub_254
+    .long isr_stub_255
