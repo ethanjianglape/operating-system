@@ -1,10 +1,9 @@
-#ifndef ARCH_I386_PIT_HPP
-#define ARCH_I386_PIT_HPP
+#pragma once
 
 #include <cstdint>
 
 /*
- * Legacy PIT timer, only used by the APIC to calibrate its frequency and then never used again.
+ * Legacy PIT timer, only used by the APIC timer to calibrate its frequency and then never used again.
  */
 namespace i386::pit {
     inline constexpr std::uint8_t CHANNEL_0_DATA_PORT = 0x40;
@@ -22,5 +21,3 @@ namespace i386::pit {
 
     void sleep_ms(std::uint32_t ms);
 }
-
-#endif

@@ -25,6 +25,7 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/timers/timer.cpp
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
+    ${ARCH_DIR}/paging/paging.cpp
 )
 
 # Architecture-specific boot files

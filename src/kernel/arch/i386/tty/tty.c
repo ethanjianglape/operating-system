@@ -81,6 +81,35 @@ void terminal_putchar(char c) {
     }
 }
 
+void terminal_putuint(uint32_t num) {
+    if (num == 0) {
+        terminal_putchar('0');
+        return;
+    }
+    
+    const bool positive = num >= 0;
+    num = positive ? num : -num;
+
+    int i = 0;
+    char buff[128];
+
+    while (num > 0) {
+        const int rem = num % 10;
+        const char digit = '0' + rem;
+
+        buff[i] = digit;
+        i++;
+        num /= 10;
+    }
+
+    i--;
+
+    while (i >= 0) {
+        terminal_putchar(buff[i]);
+        i--;
+    }
+}
+
 void terminal_putint(int num) {
     if (num == 0) {
         terminal_putchar('0');

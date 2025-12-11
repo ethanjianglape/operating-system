@@ -15,7 +15,7 @@ void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_t ha
 
 [[noreturn]]
 void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
-    terminal_clear();
+    //terminal_clear();
     terminal_puts("~~ FATAL EXCEPTION ~~\n");
     terminal_puts("vector = ");
     terminal_putint(vector);
@@ -24,6 +24,15 @@ void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
     terminal_putint(error);
     terminal_puts("\n");
     terminal_puts("Kernel Panic!\n");
+
+    // page faults
+    if (vector == 14) {
+        std::uint32_t addr;
+        asm volatile("mov %%cr2, %0" : "=r"(addr));
+        terminal_puts("page fault at addr = ");
+        terminal_putuint(addr);
+        terminal_puts("\n");
+    }
 
     cpu::cli();
 

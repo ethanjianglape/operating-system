@@ -5,6 +5,12 @@
 namespace i386::syscall {
     inline constexpr std::uint32_t SYSCALL_IRQ_VECTOR = 0x80;
 
+    inline constexpr std::uint32_t ENOSYS = -1;
+
+    enum class syscall_number : std::uint32_t {
+        SYS_WRITE = 1
+    };
+
     struct [[gnu::packed]] registers {
         std::uint32_t edi;
         std::uint32_t esi;

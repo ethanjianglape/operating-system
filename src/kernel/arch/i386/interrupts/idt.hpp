@@ -1,5 +1,4 @@
-#ifndef ARCH_I386_IDT_HPP
-#define ARCH_I386_IDT_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -20,4 +19,3 @@ namespace i386::idt {
     void init();
 }
 
-#endif

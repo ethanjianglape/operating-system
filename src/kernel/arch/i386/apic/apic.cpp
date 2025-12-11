@@ -5,6 +5,7 @@
 #include "arch/i386/timers/pit.hpp"
 #include "arch/i386/timers/timer.hpp"
 #include "kernel/tty.h"
+
 #include <stdio.h>
 
 using namespace i386;
@@ -51,12 +52,12 @@ void apic::init() {
     // Bit 8: Enable APIC
     // Bits 0-7: Spurious vector number (we'll use 0xFF)
     lapic_write(LAPIC_SPURIOUS, 0x1FF);  // Enable APIC + vector 0xFF
-
+    
     // Clear task priority to enable all interrupts
     lapic_write(LAPIC_TPR, 0);
 }
 
-void apic::timer_init(const std::uint32_t vector, const std::uint32_t frequency) {
+void apic::timer_init() {
     constexpr std::uint32_t initial_count = 0xFFFFFFFF;
     
     lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
@@ -67,10 +68,6 @@ void apic::timer_init(const std::uint32_t vector, const std::uint32_t frequency)
     lapic_write(LAPIC_TIMER, APIC_LVT_INT_MASKED);
 
     const std::uint32_t ticks = initial_count - lapic_read(LAPIC_TIMER_CURRENT);
-
-    printf("APIC timer ticks: ");
-    terminal_putint(ticks);
-    printf("\n");
 
     lapic_write(LAPIC_TIMER, 32 | TIMER_MODE_PERIODIC);
     lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);

@@ -1,5 +1,4 @@
-#ifndef ARCH_I386_APIC_HPP
-#define ARCH_I386_APIC_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -40,7 +39,5 @@ namespace i386::apic {
     void enable();
     void init();
     void send_eoi();
-    void timer_init(const std::uint32_t vector, const std::uint32_t frequency);
+    void timer_init();
 }
-
-#endif // ARCH_I386_APIC_HPP

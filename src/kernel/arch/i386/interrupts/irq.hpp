@@ -1,5 +1,4 @@
-#ifndef ARCH_I386_IRQ_HPP
-#define ARCH_I386_IRQ_HPP
+#pragma once
 
 #include <cstdint>
 
@@ -9,4 +8,3 @@ namespace i386::irq {
     void register_irq_handler(const std::uint32_t vector, irq_handler_t handler);
 }
 
-#endif
