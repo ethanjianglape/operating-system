@@ -23,6 +23,8 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/interrupts/isr.s
     ${ARCH_DIR}/timers/pit.cpp
     ${ARCH_DIR}/timers/timer.cpp
+    ${ARCH_DIR}/syscall/syscall.cpp
+    ${ARCH_DIR}/syscall/syscall_entry.s
 )
 
 # Architecture-specific boot files

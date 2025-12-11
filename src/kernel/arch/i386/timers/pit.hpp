@@ -3,6 +3,9 @@
 
 #include <cstdint>
 
+/*
+ * Legacy PIT timer, only used by the APIC to calibrate its frequency and then never used again.
+ */
 namespace i386::pit {
     inline constexpr std::uint8_t CHANNEL_0_DATA_PORT = 0x40;
     inline constexpr std::uint8_t CHANNEL_1_DATA_PORT = 0x41;

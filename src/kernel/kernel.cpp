@@ -7,6 +7,7 @@
 #include "arch/i386/apic/apic.hpp"
 #include "arch/i386/interrupts/irq.hpp"
 #include "arch/i386/timers/pit.hpp"
+#include "arch/i386/syscall/syscall.hpp"
 
 extern "C" [[noreturn]]
 void kernel_main(void) {
@@ -32,6 +33,10 @@ void kernel_main(void) {
     } else {
         printf("WARNING: APIC not supported on this CPU!\n");
     }
+
+    printf("INIT syscalls at vector 0x80\n");
+    i386::syscall::init();
+    printf("done\n");
 
     // Infinite loop - kernel should never exit
     while (1) {

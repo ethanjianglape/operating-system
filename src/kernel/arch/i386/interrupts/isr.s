@@ -1,6 +1,7 @@
 .global isr_stub_table
 
 .extern interrupt_handler
+.extern syscall_entry
 
 .macro isr_err_stub num
 isr_stub_\num:
@@ -19,517 +20,520 @@ isr_stub_\num:
     iret
 .endm
 
-isr_no_err_stub 0
-isr_no_err_stub 1
-isr_no_err_stub 2
-isr_no_err_stub 3
-isr_no_err_stub 4
-isr_no_err_stub 5
-isr_no_err_stub 6
-isr_no_err_stub 7
-isr_err_stub    8
-isr_no_err_stub 9
-isr_err_stub    10
-isr_err_stub    11
-isr_err_stub    12
-isr_err_stub    13
-isr_err_stub    14
-isr_no_err_stub 15
-isr_no_err_stub 16
-isr_err_stub    17
-isr_no_err_stub 18
-isr_no_err_stub 19
-isr_no_err_stub 20
-isr_no_err_stub 21
-isr_no_err_stub 22
-isr_no_err_stub 23
-isr_no_err_stub 24
-isr_no_err_stub 25
-isr_no_err_stub 26
-isr_no_err_stub 27
-isr_no_err_stub 28
-isr_no_err_stub 29
-isr_err_stub    30
-isr_no_err_stub 31
-isr_no_err_stub 32
-isr_no_err_stub 33
-isr_no_err_stub 34
-isr_no_err_stub 35
-isr_no_err_stub 36
-isr_no_err_stub 37
-isr_no_err_stub 38
-isr_no_err_stub 39
-isr_no_err_stub 40
-isr_no_err_stub 41
-isr_no_err_stub 42
-isr_no_err_stub 43
-isr_no_err_stub 44
-isr_no_err_stub 45
-isr_no_err_stub 46
-isr_no_err_stub 47
-isr_no_err_stub 48
-isr_no_err_stub 49
-isr_no_err_stub 50
-isr_no_err_stub 51
-isr_no_err_stub 52
-isr_no_err_stub 53
-isr_no_err_stub 54
-isr_no_err_stub 55
-isr_no_err_stub 56
-isr_no_err_stub 57
-isr_no_err_stub 58
-isr_no_err_stub 59
-isr_no_err_stub 60
-isr_no_err_stub 61
-isr_no_err_stub 62
-isr_no_err_stub 63
-isr_no_err_stub 64
-isr_no_err_stub 65
-isr_no_err_stub 66
-isr_no_err_stub 67
-isr_no_err_stub 68
-isr_no_err_stub 69
-isr_no_err_stub 70
-isr_no_err_stub 71
-isr_no_err_stub 72
-isr_no_err_stub 73
-isr_no_err_stub 74
-isr_no_err_stub 75
-isr_no_err_stub 76
-isr_no_err_stub 77
-isr_no_err_stub 78
-isr_no_err_stub 79
-isr_no_err_stub 80
-isr_no_err_stub 81
-isr_no_err_stub 82
-isr_no_err_stub 83
-isr_no_err_stub 84
-isr_no_err_stub 85
-isr_no_err_stub 86
-isr_no_err_stub 87
-isr_no_err_stub 88
-isr_no_err_stub 89
-isr_no_err_stub 90
-isr_no_err_stub 91
-isr_no_err_stub 92
-isr_no_err_stub 93
-isr_no_err_stub 94
-isr_no_err_stub 95
-isr_no_err_stub 96
-isr_no_err_stub 97
-isr_no_err_stub 98
-isr_no_err_stub 99
-isr_no_err_stub 100
-isr_no_err_stub 101
-isr_no_err_stub 102
-isr_no_err_stub 103
-isr_no_err_stub 104
-isr_no_err_stub 105
-isr_no_err_stub 106
-isr_no_err_stub 107
-isr_no_err_stub 108
-isr_no_err_stub 109
-isr_no_err_stub 110
-isr_no_err_stub 111
-isr_no_err_stub 112
-isr_no_err_stub 113
-isr_no_err_stub 114
-isr_no_err_stub 115
-isr_no_err_stub 116
-isr_no_err_stub 117
-isr_no_err_stub 118
-isr_no_err_stub 119
-isr_no_err_stub 120
-isr_no_err_stub 121
-isr_no_err_stub 122
-isr_no_err_stub 123
-isr_no_err_stub 124
-isr_no_err_stub 125
-isr_no_err_stub 126
-isr_no_err_stub 127
-isr_no_err_stub 128
-isr_no_err_stub 129
-isr_no_err_stub 130
-isr_no_err_stub 131
-isr_no_err_stub 132
-isr_no_err_stub 133
-isr_no_err_stub 134
-isr_no_err_stub 135
-isr_no_err_stub 136
-isr_no_err_stub 137
-isr_no_err_stub 138
-isr_no_err_stub 139
-isr_no_err_stub 140
-isr_no_err_stub 141
-isr_no_err_stub 142
-isr_no_err_stub 143
-isr_no_err_stub 144
-isr_no_err_stub 145
-isr_no_err_stub 146
-isr_no_err_stub 147
-isr_no_err_stub 148
-isr_no_err_stub 149
-isr_no_err_stub 150
-isr_no_err_stub 151
-isr_no_err_stub 152
-isr_no_err_stub 153
-isr_no_err_stub 154
-isr_no_err_stub 155
-isr_no_err_stub 156
-isr_no_err_stub 157
-isr_no_err_stub 158
-isr_no_err_stub 159
-isr_no_err_stub 160
-isr_no_err_stub 161
-isr_no_err_stub 162
-isr_no_err_stub 163
-isr_no_err_stub 164
-isr_no_err_stub 165
-isr_no_err_stub 166
-isr_no_err_stub 167
-isr_no_err_stub 168
-isr_no_err_stub 169
-isr_no_err_stub 170
-isr_no_err_stub 171
-isr_no_err_stub 172
-isr_no_err_stub 173
-isr_no_err_stub 174
-isr_no_err_stub 175
-isr_no_err_stub 176
-isr_no_err_stub 177
-isr_no_err_stub 178
-isr_no_err_stub 179
-isr_no_err_stub 180
-isr_no_err_stub 181
-isr_no_err_stub 182
-isr_no_err_stub 183
-isr_no_err_stub 184
-isr_no_err_stub 185
-isr_no_err_stub 186
-isr_no_err_stub 187
-isr_no_err_stub 188
-isr_no_err_stub 189
-isr_no_err_stub 190
-isr_no_err_stub 191
-isr_no_err_stub 192
-isr_no_err_stub 193
-isr_no_err_stub 194
-isr_no_err_stub 195
-isr_no_err_stub 196
-isr_no_err_stub 197
-isr_no_err_stub 198
-isr_no_err_stub 199
-isr_no_err_stub 200
-isr_no_err_stub 201
-isr_no_err_stub 202
-isr_no_err_stub 203
-isr_no_err_stub 204
-isr_no_err_stub 205
-isr_no_err_stub 206
-isr_no_err_stub 207
-isr_no_err_stub 208
-isr_no_err_stub 209
-isr_no_err_stub 210
-isr_no_err_stub 211
-isr_no_err_stub 212
-isr_no_err_stub 213
-isr_no_err_stub 214
-isr_no_err_stub 215
-isr_no_err_stub 216
-isr_no_err_stub 217
-isr_no_err_stub 218
-isr_no_err_stub 219
-isr_no_err_stub 220
-isr_no_err_stub 221
-isr_no_err_stub 222
-isr_no_err_stub 223
-isr_no_err_stub 224
-isr_no_err_stub 225
-isr_no_err_stub 226
-isr_no_err_stub 227
-isr_no_err_stub 228
-isr_no_err_stub 229
-isr_no_err_stub 230
-isr_no_err_stub 231
-isr_no_err_stub 232
-isr_no_err_stub 233
-isr_no_err_stub 234
-isr_no_err_stub 235
-isr_no_err_stub 236
-isr_no_err_stub 237
-isr_no_err_stub 238
-isr_no_err_stub 239
-isr_no_err_stub 240
-isr_no_err_stub 241
-isr_no_err_stub 242
-isr_no_err_stub 243
-isr_no_err_stub 244
-isr_no_err_stub 245
-isr_no_err_stub 246
-isr_no_err_stub 247
-isr_no_err_stub 248
-isr_no_err_stub 249
-isr_no_err_stub 250
-isr_no_err_stub 251
-isr_no_err_stub 252
-isr_no_err_stub 253
-isr_no_err_stub 254
-isr_no_err_stub 255
+# 0-31: CPU Exceptions
+isr_no_err_stub 0x00
+isr_no_err_stub 0x01
+isr_no_err_stub 0x02
+isr_no_err_stub 0x03
+isr_no_err_stub 0x04
+isr_no_err_stub 0x05
+isr_no_err_stub 0x06
+isr_no_err_stub 0x07
+isr_err_stub    0x08
+isr_no_err_stub 0x09
+isr_err_stub    0x0a
+isr_err_stub    0x0b
+isr_err_stub    0x0c
+isr_err_stub    0x0d
+isr_err_stub    0x0e
+isr_no_err_stub 0x0f
+isr_no_err_stub 0x10
+isr_err_stub    0x11
+isr_no_err_stub 0x12
+isr_no_err_stub 0x13
+isr_no_err_stub 0x14
+isr_no_err_stub 0x15
+isr_no_err_stub 0x16
+isr_no_err_stub 0x17
+isr_no_err_stub 0x18
+isr_no_err_stub 0x19
+isr_no_err_stub 0x1a
+isr_no_err_stub 0x1b
+isr_no_err_stub 0x1c
+isr_no_err_stub 0x1d
+isr_err_stub    0x1e
+isr_no_err_stub 0x1f
+
+# 32-255: IRQs
+isr_no_err_stub 0x20
+isr_no_err_stub 0x21
+isr_no_err_stub 0x22
+isr_no_err_stub 0x23
+isr_no_err_stub 0x24
+isr_no_err_stub 0x25
+isr_no_err_stub 0x26
+isr_no_err_stub 0x27
+isr_no_err_stub 0x28
+isr_no_err_stub 0x29
+isr_no_err_stub 0x2a
+isr_no_err_stub 0x2b
+isr_no_err_stub 0x2c
+isr_no_err_stub 0x2d
+isr_no_err_stub 0x2e
+isr_no_err_stub 0x2f
+isr_no_err_stub 0x30
+isr_no_err_stub 0x31
+isr_no_err_stub 0x32
+isr_no_err_stub 0x33
+isr_no_err_stub 0x34
+isr_no_err_stub 0x35
+isr_no_err_stub 0x36
+isr_no_err_stub 0x37
+isr_no_err_stub 0x38
+isr_no_err_stub 0x39
+isr_no_err_stub 0x3a
+isr_no_err_stub 0x3b
+isr_no_err_stub 0x3c
+isr_no_err_stub 0x3d
+isr_no_err_stub 0x3e
+isr_no_err_stub 0x3f
+isr_no_err_stub 0x40
+isr_no_err_stub 0x41
+isr_no_err_stub 0x42
+isr_no_err_stub 0x43
+isr_no_err_stub 0x44
+isr_no_err_stub 0x45
+isr_no_err_stub 0x46
+isr_no_err_stub 0x47
+isr_no_err_stub 0x48
+isr_no_err_stub 0x49
+isr_no_err_stub 0x4a
+isr_no_err_stub 0x4b
+isr_no_err_stub 0x4c
+isr_no_err_stub 0x4d
+isr_no_err_stub 0x4e
+isr_no_err_stub 0x4f
+isr_no_err_stub 0x50
+isr_no_err_stub 0x51
+isr_no_err_stub 0x52
+isr_no_err_stub 0x53
+isr_no_err_stub 0x54
+isr_no_err_stub 0x55
+isr_no_err_stub 0x56
+isr_no_err_stub 0x57
+isr_no_err_stub 0x58
+isr_no_err_stub 0x59
+isr_no_err_stub 0x5a
+isr_no_err_stub 0x5b
+isr_no_err_stub 0x5c
+isr_no_err_stub 0x5d
+isr_no_err_stub 0x5e
+isr_no_err_stub 0x5f
+isr_no_err_stub 0x60
+isr_no_err_stub 0x61
+isr_no_err_stub 0x62
+isr_no_err_stub 0x63
+isr_no_err_stub 0x64
+isr_no_err_stub 0x65
+isr_no_err_stub 0x66
+isr_no_err_stub 0x67
+isr_no_err_stub 0x68
+isr_no_err_stub 0x69
+isr_no_err_stub 0x6a
+isr_no_err_stub 0x6b
+isr_no_err_stub 0x6c
+isr_no_err_stub 0x6d
+isr_no_err_stub 0x6e
+isr_no_err_stub 0x6f
+isr_no_err_stub 0x70
+isr_no_err_stub 0x71
+isr_no_err_stub 0x72
+isr_no_err_stub 0x73
+isr_no_err_stub 0x74
+isr_no_err_stub 0x75
+isr_no_err_stub 0x76
+isr_no_err_stub 0x77
+isr_no_err_stub 0x78
+isr_no_err_stub 0x79
+isr_no_err_stub 0x7a
+isr_no_err_stub 0x7b
+isr_no_err_stub 0x7c
+isr_no_err_stub 0x7d
+isr_no_err_stub 0x7e
+isr_no_err_stub 0x7f
+# 0x80: syscall, no stub
+isr_no_err_stub 0x81
+isr_no_err_stub 0x82
+isr_no_err_stub 0x83
+isr_no_err_stub 0x84
+isr_no_err_stub 0x85
+isr_no_err_stub 0x86
+isr_no_err_stub 0x87
+isr_no_err_stub 0x88
+isr_no_err_stub 0x89
+isr_no_err_stub 0x8a
+isr_no_err_stub 0x8b
+isr_no_err_stub 0x8c
+isr_no_err_stub 0x8d
+isr_no_err_stub 0x8e
+isr_no_err_stub 0x8f
+isr_no_err_stub 0x90
+isr_no_err_stub 0x91
+isr_no_err_stub 0x92
+isr_no_err_stub 0x93
+isr_no_err_stub 0x94
+isr_no_err_stub 0x95
+isr_no_err_stub 0x96
+isr_no_err_stub 0x97
+isr_no_err_stub 0x98
+isr_no_err_stub 0x99
+isr_no_err_stub 0x9a
+isr_no_err_stub 0x9b
+isr_no_err_stub 0x9c
+isr_no_err_stub 0x9d
+isr_no_err_stub 0x9e
+isr_no_err_stub 0x9f
+isr_no_err_stub 0xa0
+isr_no_err_stub 0xa1
+isr_no_err_stub 0xa2
+isr_no_err_stub 0xa3
+isr_no_err_stub 0xa4
+isr_no_err_stub 0xa5
+isr_no_err_stub 0xa6
+isr_no_err_stub 0xa7
+isr_no_err_stub 0xa8
+isr_no_err_stub 0xa9
+isr_no_err_stub 0xaa
+isr_no_err_stub 0xab
+isr_no_err_stub 0xac
+isr_no_err_stub 0xad
+isr_no_err_stub 0xae
+isr_no_err_stub 0xaf
+isr_no_err_stub 0xb0
+isr_no_err_stub 0xb1
+isr_no_err_stub 0xb2
+isr_no_err_stub 0xb3
+isr_no_err_stub 0xb4
+isr_no_err_stub 0xb5
+isr_no_err_stub 0xb6
+isr_no_err_stub 0xb7
+isr_no_err_stub 0xb8
+isr_no_err_stub 0xb9
+isr_no_err_stub 0xba
+isr_no_err_stub 0xbb
+isr_no_err_stub 0xbc
+isr_no_err_stub 0xbd
+isr_no_err_stub 0xbe
+isr_no_err_stub 0xbf
+isr_no_err_stub 0xc0
+isr_no_err_stub 0xc1
+isr_no_err_stub 0xc2
+isr_no_err_stub 0xc3
+isr_no_err_stub 0xc4
+isr_no_err_stub 0xc5
+isr_no_err_stub 0xc6
+isr_no_err_stub 0xc7
+isr_no_err_stub 0xc8
+isr_no_err_stub 0xc9
+isr_no_err_stub 0xca
+isr_no_err_stub 0xcb
+isr_no_err_stub 0xcc
+isr_no_err_stub 0xcd
+isr_no_err_stub 0xce
+isr_no_err_stub 0xcf
+isr_no_err_stub 0xd0
+isr_no_err_stub 0xd1
+isr_no_err_stub 0xd2
+isr_no_err_stub 0xd3
+isr_no_err_stub 0xd4
+isr_no_err_stub 0xd5
+isr_no_err_stub 0xd6
+isr_no_err_stub 0xd7
+isr_no_err_stub 0xd8
+isr_no_err_stub 0xd9
+isr_no_err_stub 0xda
+isr_no_err_stub 0xdb
+isr_no_err_stub 0xdc
+isr_no_err_stub 0xdd
+isr_no_err_stub 0xde
+isr_no_err_stub 0xdf
+isr_no_err_stub 0xe0
+isr_no_err_stub 0xe1
+isr_no_err_stub 0xe2
+isr_no_err_stub 0xe3
+isr_no_err_stub 0xe4
+isr_no_err_stub 0xe5
+isr_no_err_stub 0xe6
+isr_no_err_stub 0xe7
+isr_no_err_stub 0xe8
+isr_no_err_stub 0xe9
+isr_no_err_stub 0xea
+isr_no_err_stub 0xeb
+isr_no_err_stub 0xec
+isr_no_err_stub 0xed
+isr_no_err_stub 0xee
+isr_no_err_stub 0xef
+isr_no_err_stub 0xf0
+isr_no_err_stub 0xf1
+isr_no_err_stub 0xf2
+isr_no_err_stub 0xf3
+isr_no_err_stub 0xf4
+isr_no_err_stub 0xf5
+isr_no_err_stub 0xf6
+isr_no_err_stub 0xf7
+isr_no_err_stub 0xf8
+isr_no_err_stub 0xf9
+isr_no_err_stub 0xfa
+isr_no_err_stub 0xfb
+isr_no_err_stub 0xfc
+isr_no_err_stub 0xfd
+isr_no_err_stub 0xfe
+isr_no_err_stub 0xff
 
 isr_stub_table:
-    .long isr_stub_0
-    .long isr_stub_1
-    .long isr_stub_2
-    .long isr_stub_3
-    .long isr_stub_4
-    .long isr_stub_5
-    .long isr_stub_6
-    .long isr_stub_7
-    .long isr_stub_8
-    .long isr_stub_9
-    .long isr_stub_10
-    .long isr_stub_11
-    .long isr_stub_12
-    .long isr_stub_13
-    .long isr_stub_14
-    .long isr_stub_15
-    .long isr_stub_16
-    .long isr_stub_17
-    .long isr_stub_18
-    .long isr_stub_19
-    .long isr_stub_20
-    .long isr_stub_21
-    .long isr_stub_22
-    .long isr_stub_23
-    .long isr_stub_24
-    .long isr_stub_25
-    .long isr_stub_26
-    .long isr_stub_27
-    .long isr_stub_28
-    .long isr_stub_29
-    .long isr_stub_30
-    .long isr_stub_31
-    .long isr_stub_32
-    .long isr_stub_33
-    .long isr_stub_34
-    .long isr_stub_35
-    .long isr_stub_36
-    .long isr_stub_37
-    .long isr_stub_38
-    .long isr_stub_39
-    .long isr_stub_40
-    .long isr_stub_41
-    .long isr_stub_42
-    .long isr_stub_43
-    .long isr_stub_44
-    .long isr_stub_45
-    .long isr_stub_46
-    .long isr_stub_47
-    .long isr_stub_48
-    .long isr_stub_49
-    .long isr_stub_50
-    .long isr_stub_51
-    .long isr_stub_52
-    .long isr_stub_53
-    .long isr_stub_54
-    .long isr_stub_55
-    .long isr_stub_56
-    .long isr_stub_57
-    .long isr_stub_58
-    .long isr_stub_59
-    .long isr_stub_60
-    .long isr_stub_61
-    .long isr_stub_62
-    .long isr_stub_63
-    .long isr_stub_64
-    .long isr_stub_65
-    .long isr_stub_66
-    .long isr_stub_67
-    .long isr_stub_68
-    .long isr_stub_69
-    .long isr_stub_70
-    .long isr_stub_71
-    .long isr_stub_72
-    .long isr_stub_73
-    .long isr_stub_74
-    .long isr_stub_75
-    .long isr_stub_76
-    .long isr_stub_77
-    .long isr_stub_78
-    .long isr_stub_79
-    .long isr_stub_80
-    .long isr_stub_81
-    .long isr_stub_82
-    .long isr_stub_83
-    .long isr_stub_84
-    .long isr_stub_85
-    .long isr_stub_86
-    .long isr_stub_87
-    .long isr_stub_88
-    .long isr_stub_89
-    .long isr_stub_90
-    .long isr_stub_91
-    .long isr_stub_92
-    .long isr_stub_93
-    .long isr_stub_94
-    .long isr_stub_95
-    .long isr_stub_96
-    .long isr_stub_97
-    .long isr_stub_98
-    .long isr_stub_99
-    .long isr_stub_100
-    .long isr_stub_101
-    .long isr_stub_102
-    .long isr_stub_103
-    .long isr_stub_104
-    .long isr_stub_105
-    .long isr_stub_106
-    .long isr_stub_107
-    .long isr_stub_108
-    .long isr_stub_109
-    .long isr_stub_110
-    .long isr_stub_111
-    .long isr_stub_112
-    .long isr_stub_113
-    .long isr_stub_114
-    .long isr_stub_115
-    .long isr_stub_116
-    .long isr_stub_117
-    .long isr_stub_118
-    .long isr_stub_119
-    .long isr_stub_120
-    .long isr_stub_121
-    .long isr_stub_122
-    .long isr_stub_123
-    .long isr_stub_124
-    .long isr_stub_125
-    .long isr_stub_126
-    .long isr_stub_127
-    .long isr_stub_128
-    .long isr_stub_129
-    .long isr_stub_130
-    .long isr_stub_131
-    .long isr_stub_132
-    .long isr_stub_133
-    .long isr_stub_134
-    .long isr_stub_135
-    .long isr_stub_136
-    .long isr_stub_137
-    .long isr_stub_138
-    .long isr_stub_139
-    .long isr_stub_140
-    .long isr_stub_141
-    .long isr_stub_142
-    .long isr_stub_143
-    .long isr_stub_144
-    .long isr_stub_145
-    .long isr_stub_146
-    .long isr_stub_147
-    .long isr_stub_148
-    .long isr_stub_149
-    .long isr_stub_150
-    .long isr_stub_151
-    .long isr_stub_152
-    .long isr_stub_153
-    .long isr_stub_154
-    .long isr_stub_155
-    .long isr_stub_156
-    .long isr_stub_157
-    .long isr_stub_158
-    .long isr_stub_159
-    .long isr_stub_160
-    .long isr_stub_161
-    .long isr_stub_162
-    .long isr_stub_163
-    .long isr_stub_164
-    .long isr_stub_165
-    .long isr_stub_166
-    .long isr_stub_167
-    .long isr_stub_168
-    .long isr_stub_169
-    .long isr_stub_170
-    .long isr_stub_171
-    .long isr_stub_172
-    .long isr_stub_173
-    .long isr_stub_174
-    .long isr_stub_175
-    .long isr_stub_176
-    .long isr_stub_177
-    .long isr_stub_178
-    .long isr_stub_179
-    .long isr_stub_180
-    .long isr_stub_181
-    .long isr_stub_182
-    .long isr_stub_183
-    .long isr_stub_184
-    .long isr_stub_185
-    .long isr_stub_186
-    .long isr_stub_187
-    .long isr_stub_188
-    .long isr_stub_189
-    .long isr_stub_190
-    .long isr_stub_191
-    .long isr_stub_192
-    .long isr_stub_193
-    .long isr_stub_194
-    .long isr_stub_195
-    .long isr_stub_196
-    .long isr_stub_197
-    .long isr_stub_198
-    .long isr_stub_199
-    .long isr_stub_200
-    .long isr_stub_201
-    .long isr_stub_202
-    .long isr_stub_203
-    .long isr_stub_204
-    .long isr_stub_205
-    .long isr_stub_206
-    .long isr_stub_207
-    .long isr_stub_208
-    .long isr_stub_209
-    .long isr_stub_210
-    .long isr_stub_211
-    .long isr_stub_212
-    .long isr_stub_213
-    .long isr_stub_214
-    .long isr_stub_215
-    .long isr_stub_216
-    .long isr_stub_217
-    .long isr_stub_218
-    .long isr_stub_219
-    .long isr_stub_220
-    .long isr_stub_221
-    .long isr_stub_222
-    .long isr_stub_223
-    .long isr_stub_224
-    .long isr_stub_225
-    .long isr_stub_226
-    .long isr_stub_227
-    .long isr_stub_228
-    .long isr_stub_229
-    .long isr_stub_230
-    .long isr_stub_231
-    .long isr_stub_232
-    .long isr_stub_233
-    .long isr_stub_234
-    .long isr_stub_235
-    .long isr_stub_236
-    .long isr_stub_237
-    .long isr_stub_238
-    .long isr_stub_239
-    .long isr_stub_240
-    .long isr_stub_241
-    .long isr_stub_242
-    .long isr_stub_243
-    .long isr_stub_244
-    .long isr_stub_245
-    .long isr_stub_246
-    .long isr_stub_247
-    .long isr_stub_248
-    .long isr_stub_249
-    .long isr_stub_250
-    .long isr_stub_251
-    .long isr_stub_252
-    .long isr_stub_253
-    .long isr_stub_254
-    .long isr_stub_255
+    .long isr_stub_0x00
+    .long isr_stub_0x01
+    .long isr_stub_0x02
+    .long isr_stub_0x03
+    .long isr_stub_0x04
+    .long isr_stub_0x05
+    .long isr_stub_0x06
+    .long isr_stub_0x07
+    .long isr_stub_0x08
+    .long isr_stub_0x09
+    .long isr_stub_0x0a
+    .long isr_stub_0x0b
+    .long isr_stub_0x0c
+    .long isr_stub_0x0d
+    .long isr_stub_0x0e
+    .long isr_stub_0x0f
+    .long isr_stub_0x10
+    .long isr_stub_0x11
+    .long isr_stub_0x12
+    .long isr_stub_0x13
+    .long isr_stub_0x14
+    .long isr_stub_0x15
+    .long isr_stub_0x16
+    .long isr_stub_0x17
+    .long isr_stub_0x18
+    .long isr_stub_0x19
+    .long isr_stub_0x1a
+    .long isr_stub_0x1b
+    .long isr_stub_0x1c
+    .long isr_stub_0x1d
+    .long isr_stub_0x1e
+    .long isr_stub_0x1f
+    .long isr_stub_0x20
+    .long isr_stub_0x21
+    .long isr_stub_0x22
+    .long isr_stub_0x23
+    .long isr_stub_0x24
+    .long isr_stub_0x25
+    .long isr_stub_0x26
+    .long isr_stub_0x27
+    .long isr_stub_0x28
+    .long isr_stub_0x29
+    .long isr_stub_0x2a
+    .long isr_stub_0x2b
+    .long isr_stub_0x2c
+    .long isr_stub_0x2d
+    .long isr_stub_0x2e
+    .long isr_stub_0x2f
+    .long isr_stub_0x30
+    .long isr_stub_0x31
+    .long isr_stub_0x32
+    .long isr_stub_0x33
+    .long isr_stub_0x34
+    .long isr_stub_0x35
+    .long isr_stub_0x36
+    .long isr_stub_0x37
+    .long isr_stub_0x38
+    .long isr_stub_0x39
+    .long isr_stub_0x3a
+    .long isr_stub_0x3b
+    .long isr_stub_0x3c
+    .long isr_stub_0x3d
+    .long isr_stub_0x3e
+    .long isr_stub_0x3f
+    .long isr_stub_0x40
+    .long isr_stub_0x41
+    .long isr_stub_0x42
+    .long isr_stub_0x43
+    .long isr_stub_0x44
+    .long isr_stub_0x45
+    .long isr_stub_0x46
+    .long isr_stub_0x47
+    .long isr_stub_0x48
+    .long isr_stub_0x49
+    .long isr_stub_0x4a
+    .long isr_stub_0x4b
+    .long isr_stub_0x4c
+    .long isr_stub_0x4d
+    .long isr_stub_0x4e
+    .long isr_stub_0x4f
+    .long isr_stub_0x50
+    .long isr_stub_0x51
+    .long isr_stub_0x52
+    .long isr_stub_0x53
+    .long isr_stub_0x54
+    .long isr_stub_0x55
+    .long isr_stub_0x56
+    .long isr_stub_0x57
+    .long isr_stub_0x58
+    .long isr_stub_0x59
+    .long isr_stub_0x5a
+    .long isr_stub_0x5b
+    .long isr_stub_0x5c
+    .long isr_stub_0x5d
+    .long isr_stub_0x5e
+    .long isr_stub_0x5f
+    .long isr_stub_0x60
+    .long isr_stub_0x61
+    .long isr_stub_0x62
+    .long isr_stub_0x63
+    .long isr_stub_0x64
+    .long isr_stub_0x65
+    .long isr_stub_0x66
+    .long isr_stub_0x67
+    .long isr_stub_0x68
+    .long isr_stub_0x69
+    .long isr_stub_0x6a
+    .long isr_stub_0x6b
+    .long isr_stub_0x6c
+    .long isr_stub_0x6d
+    .long isr_stub_0x6e
+    .long isr_stub_0x6f
+    .long isr_stub_0x70
+    .long isr_stub_0x71
+    .long isr_stub_0x72
+    .long isr_stub_0x73
+    .long isr_stub_0x74
+    .long isr_stub_0x75
+    .long isr_stub_0x76
+    .long isr_stub_0x77
+    .long isr_stub_0x78
+    .long isr_stub_0x79
+    .long isr_stub_0x7a
+    .long isr_stub_0x7b
+    .long isr_stub_0x7c
+    .long isr_stub_0x7d
+    .long isr_stub_0x7e
+    .long isr_stub_0x7f
+    .long syscall_entry
+    .long isr_stub_0x81
+    .long isr_stub_0x82
+    .long isr_stub_0x83
+    .long isr_stub_0x84
+    .long isr_stub_0x85
+    .long isr_stub_0x86
+    .long isr_stub_0x87
+    .long isr_stub_0x88
+    .long isr_stub_0x89
+    .long isr_stub_0x8a
+    .long isr_stub_0x8b
+    .long isr_stub_0x8c
+    .long isr_stub_0x8d
+    .long isr_stub_0x8e
+    .long isr_stub_0x8f
+    .long isr_stub_0x90
+    .long isr_stub_0x91
+    .long isr_stub_0x92
+    .long isr_stub_0x93
+    .long isr_stub_0x94
+    .long isr_stub_0x95
+    .long isr_stub_0x96
+    .long isr_stub_0x97
+    .long isr_stub_0x98
+    .long isr_stub_0x99
+    .long isr_stub_0x9a
+    .long isr_stub_0x9b
+    .long isr_stub_0x9c
+    .long isr_stub_0x9d
+    .long isr_stub_0x9e
+    .long isr_stub_0x9f
+    .long isr_stub_0xa0
+    .long isr_stub_0xa1
+    .long isr_stub_0xa2
+    .long isr_stub_0xa3
+    .long isr_stub_0xa4
+    .long isr_stub_0xa5
+    .long isr_stub_0xa6
+    .long isr_stub_0xa7
+    .long isr_stub_0xa8
+    .long isr_stub_0xa9
+    .long isr_stub_0xaa
+    .long isr_stub_0xab
+    .long isr_stub_0xac
+    .long isr_stub_0xad
+    .long isr_stub_0xae
+    .long isr_stub_0xaf
+    .long isr_stub_0xb0
+    .long isr_stub_0xb1
+    .long isr_stub_0xb2
+    .long isr_stub_0xb3
+    .long isr_stub_0xb4
+    .long isr_stub_0xb5
+    .long isr_stub_0xb6
+    .long isr_stub_0xb7
+    .long isr_stub_0xb8
+    .long isr_stub_0xb9
+    .long isr_stub_0xba
+    .long isr_stub_0xbb
+    .long isr_stub_0xbc
+    .long isr_stub_0xbd
+    .long isr_stub_0xbe
+    .long isr_stub_0xbf
+    .long isr_stub_0xc0
+    .long isr_stub_0xc1
+    .long isr_stub_0xc2
+    .long isr_stub_0xc3
+    .long isr_stub_0xc4
+    .long isr_stub_0xc5
+    .long isr_stub_0xc6
+    .long isr_stub_0xc7
+    .long isr_stub_0xc8
+    .long isr_stub_0xc9
+    .long isr_stub_0xca
+    .long isr_stub_0xcb
+    .long isr_stub_0xcc
+    .long isr_stub_0xcd
+    .long isr_stub_0xce
+    .long isr_stub_0xcf
+    .long isr_stub_0xd0
+    .long isr_stub_0xd1
+    .long isr_stub_0xd2
+    .long isr_stub_0xd3
+    .long isr_stub_0xd4
+    .long isr_stub_0xd5
+    .long isr_stub_0xd6
+    .long isr_stub_0xd7
+    .long isr_stub_0xd8
+    .long isr_stub_0xd9
+    .long isr_stub_0xda
+    .long isr_stub_0xdb
+    .long isr_stub_0xdc
+    .long isr_stub_0xdd
+    .long isr_stub_0xde
+    .long isr_stub_0xdf
+    .long isr_stub_0xe0
+    .long isr_stub_0xe1
+    .long isr_stub_0xe2
+    .long isr_stub_0xe3
+    .long isr_stub_0xe4
+    .long isr_stub_0xe5
+    .long isr_stub_0xe6
+    .long isr_stub_0xe7
+    .long isr_stub_0xe8
+    .long isr_stub_0xe9
+    .long isr_stub_0xea
+    .long isr_stub_0xeb
+    .long isr_stub_0xec
+    .long isr_stub_0xed
+    .long isr_stub_0xee
+    .long isr_stub_0xef
+    .long isr_stub_0xf0
+    .long isr_stub_0xf1
+    .long isr_stub_0xf2
+    .long isr_stub_0xf3
+    .long isr_stub_0xf4
+    .long isr_stub_0xf5
+    .long isr_stub_0xf6
+    .long isr_stub_0xf7
+    .long isr_stub_0xf8
+    .long isr_stub_0xf9
+    .long isr_stub_0xfa
+    .long isr_stub_0xfb
+    .long isr_stub_0xfc
+    .long isr_stub_0xfd
+    .long isr_stub_0xfe
+    .long isr_stub_0xff
