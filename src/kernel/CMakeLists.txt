@@ -28,6 +28,7 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/paging/paging.cpp
+    ${ARCH_DIR}/process/process.cpp
 )
 
 # Architecture-specific boot files

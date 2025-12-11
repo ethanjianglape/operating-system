@@ -1,5 +1,6 @@
 .code32
 .global load_gdt
+.global load_tss
 
 load_gdt:
     mov 4(%esp), %eax
@@ -16,4 +17,8 @@ load_gdt:
 
 .reload_cs:
     ret
-    
+
+load_tss:
+    mov $0x28, %ax
+    ltr %ax
+    ret
