@@ -15,6 +15,8 @@ set(KERNEL_SOURCES
 
 # Architecture-specific kernel sources
 set(ARCH_KERNEL_SOURCES
+    ${ARCH_DIR}/gdt/gdt.cpp
+    ${ARCH_DIR}/gdt/gdt.s
     ${ARCH_DIR}/tty/tty.c
     ${ARCH_DIR}/pic/pic.cpp
     ${ARCH_DIR}/apic/apic.cpp

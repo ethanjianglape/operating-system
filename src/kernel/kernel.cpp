@@ -2,6 +2,7 @@
 
 #include <kernel/tty.h>
 
+#include "arch/i386/gdt/gdt.hpp"
 #include "arch/i386/cpu/cpu.hpp"
 #include "arch/i386/interrupts/idt.hpp"
 #include "arch/i386/pic/pic.hpp"
@@ -13,6 +14,7 @@
 
 extern "C" [[noreturn]]
 void kernel_main(void) {
+    i386::gdt::init();
     i386::idt::init();
     i386::paging::init();
 

@@ -2,6 +2,7 @@
 build/
 cmake-build-*/
 .cache/*
+.claude*
 
 # Build artifacts
 *.o
@@ -24,6 +25,7 @@ cmake-build-*/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
+compile_commands.json
 
 # OS specific
 .DS_Store
