@@ -1,4 +1,5 @@
 /* x86 crti.s */
+.code32
 .section .init
 .global _init
 .type _init, @function

@@ -65,6 +65,9 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
 )
 
+# Set ASM flags for 32-bit assembly
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --32")
+
 # Create boot object library
 add_library(boot_objs OBJECT ${BOOT_SOURCES})
 

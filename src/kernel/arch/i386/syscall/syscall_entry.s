@@ -1,3 +1,4 @@
+.code32
 .global syscall_entry
 
 .extern syscall_dispatcher

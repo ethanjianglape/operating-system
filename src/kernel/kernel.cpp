@@ -11,8 +11,6 @@
 #include "arch/i386/syscall/syscall.hpp"
 #include "arch/i386/paging/paging.hpp"
 
-extern std::uint32_t kernel_end;
-
 extern "C" [[noreturn]]
 void kernel_main(void) {
     i386::idt::init();
@@ -51,7 +49,7 @@ void kernel_main(void) {
       : : "r"("Test") : "eax", "ebx", "ecx", "edx"
      );
 
-    // Infinite loop - kernel should never exit
+    // Infinite loop - kernel_main should never exit
     while (true) {
         i386::cpu::hlt();
     }

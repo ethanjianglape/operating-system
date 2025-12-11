@@ -1,3 +1,4 @@
+.code32
 .global isr_stub_table
 
 .extern interrupt_handler

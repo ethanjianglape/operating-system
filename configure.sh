@@ -27,7 +27,7 @@ cd build
 
 # Configure with CMake
 echo -e "${YELLOW}Configuring with CMake...${NC}"
-cmake .. -DCMAKE_C_COMPILER=i686-elf-gcc -DCMAKE_ASM_COMPILER=i686-elf-as -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_ASM_COMPILER=as -DCMAKE_BUILD_TYPE=Debug
 
 # Build (CMakeLists.txt handles cleaning and copying to sysroot)
 echo -e "${YELLOW}Building kernel...${NC}"
