@@ -9,8 +9,14 @@ namespace i386::paging {
 
     // Map kernel to higher-half (0xC0000000)
     // PDE index 768 = 0xC0000000 >> 22
-    inline constexpr std::uint32_t KERNEL_VIRT_BASE = 0xC0000000;
-    inline constexpr std::uint32_t KERNEL_PDE_START = 768;
+    inline constexpr std::uint32_t KERNEL_VIRT_BASE      = 0xC0000000; // 0xC0000000 = 3GB
+    inline constexpr std::uint32_t KERNEL_HIGH_PDE_START = 768;        // 0xC0000000 >> 22
+    inline constexpr std::uint32_t KERNEL_LOW_PDE_START  = 0;          // 0x00000000 = start of memory
+    inline constexpr std::uint32_t KERNEL_LOW_PT_SIZE    = 8;          // 8 page tables = 32MB
+    inline constexpr std::uint32_t KERNEL_HIGH_PT_SIZE   = 64;         // 64 page tables = 256MB
+
+    inline constexpr std::uint32_t USER_PDE_START = KERNEL_LOW_PDE_START + KERNEL_LOW_PT_SIZE; // userspace starts after kernel low
+    inline constexpr std::uint32_t USER_PT_SIZE   = 8;                 // give userspace 32MB for now
 
     inline constexpr std::uint32_t APIC_PDE_START = 1019;
 

@@ -7,15 +7,12 @@
 #include "arch/i386/interrupts/idt.hpp"
 #include "arch/i386/pic/pic.hpp"
 #include "arch/i386/apic/apic.hpp"
-#include "arch/i386/interrupts/irq.hpp"
-#include "arch/i386/timers/pit.hpp"
 #include "arch/i386/syscall/syscall.hpp"
 #include "arch/i386/paging/paging.hpp"
 #include "arch/i386/process/process.hpp"
 
 extern "C"
 [[gnu::noreturn]]
-[[gnu::naked]]
 void kernel_main(void) {
     terminal_initialize();
     printf("~~ Welcome to My OS! ~~\n");
@@ -44,7 +41,7 @@ void kernel_main(void) {
     i386::syscall::init();
     printf("done\n");
 
-    i386::process::init();
+    //i386::process::init();
 
     printf("process::init() done.\n");
 
