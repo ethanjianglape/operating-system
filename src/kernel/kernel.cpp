@@ -11,7 +11,7 @@
 #include "kernel/log/log.hpp"
 
 extern "C"
-[[gnu::noreturn]]
+[[noreturn]]
 void kernel_main(void) {
     i386::vga::init();
 
@@ -31,7 +31,7 @@ void kernel_main(void) {
     i386::syscall::init();
 
     kernel::log::success("Kernel initialization complete!");
-    kernel::log::info("Entering userpace...");
+    kernel::log::info("Entering userspace...");
 
     //i386::process::init();
 

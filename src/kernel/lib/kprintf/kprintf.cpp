@@ -44,23 +44,31 @@ namespace kernel {
                 }
                 case 'd': {
                     int num = va_arg(args, int);
+                    unsigned int unum;
                     int i = 0;
                     char buff[16];
 
                     if (num < 0) {
                         console::putchar('-');
                         written++;
-                        num = -num;
+                        unum = -static_cast<unsigned int>(num);
+                    } else {
+                        unum = num;
                     }
 
-                    while (num > 0) {
-                        buff[i++] = '0' + (num % 10);
-                        num /= 10;
-                    }
-
-                    while (i > 0) {
-                        console::putchar(buff[--i]);
+                    if (unum == 0) {
+                        console::putchar('0');
                         written++;
+                    } else {
+                        while (unum > 0) {
+                            buff[i++] = '0' + (unum % 10);
+                            unum /= 10;
+                        }
+
+                        while (i > 0) {
+                            console::putchar(buff[--i]);
+                            written++;
+                        }
                     }
 
                     break;
@@ -88,9 +96,9 @@ namespace kernel {
 }
 
 namespace kernel::console {
-    static console_putchar_fn putchar_fn = nullptr;
-    static console_set_color_fn set_color_fn = nullptr;
-    static console_get_color_fn get_color_fn = nullptr;
+    static console_putchar_fn putchar_driver_fn = nullptr;
+    static console_set_color_fn set_color_driver_fn = nullptr;
+    static console_get_color_fn get_color_driver_fn = nullptr;
 
     void init(console_putchar_fn putchar_fn,
               console_set_color_fn set_color_fn,
@@ -102,17 +110,17 @@ namespace kernel::console {
     }
     
     void set_putchar_driver(console_putchar_fn fn) {
-        putchar_fn = fn;
+        putchar_driver_fn = fn;
     }
 
     void set_color_driver(console_set_color_fn set_fn, console_get_color_fn get_fn) {
-        set_color_fn = set_fn;
-        get_color_fn = get_fn;
+        set_color_driver_fn = set_fn;
+        get_color_driver_fn = get_fn;
     }
 
     void putchar(char c) {
-        if (putchar_fn != nullptr) {
-            putchar_fn(c);
+        if (putchar_driver_fn != nullptr) {
+            putchar_driver_fn(c);
         }
     }
 
@@ -123,14 +131,14 @@ namespace kernel::console {
     }
 
     void set_color(color fg, color bg) {
-        if (set_color_fn != nullptr) {
-            set_color_fn(static_cast<std::uint8_t>(fg), static_cast<std::uint8_t>(bg));
+        if (set_color_driver_fn != nullptr) {
+            set_color_driver_fn(static_cast<std::uint8_t>(fg), static_cast<std::uint8_t>(bg));
         }
     }
 
     std::uint8_t get_color() {
-        if (get_color_fn != nullptr) {
-            return get_color_fn();
+        if (get_color_driver_fn != nullptr) {
+            return get_color_driver_fn();
         }
 
         return 0x0F; // Default: white on black

@@ -69,7 +69,7 @@ SECTIONS
     /* Stack section */
     .stack ALIGN(16) : AT(ADDR(.stack) - KERNEL_VIRT_BASE)
     {
-        . = . + 16K; /* 16KB stack */
+        . = . + 64K; /* 64KB stack */
         stack_top = .;
     } :data
 

@@ -33,9 +33,9 @@ namespace kernel {
             WHITE = 15,
         };
 
-        void init(console_putchar_fn putchar_fn,
-                  console_set_color_fn set_color_fn,
-                  console_get_color_fn get_color_fn);
+        void init(console_putchar_fn putchar_driver,
+                  console_set_color_fn set_color_driver,
+                  console_get_color_fn get_color_driver);
         
         void set_putchar_driver(console_putchar_fn fn);
         void set_color_driver(console_set_color_fn set_fn, console_get_color_fn get_fn);
