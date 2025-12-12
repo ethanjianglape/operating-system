@@ -2,6 +2,17 @@
 
 A hobby operating system for x86 (i386) architecture, written in C++23 and assembly.
 
+## Disclaimer
+
+**This is a hobby operating system project for educational purposes.**
+
+- ⚠️ Not production-ready or security-hardened
+- ⚠️ May contain bugs or undefined behavior
+- ⚠️ **Not recommended for use on real hardware**
+- ✅ Safe for use in virtual machines (QEMU, VirtualBox, etc.)
+
+Use at your own risk. The author(s) are not responsible for any damage, data loss, or hardware issues that may result from running this software.
+
 ## Features
 
 **Current Status:**
