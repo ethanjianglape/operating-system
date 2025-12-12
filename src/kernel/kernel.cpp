@@ -11,6 +11,7 @@
 #include "arch/i386/timers/pit.hpp"
 #include "arch/i386/syscall/syscall.hpp"
 #include "arch/i386/paging/paging.hpp"
+#include "arch/i386/process/process.hpp"
 
 extern "C" [[noreturn]]
 void kernel_main(void) {
@@ -50,6 +51,8 @@ void kernel_main(void) {
       "int $0x80\n"
       : : "r"("Test") : "eax", "ebx", "ecx", "edx"
      );
+
+    i386::process::init();
 
     // Infinite loop - kernel_main should never exit
     while (true) {
