@@ -30,6 +30,9 @@ void kernel_main(void) {
     i386::apic::timer_init();
     i386::syscall::init();
 
+    kernel::log::success("Kernel initialization complete!");
+    kernel::log::info("Entering userpace...");
+
     //i386::process::init();
 
     // Infinite loop - kernel_main should never exit
