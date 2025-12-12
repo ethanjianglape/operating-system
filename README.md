@@ -54,7 +54,7 @@ os/
 ## Building
 
 **Requirements:**
-- GCC/G++ with 32-bit support
+- GCC/G++ with 32-bit multilib support
 - CMake 3.16+
 - GNU assembler
 - GRUB (for bootable image)
@@ -73,9 +73,9 @@ qemu-system-x86_64 -cdrom myos.iso
 ## Architecture
 
 **Boot Sequence:**
-1. GRUB loads kernel at physical 0x00200000
+1. GRUB loads kernel at physical `0x00200000`
 2. `boot.s` sets up GDT and enables paging
-3. Jump to higher-half (`kernel_main` at 0xC0...)
+3. Jump to higher-half (`kernel_main` at `0xC0000000`)
 4. Initialize subsystems (GDT, IDT, paging, etc.)
 5. Enter kernel main loop
 
