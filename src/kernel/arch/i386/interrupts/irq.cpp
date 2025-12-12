@@ -16,23 +16,16 @@ void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_t ha
 
 [[noreturn]]
 void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
-    //terminal_clear();
     kernel::kprintf("~~ FATAL EXCEPTION ~~\n");
-    kernel::kprintf("vector = ");
-    //terminal_putint(vector);
-    kernel::kprintf("\n");
-    kernel::kprintf("error = ");
-    //terminal_putint(error);
-    kernel::kprintf("\n");
+    kernel::kprintf("vector = %d\n", vector);
+    kernel::kprintf("error = %d\n", error);
     kernel::kprintf("Kernel Panic!\n");
 
     // page faults
     if (vector == 14) {
         std::uint32_t addr;
         asm volatile("mov %%cr2, %0" : "=r"(addr));
-        kernel::kprintf("page fault at addr = ");
-        //terminal_putuint(addr);
-        kernel::kprintf("\n");
+        kernel::kprintf("page fault at addr = %d\n", addr);
     }
 
     cpu::cli();
@@ -50,9 +43,7 @@ void handle_irq(const std::uint32_t vector) {
 
 extern "C"
 void interrupt_handler(const std::uint32_t vector, const std::uint32_t error) {
-    kernel::kprintf("[IRQ ");
-    //terminal_putint(vector);
-    kernel::kprintf("]\n");
+    kernel::kprintf("[IRQ %d]\n", vector);
 
     if (vector < 32) {
         handle_exception(vector, error);
