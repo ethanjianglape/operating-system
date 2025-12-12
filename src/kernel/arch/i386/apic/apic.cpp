@@ -4,9 +4,7 @@
 #include "arch/i386/interrupts/irq.hpp"
 #include "arch/i386/timers/pit.hpp"
 #include "arch/i386/timers/timer.hpp"
-#include "kernel/tty.h"
-
-#include <stdio.h>
+#include "kernel/log/log.hpp"
 
 using namespace i386;
 
@@ -45,6 +43,8 @@ void apic::enable() {
 
 // Initialize Local APIC
 void apic::init() {
+    kernel::log::init_start("APIC");
+    
     // Enable Local APIC via MSR
     apic::enable();
 
@@ -55,9 +55,13 @@ void apic::init() {
     
     // Clear task priority to enable all interrupts
     lapic_write(LAPIC_TPR, 0);
+
+    kernel::log::init_end("APIC");
 }
 
 void apic::timer_init() {
+    kernel::log::init_start("APIC timer at IRQ0");
+    
     constexpr std::uint32_t initial_count = 0xFFFFFFFF;
     
     lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
@@ -74,6 +78,8 @@ void apic::timer_init() {
     lapic_write(LAPIC_TIMER_INIT_COUNT, ticks);
 
     irq::register_irq_handler(32, timer::timer_tick);
+    
+    kernel::log::init_end("APIC timer at IRQ0");
 }
 
 // Send End of Interrupt signal

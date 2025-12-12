@@ -1,12 +1,11 @@
 #include "syscall.hpp"
-#include "arch/i386/interrupts/irq.hpp"
-#include "kernel/tty.h"
+#include "kernel/log/log.hpp"
 
 using namespace i386;
 
 static int sys_write(int fd, const char* buff, std::size_t count) {
     for (std::size_t i = 0; i < count; i++) {
-        terminal_putchar(buff[i]);
+        //terminal_putchar(buff[i]);
     }
     
     return count;
@@ -27,7 +26,7 @@ void syscall_dispatcher(syscall::registers* registers) {
         break;
     }
     case syscall::syscall_number::TEST:
-        terminal_puts("hello from ring3!\n");
+        //terminal_puts("hello from ring3!\n");
         break;
     default:
         registers->eax = syscall::ENOSYS;
@@ -36,5 +35,6 @@ void syscall_dispatcher(syscall::registers* registers) {
 }
 
 void syscall::init() {
-    
+    kernel::log::init_start("Syscall at ISR 0x80");
+    kernel::log::init_end("Syscall at ISR 0x80");
 }

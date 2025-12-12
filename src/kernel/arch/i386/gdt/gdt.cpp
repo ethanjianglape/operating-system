@@ -1,4 +1,5 @@
 #include "gdt.hpp"
+#include "kernel/log/log.hpp"
 
 using namespace i386;
 
@@ -66,6 +67,8 @@ void init_tss() {
 }
 
 void gdt::init() {
+    kernel::log::init_start("GDT");
+    
     init_gdt_table();
     init_tss();
     
@@ -74,4 +77,6 @@ void gdt::init() {
 
     load_gdt(&gdtr);
     load_tss();
+
+    kernel::log::init_end("GDT");
 }

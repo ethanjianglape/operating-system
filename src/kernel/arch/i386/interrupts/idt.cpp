@@ -1,6 +1,7 @@
 #include "idt.hpp"
 
 #include "arch/i386/cpu/cpu.hpp"
+#include "kernel/log/log.hpp"
 
 using namespace i386;
 
@@ -26,6 +27,8 @@ void set_descriptor(std::uint8_t vector, void* isr, std::uint8_t flags) {
 }
 
 void idt::init() {
+    kernel::log::init_start("IDT");
+    
     idtr.base = reinterpret_cast<std::uintptr_t>(&idt_entries[0]);
     idtr.limit = sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
 
@@ -44,4 +47,6 @@ void idt::init() {
 
     asm volatile("lidt %0" : : "m"(idtr));
     cpu::sti();
+
+    kernel::log::init_end("IDT");
 }

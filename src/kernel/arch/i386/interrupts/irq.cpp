@@ -1,6 +1,7 @@
 #include "irq.hpp"
-#include "kernel/tty.h"
+#include "kernel/kprintf/kprintf.hpp"
 #include "arch/i386/cpu/cpu.hpp"
+
 #include <cstdint>
 
 using namespace i386;
@@ -16,22 +17,22 @@ void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_t ha
 [[noreturn]]
 void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
     //terminal_clear();
-    terminal_puts("~~ FATAL EXCEPTION ~~\n");
-    terminal_puts("vector = ");
-    terminal_putint(vector);
-    terminal_puts("\n");
-    terminal_puts("error = ");
-    terminal_putint(error);
-    terminal_puts("\n");
-    terminal_puts("Kernel Panic!\n");
+    kernel::kprintf("~~ FATAL EXCEPTION ~~\n");
+    kernel::kprintf("vector = ");
+    //terminal_putint(vector);
+    kernel::kprintf("\n");
+    kernel::kprintf("error = ");
+    //terminal_putint(error);
+    kernel::kprintf("\n");
+    kernel::kprintf("Kernel Panic!\n");
 
     // page faults
     if (vector == 14) {
         std::uint32_t addr;
         asm volatile("mov %%cr2, %0" : "=r"(addr));
-        terminal_puts("page fault at addr = ");
-        terminal_putuint(addr);
-        terminal_puts("\n");
+        kernel::kprintf("page fault at addr = ");
+        //terminal_putuint(addr);
+        kernel::kprintf("\n");
     }
 
     cpu::cli();
@@ -49,9 +50,9 @@ void handle_irq(const std::uint32_t vector) {
 
 extern "C"
 void interrupt_handler(const std::uint32_t vector, const std::uint32_t error) {
-    terminal_puts("[IRQ ");
-    terminal_putint(vector);
-    terminal_puts("]\n");
+    kernel::kprintf("[IRQ ");
+    //terminal_putint(vector);
+    kernel::kprintf("]\n");
 
     if (vector < 32) {
         handle_exception(vector, error);

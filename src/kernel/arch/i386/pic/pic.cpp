@@ -1,6 +1,7 @@
 #include "pic.hpp"
 
 #include "arch/i386/cpu/cpu.hpp"
+#include "kernel/log/log.hpp"
 
 using namespace i386;
 
@@ -15,6 +16,8 @@ bool pic::disable() {
 
     const auto master = cpu::inb(PIC1_DATA);
     const auto slave = cpu::inb(PIC2_DATA);
+
+    kernel::log::success("Legacy PIT Disabled");
 
     return master == 0xFF && slave == 0xFF;
 }

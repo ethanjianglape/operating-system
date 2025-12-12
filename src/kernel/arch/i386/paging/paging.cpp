@@ -1,8 +1,7 @@
 #include "paging.hpp"
+#include "kernel/log/log.hpp"
 
 #include <cstdint>
-
-#include <kernel/tty.h>
 
 using namespace i386;
 
@@ -158,6 +157,8 @@ void enable_paging() {
 }
 
 void paging::init() {
+    kernel::log::init_start("Paging");
+    
     init_pdt();
     init_pte();
 
@@ -216,4 +217,6 @@ void paging::init() {
     */
     
     enable_paging();
+
+    kernel::log::init_end("Paging");
 }
