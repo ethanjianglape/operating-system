@@ -8,7 +8,8 @@ namespace i386::syscall {
     inline constexpr std::uint32_t ENOSYS = -1;
 
     enum class syscall_number : std::uint32_t {
-        SYS_WRITE = 1
+        SYS_WRITE = 1,
+        TEST = 42
     };
 
     struct [[gnu::packed]] registers {

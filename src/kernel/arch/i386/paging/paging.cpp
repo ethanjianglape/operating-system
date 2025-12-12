@@ -1,5 +1,6 @@
 #include "paging.hpp"
 
+#include <cstdint>
 #include <stdio.h>
 
 #include <kernel/tty.h>
@@ -17,7 +18,7 @@ static paging::page_table_entry pt_apic[paging::NUM_PT_ENTRIES];
 
 void init_pdt() {
     for (std::uint32_t i = 0; i < 8; i++) {
-        paging::page_directory_entry* entry = &pdt[i];
+        paging::page_directory_entry* entry = &pdt[paging::KERNEL_PDE_START + i];
 
         entry->p = 1;
         entry->rw = 1;
@@ -28,25 +29,37 @@ void init_pdt() {
         entry->ign = 0;
         entry->ps = 0;
         entry->avl = 0;
-        entry->addr = reinterpret_cast<std::uintptr_t>(page_tables[i]) >> 12;
+        entry->addr = paging::virt_to_phys(page_tables[i]) >> 12;
     }
 
-    // The APIC uses memory mapped IO calls at address (0xFEE00000)
-    // Until we have all of pdt mapped, this needs to be explicitly set
-    // 0xFEE00000 >> 22 = 0x3FB (1019) = PDE index
-    // 0xFEE00000 >> 12 = 0xFEE00 & 0x3FB = 0x000 = PTE index
-    paging::page_directory_entry* pdt_apic = &pdt[1019];
+    paging::page_directory_entry* user_pde = &pdt[0];
+      user_pde->p = 1;
+      user_pde->rw = 1;
+      user_pde->us = 1; // User accessible
+      user_pde->pwt = 0;
+      user_pde->pcd = 0;
+      user_pde->a = 0;
+      user_pde->ign = 0;
+      user_pde->ps = 0;
+      user_pde->avl = 0;
+      user_pde->addr = paging::virt_to_phys(page_tables[0]) >> 12;
 
-    pdt_apic->p = 1;
-    pdt_apic->rw = 1;
-    pdt_apic->us = 0;
-    pdt_apic->pwt = 1;
-    pdt_apic->pcd = 1;
-    pdt_apic->a = 0;
-    pdt_apic->ign = 0;
-    pdt_apic->ps = 0;
-    pdt_apic->avl = 0;
-    pdt_apic->addr = reinterpret_cast<std::uintptr_t>(pt_apic) >> 12;
+      // The APIC uses memory mapped IO calls at address (0xFEE00000)
+      // Until we have all of pdt mapped, this needs to be explicitly set
+      // 0xFEE00000 >> 22 = 0x3FB (1019) = PDE index
+      // 0xFEE00000 >> 12 = 0xFEE00 & 0x3FB = 0x000 = PTE index
+      paging::page_directory_entry* pdt_apic = &pdt[paging::APIC_PDE_START];
+
+      pdt_apic->p = 1;
+      pdt_apic->rw = 1;
+      pdt_apic->us = 0;
+      pdt_apic->pwt = 1;
+      pdt_apic->pcd = 1;
+      pdt_apic->a = 0;
+      pdt_apic->ign = 0;
+      pdt_apic->ps = 0;
+      pdt_apic->avl = 0;
+      pdt_apic->addr = paging::virt_to_phys(pt_apic) >> 12;
 }
 
 void init_pte() {
@@ -56,7 +69,7 @@ void init_pte() {
             
             page_tables[table][i].p = 1;
             page_tables[table][i].rw = 1;
-            page_tables[table][i].us = 0;
+            page_tables[table][i].us = 1; // TODO: userspace for now, needs to be kernel only again
             page_tables[table][i].addr = page_frame;
         }
     }
@@ -72,8 +85,9 @@ void init_pte() {
 
 void enable_paging() {
     std::uint32_t cr0;
+    std::uintptr_t pdt_addr = paging::virt_to_phys(pdt);
     
-    asm volatile("mov %0, %%cr3" : : "r"(pdt) : "memory");
+    asm volatile("mov %0, %%cr3" : : "r"(pdt_addr) : "memory");
     asm volatile("mov %%cr0, %0" : "=r"(cr0));
 
     cr0 |= 0x80000000; // set bit 31 to enable paging

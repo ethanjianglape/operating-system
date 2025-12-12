@@ -49,6 +49,10 @@ void handle_irq(const std::uint32_t vector) {
 
 extern "C"
 void interrupt_handler(const std::uint32_t vector, const std::uint32_t error) {
+    terminal_puts("[IRQ ");
+    terminal_putint(vector);
+    terminal_puts("]\n");
+
     if (vector < 32) {
         handle_exception(vector, error);
     } else {

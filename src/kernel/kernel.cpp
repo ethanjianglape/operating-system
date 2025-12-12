@@ -13,23 +13,24 @@
 #include "arch/i386/paging/paging.hpp"
 #include "arch/i386/process/process.hpp"
 
-extern "C" [[noreturn]]
+extern "C"
+[[gnu::noreturn]]
+[[gnu::naked]]
 void kernel_main(void) {
-    i386::gdt::init();
-    i386::idt::init();
-    i386::paging::init();
-
     terminal_initialize();
     printf("~~ Welcome to My OS! ~~\n");
 
-    // Disable legacy PIC
+    i386::gdt::init();
+    i386::paging::init();
+
     if (i386::pic::disable()) {
         printf("PIC Disabled!\n");
     } else {
         printf("PIC Failed to disable!\n");
     }
 
-    // Check APIC support and initialize
+    i386::idt::init();
+
     if (i386::apic::check_support()) {
         printf("APIC supported! Initializing...\n");
         i386::apic::init();
@@ -43,16 +44,9 @@ void kernel_main(void) {
     i386::syscall::init();
     printf("done\n");
 
-    asm volatile(
-      "mov $1, %%eax\n"      // SYS_WRITE
-      "mov $1, %%ebx\n"      // fd = stdout
-      "mov %0, %%ecx\n"      // buf = "Test"
-      "mov $4, %%edx\n"      // count = 4
-      "int $0x80\n"
-      : : "r"("Test") : "eax", "ebx", "ecx", "edx"
-     );
-
     i386::process::init();
+
+    printf("process::init() done.\n");
 
     // Infinite loop - kernel_main should never exit
     while (true) {

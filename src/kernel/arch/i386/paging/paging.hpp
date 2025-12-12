@@ -6,6 +6,18 @@ namespace i386::paging {
     inline constexpr std::uint32_t NUM_PDT_ENTRIES = 1024;
     inline constexpr std::uint32_t NUM_PT_ENTRIES  = 1024;
     inline constexpr std::uint32_t PAGE_SIZE       = 4096;
+
+    // Map kernel to higher-half (0xC0000000)
+    // PDE index 768 = 0xC0000000 >> 22
+    inline constexpr std::uint32_t KERNEL_VIRT_BASE = 0xC0000000;
+    inline constexpr std::uint32_t KERNEL_PDE_START = 768;
+
+    inline constexpr std::uint32_t APIC_PDE_START = 1019;
+
+    template <typename T>
+    inline constexpr std::uintptr_t virt_to_phys(T addr) {
+        return reinterpret_cast<std::uintptr_t>(addr) - KERNEL_VIRT_BASE;
+    }
     
     struct page_directory_entry {
         std::uint32_t p    : 1;  // bit 0: present

@@ -26,6 +26,9 @@ void syscall_dispatcher(syscall::registers* registers) {
         
         break;
     }
+    case syscall::syscall_number::TEST:
+        terminal_puts("hello from ring3!\n");
+        break;
     default:
         registers->eax = syscall::ENOSYS;
         break;

@@ -30,7 +30,15 @@ void idt::init() {
     idtr.limit = sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
 
     for (std::uint32_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
-        set_descriptor(vector, isr_stub_table[vector], 0x8E);
+        // By default, DPL=0 (ring0 only)
+        std::uint8_t flags = 0x8E;
+
+        // int 0x80 needs to be called by userspace DPL=3 (ring3)
+        if (vector == 0x80) {
+            flags = 0xEE;
+        }
+        
+        set_descriptor(vector, isr_stub_table[vector], flags);
         vectors[vector] = true;
     }
 
