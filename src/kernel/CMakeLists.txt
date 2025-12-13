@@ -30,9 +30,10 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/paging/paging.cpp
     ${ARCH_DIR}/process/process.cpp
     ${ARCH_DIR}/process/process.s
-    ${ARCH_DIR}/vga/vga.cpp
+    ${ARCH_DIR}/drivers/vga/vga.cpp
 )
 
+# General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/kprintf/kprintf.cpp
     ${LIB_DIR}/log/log.cpp

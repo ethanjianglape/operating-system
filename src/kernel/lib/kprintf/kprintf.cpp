@@ -22,7 +22,6 @@ namespace kernel {
 
         int written = 0;
 
-        // for now, just print raw string
         while (*format != '\0') {
             if (*format == '%' && *(format + 1)) {
                 format++;
@@ -42,7 +41,8 @@ namespace kernel {
 
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'i': {
                     int num = va_arg(args, int);
                     unsigned int unum;
                     int i = 0;
@@ -55,6 +55,28 @@ namespace kernel {
                     } else {
                         unum = num;
                     }
+
+                    if (unum == 0) {
+                        console::putchar('0');
+                        written++;
+                    } else {
+                        while (unum > 0) {
+                            buff[i++] = '0' + (unum % 10);
+                            unum /= 10;
+                        }
+
+                        while (i > 0) {
+                            console::putchar(buff[--i]);
+                            written++;
+                        }
+                    }
+
+                    break;
+                }
+                case 'u': {
+                    unsigned int unum = va_arg(args, unsigned int);
+                    int i = 0;
+                    char buff[16];
 
                     if (unum == 0) {
                         console::putchar('0');

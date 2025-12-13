@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace i386::vga {
+namespace i386::drivers::vga {
     inline constexpr std::size_t VGA_WIDTH = 80;
     inline constexpr std::size_t VGA_HEIGHT = 25;
 

@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace i386::vga {
+namespace i386::drivers::vga {
     static std::size_t cursor_x;
     static std::size_t cursor_y;
 

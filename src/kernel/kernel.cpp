@@ -5,7 +5,7 @@
 #include "arch/i386/apic/apic.hpp"
 #include "arch/i386/syscall/syscall.hpp"
 #include "arch/i386/paging/paging.hpp"
-#include "arch/i386/vga/vga.hpp"
+#include "arch/i386/drivers/vga/vga.hpp"
 
 #include "kernel/kprintf/kprintf.hpp"
 #include "kernel/log/log.hpp"
@@ -13,11 +13,11 @@
 extern "C"
 [[noreturn]]
 void kernel_main(void) {
-    i386::vga::init();
+    i386::drivers::vga::init();
 
-    kernel::console::init(i386::vga::putchar,
-                          i386::vga::set_color,
-                          i386::vga::get_color);
+    kernel::console::init(i386::drivers::vga::putchar,
+                          i386::drivers::vga::set_color,
+                          i386::drivers::vga::get_color);
     
     kernel::log::info("Welcome to My OS!");
     kernel::log::info("Beginning initial kernel setup...");
