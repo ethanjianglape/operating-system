@@ -1,12 +1,12 @@
-#include "arch/i386/gdt/gdt.hpp"
-#include "arch/i386/cpu/cpu.hpp"
-#include "arch/i386/interrupts/idt.hpp"
-#include "arch/i386/syscall/syscall.hpp"
-#include "arch/i386/paging/paging.hpp"
+#include "arch/i686/gdt/gdt.hpp"
+#include "arch/i686/cpu/cpu.hpp"
+#include "arch/i686/interrupts/idt.hpp"
+#include "arch/i686/syscall/syscall.hpp"
+#include "arch/i686/paging/paging.hpp"
 
-#include "arch/i386/drivers/pic/pic.hpp"
-#include "arch/i386/drivers/vga/vga.hpp"
-#include "arch/i386/drivers/apic/apic.hpp"
+#include "arch/i686/drivers/pic/pic.hpp"
+#include "arch/i686/drivers/vga/vga.hpp"
+#include "arch/i686/drivers/apic/apic.hpp"
 
 #include "kernel/kprintf/kprintf.hpp"
 #include "kernel/log/log.hpp"
@@ -14,30 +14,30 @@
 extern "C"
 [[noreturn]]
 void kernel_main(void) {
-    i386::drivers::vga::init();
+    i686::drivers::vga::init();
 
-    kernel::console::init(i386::drivers::vga::putchar,
-                          i386::drivers::vga::set_color,
-                          i386::drivers::vga::get_color);
-    
+    kernel::console::init(i686::drivers::vga::putchar,
+                          i686::drivers::vga::set_color,
+                          i686::drivers::vga::get_color);
+
     kernel::log::info("Welcome to My OS!");
     kernel::log::info("Beginning initial kernel setup...");
 
-    i386::gdt::init();
-    i386::paging::init();
-    i386::drivers::pic::init();
-    i386::idt::init();
-    i386::drivers::apic::init();
-    i386::drivers::apic::timer_init();
-    i386::syscall::init();
+    i686::gdt::init();
+    i686::paging::init();
+    i686::drivers::pic::init();
+    i686::idt::init();
+    i686::drivers::apic::init();
+    i686::drivers::apic::timer_init();
+    i686::syscall::init();
 
     kernel::log::success("Kernel initialization complete!");
     kernel::log::info("Entering userspace...");
 
-    //i386::process::init();
+    //i686::process::init();
 
     // Infinite loop - kernel_main should never exit
     while (true) {
-        i386::cpu::hlt();
+        i686::cpu::hlt();
     }
 }

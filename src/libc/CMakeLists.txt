@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(libc C ASM)
 
 # Configuration variables
-set(HOSTARCH "i386" CACHE STRING "Target architecture")
+set(HOSTARCH "i686" CACHE STRING "Target architecture")
 set(SYSROOT "${CMAKE_SOURCE_DIR}/sysroot" CACHE PATH "Sysroot directory")
 
 # Install headers to sysroot FIRST (before building anything)
@@ -50,7 +50,7 @@ set(FREESTANDING_SOURCES
     string/strlen.c
 )
 
-# Architecture-specific sources (currently empty for i386)
+# Architecture-specific sources (currently empty for i686)
 set(ARCH_FREESTANDING_SOURCES
     # Add arch-specific sources here if needed
 )

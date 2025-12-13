@@ -5,7 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(kernel C CXX ASM)
 
 # Architecture-specific settings
-set(KERNEL_ARCH "i386" CACHE STRING "Target architecture")
+set(KERNEL_ARCH "i686" CACHE STRING "Target architecture")
 set(ARCH_DIR "arch/${KERNEL_ARCH}")
 set(ARCH_DRIVERS_DIR "arch/${KERNEL_ARCH}/drivers")
 set(LIB_DIR "lib/")
@@ -57,7 +57,7 @@ set(CRT_SOURCES
 # Architecture-specific linker script
 set(LINKER_SCRIPT ${ARCH_DIR}/linker.ld)
 
-# Note: Other files in arch/i386/boot (boot.asm, long_mode_start.asm) are kept for reference
+# Note: Other files in arch/i686/boot (boot.asm, long_mode_start.asm) are kept for reference
 # but not included in the build
 
 # Kernel headers - install to sysroot at configure time
@@ -75,7 +75,7 @@ endforeach()
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/i386/..." includes
+    ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/i686/..." includes
     ${SYSROOT}/usr/include
     ${CMAKE_SOURCE_DIR}/include
 )

@@ -26,6 +26,7 @@ set(CMAKE_ASM_COMPILE_OBJECT "<CMAKE_ASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT
 # Compiler flags specific to kernel development (C and C++ only, not ASM)
 add_compile_options(
     $<$<COMPILE_LANGUAGE:C,CXX>:-m32>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-march=i686>
     $<$<COMPILE_LANGUAGE:C,CXX>:-Wall>
     $<$<COMPILE_LANGUAGE:C,CXX>:-Wextra>
     $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
@@ -79,7 +80,7 @@ add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
     COMMAND ${CMAKE_CXX_COMPILER}
         -m32
-        -T ${CMAKE_SOURCE_DIR}/src/kernel/arch/i386/linker.ld
+        -T ${CMAKE_SOURCE_DIR}/src/kernel/arch/i686/linker.ld
         -nostdlib
         -static
         -Wl,-Map=kernel.map
@@ -113,7 +114,7 @@ add_custom_command(
 add_custom_target(kernel ALL DEPENDS ${CMAKE_BINARY_DIR}/kernel.elf)
 
 # Print build information
-message(STATUS "Building kernel for i386 (32-bit) architecture using standard gcc")
+message(STATUS "Building kernel for i686 (32-bit) architecture using standard gcc")
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "ASM Assembler: ${CMAKE_ASM_COMPILER}")
