@@ -2,11 +2,12 @@
 
 #include "arch/i386/cpu/cpu.hpp"
 #include "arch/i386/interrupts/irq.hpp"
-#include "arch/i386/timers/pit.hpp"
 #include "arch/i386/timers/timer.hpp"
 #include "kernel/log/log.hpp"
 
-using namespace i386;
+#include "arch/i386/drivers/pit/pit.hpp"
+
+using namespace i386::drivers;
 
 // Read from Local APIC register
 static inline std::uint32_t lapic_read(std::uint32_t reg) {
@@ -67,7 +68,7 @@ void apic::timer_init() {
     lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
     lapic_write(LAPIC_TIMER_INIT_COUNT, initial_count);
     
-    i386::pit::sleep_ms(10);
+    i386::drivers::pit::sleep_ms(10);
 
     lapic_write(LAPIC_TIMER, APIC_LVT_INT_MASKED);
 

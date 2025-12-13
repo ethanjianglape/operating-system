@@ -1,10 +1,11 @@
 #include "timer.hpp"
-#include "arch/i386/apic/apic.hpp"
+
+#include "arch/i386/drivers/apic/apic.hpp"
 
 using namespace i386;
 
 void timer::timer_tick(std::uint32_t vector) {
     // Nothing for now
 
-    apic::send_eoi();
+    drivers::apic::send_eoi();
 }

@@ -7,6 +7,7 @@ project(kernel C CXX ASM)
 # Architecture-specific settings
 set(KERNEL_ARCH "i386" CACHE STRING "Target architecture")
 set(ARCH_DIR "arch/${KERNEL_ARCH}")
+set(ARCH_DRIVERS_DIR "arch/${KERNEL_ARCH}/drivers")
 set(LIB_DIR "lib/")
 
 # Kernel source files
@@ -18,19 +19,22 @@ set(KERNEL_SOURCES
 set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/gdt/gdt.cpp
     ${ARCH_DIR}/gdt/gdt.s
-    ${ARCH_DIR}/pic/pic.cpp
-    ${ARCH_DIR}/apic/apic.cpp
     ${ARCH_DIR}/interrupts/idt.cpp
     ${ARCH_DIR}/interrupts/irq.cpp
     ${ARCH_DIR}/interrupts/isr.s
-    ${ARCH_DIR}/timers/pit.cpp
     ${ARCH_DIR}/timers/timer.cpp
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/paging/paging.cpp
     ${ARCH_DIR}/process/process.cpp
     ${ARCH_DIR}/process/process.s
-    ${ARCH_DIR}/drivers/vga/vga.cpp
+)
+
+set(ARCH_DRIVER_KERNEL_SOURCES
+    ${ARCH_DRIVERS_DIR}/vga/vga.cpp
+    ${ARCH_DRIVERS_DIR}/pic/pic.cpp
+    ${ARCH_DRIVERS_DIR}/pit/pit.cpp
+    ${ARCH_DRIVERS_DIR}/apic/apic.cpp
 )
 
 # General purpose kernel library sources (not arch specific)
@@ -87,7 +91,12 @@ add_library(crti_obj OBJECT ${ARCH_DIR}/crt/crti.s)
 add_library(crtn_obj OBJECT ${ARCH_DIR}/crt/crtn.s)
 
 # Create kernel object library
-add_library(kernel_objs OBJECT ${KERNEL_SOURCES} ${ARCH_KERNEL_SOURCES} ${LIB_KERNEL_SOURCES})
+add_library(kernel_objs OBJECT
+  ${KERNEL_SOURCES}
+  ${ARCH_DRIVER_KERNEL_SOURCES}
+  ${ARCH_KERNEL_SOURCES}
+  ${LIB_KERNEL_SOURCES}
+)
 
 # Apply freestanding flags to boot objects
 target_compile_options(boot_objs PRIVATE

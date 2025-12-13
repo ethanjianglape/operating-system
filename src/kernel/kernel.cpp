@@ -1,11 +1,12 @@
 #include "arch/i386/gdt/gdt.hpp"
 #include "arch/i386/cpu/cpu.hpp"
 #include "arch/i386/interrupts/idt.hpp"
-#include "arch/i386/pic/pic.hpp"
-#include "arch/i386/apic/apic.hpp"
 #include "arch/i386/syscall/syscall.hpp"
 #include "arch/i386/paging/paging.hpp"
+
+#include "arch/i386/drivers/pic/pic.hpp"
 #include "arch/i386/drivers/vga/vga.hpp"
+#include "arch/i386/drivers/apic/apic.hpp"
 
 #include "kernel/kprintf/kprintf.hpp"
 #include "kernel/log/log.hpp"
@@ -24,10 +25,10 @@ void kernel_main(void) {
 
     i386::gdt::init();
     i386::paging::init();
-    i386::pic::disable();
+    i386::drivers::pic::init();
     i386::idt::init();
-    i386::apic::init();
-    i386::apic::timer_init();
+    i386::drivers::apic::init();
+    i386::drivers::apic::timer_init();
     i386::syscall::init();
 
     kernel::log::success("Kernel initialization complete!");

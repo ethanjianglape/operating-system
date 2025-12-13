@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace i386::apic {
+namespace i386::drivers::apic {
     // Local APIC registers (offset from base address 0xFEE00000)
     inline constexpr std::uint32_t LAPIC_ID                = 0x0020;  // Local APIC ID
     inline constexpr std::uint32_t LAPIC_VERSION           = 0x0030;  // Local APIC Version
