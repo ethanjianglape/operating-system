@@ -1,6 +1,5 @@
 #include "idt.hpp"
 
-#include "arch/i686/cpu/cpu.hpp"
 #include "kernel/log/log.hpp"
 
 using namespace i686;
@@ -46,7 +45,6 @@ void idt::init() {
     }
 
     asm volatile("lidt %0" : : "m"(idtr));
-    cpu::sti();
 
     kernel::log::init_end("IDT");
 }

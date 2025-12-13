@@ -8,7 +8,7 @@ static gdt::gdt_ptr gdtr;
 static gdt::tss_entry tss;
 
 [[gnu::aligned(16)]]
-static std::uint8_t kernel_stack[4096];
+static std::uint8_t kernel_stack[16384]; // 16KiB stack
 
 extern "C"
 void load_gdt(gdt::gdt_ptr* ptr);

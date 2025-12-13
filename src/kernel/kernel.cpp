@@ -31,6 +31,8 @@ void kernel_main(void) {
     i686::drivers::apic::timer_init();
     i686::syscall::init();
 
+    i686::cpu::sti();
+
     kernel::log::success("Kernel initialization complete!");
     kernel::log::info("Entering userspace...");
 

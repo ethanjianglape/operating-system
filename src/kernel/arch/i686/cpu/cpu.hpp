@@ -45,11 +45,6 @@ namespace i686::cpu {
         asm volatile("hlt");
     }
 
-    [[gnu::always_inline]]
-    inline void pause() {
-        asm volatile("pause");
-    }
-
      [[gnu::always_inline]]
      inline void sti() {
          asm volatile("sti" : : : "memory");
