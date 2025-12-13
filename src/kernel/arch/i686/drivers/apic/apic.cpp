@@ -6,6 +6,7 @@
 #include "kernel/log/log.hpp"
 
 #include "arch/i686/drivers/pit/pit.hpp"
+#include "kernel/panic/panic.hpp"
 
 using namespace i686::drivers;
 
@@ -45,6 +46,10 @@ void apic::enable() {
 // Initialize Local APIC
 void apic::init() {
     kernel::log::init_start("APIC");
+
+    if (!check_support()) {
+        kernel::panic("APIC not supported - required for this kernel");
+    }
     
     // Enable Local APIC via MSR
     apic::enable();

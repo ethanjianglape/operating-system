@@ -41,6 +41,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/kprintf/kprintf.cpp
     ${LIB_DIR}/log/log.cpp
+    ${LIB_DIR}/panic/panic.cpp
 )
 
 # Architecture-specific boot files

@@ -13,6 +13,14 @@ namespace kernel {
         using console_putchar_fn = void (*)(char);
         using console_set_color_fn = void (*)(std::uint8_t fg, std::uint8_t bg);
         using console_get_color_fn = std::uint8_t (*)(void);
+        using console_clear_fn = void (*)(void);
+
+        struct driver_config {
+            console_putchar_fn putchar_fn = nullptr;
+            console_get_color_fn get_color_fn = nullptr;
+            console_set_color_fn set_color_fn = nullptr;
+            console_clear_fn clear_fn = nullptr;
+        };
 
         enum class color : std::uint8_t {
             BLACK = 0,
@@ -33,13 +41,8 @@ namespace kernel {
             WHITE = 15,
         };
 
-        void init(console_putchar_fn putchar_driver,
-                  console_set_color_fn set_color_driver,
-                  console_get_color_fn get_color_driver);
+        void init(driver_config* config);
         
-        void set_putchar_driver(console_putchar_fn fn);
-        void set_color_driver(console_set_color_fn set_fn, console_get_color_fn get_fn);
-
         void putchar(char c);
         void puts(const char* str, std::size_t length);
 

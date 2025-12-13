@@ -118,31 +118,17 @@ namespace kernel {
 }
 
 namespace kernel::console {
-    static console_putchar_fn putchar_driver_fn = nullptr;
-    static console_set_color_fn set_color_driver_fn = nullptr;
-    static console_get_color_fn get_color_driver_fn = nullptr;
+    static driver_config* driver = nullptr;
 
-    void init(console_putchar_fn putchar_fn,
-              console_set_color_fn set_color_fn,
-              console_get_color_fn get_color_fn) {
-        set_putchar_driver(putchar_fn);
-        set_color_driver(set_color_fn, get_color_fn);
-        
+    void init(driver_config* config) {
+        driver = config;
+
         set_color(color::WHITE, color::BLACK);
-    }
-    
-    void set_putchar_driver(console_putchar_fn fn) {
-        putchar_driver_fn = fn;
-    }
-
-    void set_color_driver(console_set_color_fn set_fn, console_get_color_fn get_fn) {
-        set_color_driver_fn = set_fn;
-        get_color_driver_fn = get_fn;
     }
 
     void putchar(char c) {
-        if (putchar_driver_fn != nullptr) {
-            putchar_driver_fn(c);
+        if (driver->putchar_fn != nullptr) {
+            driver->putchar_fn(c);
         }
     }
 
@@ -153,14 +139,14 @@ namespace kernel::console {
     }
 
     void set_color(color fg, color bg) {
-        if (set_color_driver_fn != nullptr) {
-            set_color_driver_fn(static_cast<std::uint8_t>(fg), static_cast<std::uint8_t>(bg));
+        if (driver->set_color_fn != nullptr) {
+            driver->set_color_fn(static_cast<std::uint8_t>(fg), static_cast<std::uint8_t>(bg));
         }
     }
 
     std::uint8_t get_color() {
-        if (get_color_driver_fn != nullptr) {
-            return get_color_driver_fn();
+        if (driver->get_color_fn != nullptr) {
+            return driver->get_color_fn();
         }
 
         return 0x0F; // Default: white on black

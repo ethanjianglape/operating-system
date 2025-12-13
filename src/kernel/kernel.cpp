@@ -16,20 +16,19 @@ extern "C"
 void kernel_main(void) {
     i686::drivers::vga::init();
 
-    kernel::console::init(i686::drivers::vga::putchar,
-                          i686::drivers::vga::set_color,
-                          i686::drivers::vga::get_color);
+    kernel::console::init(i686::drivers::vga::get_driver());
 
     kernel::log::info("Welcome to My OS!");
     kernel::log::info("Beginning initial kernel setup...");
 
     i686::gdt::init();
     i686::paging::init();
-    i686::drivers::pic::init();
     i686::idt::init();
+    i686::syscall::init();
+    
+    i686::drivers::pic::init();
     i686::drivers::apic::init();
     i686::drivers::apic::timer_init();
-    i686::syscall::init();
 
     i686::cpu::sti();
 

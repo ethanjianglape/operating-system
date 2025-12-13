@@ -1,4 +1,5 @@
 #include "vga.hpp"
+#include "kernel/kprintf/kprintf.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,6 +12,13 @@ namespace i686::drivers::vga {
 
     static std::uint16_t* vga_buffer = reinterpret_cast<std::uint16_t*>(VGA_BUFFER_ADDR);
 
+    static kernel::console::driver_config driver {
+        .putchar_fn = putchar,
+        .get_color_fn = get_color,
+        .set_color_fn = set_color,
+        .clear_fn = clear
+    };
+
     inline constexpr std::uint16_t vga_entry(std::uint8_t c, std::uint8_t color) {
         return static_cast<std::uint16_t>(c) | (static_cast<std::uint16_t>(color) << 8);
     }
@@ -20,6 +28,10 @@ namespace i686::drivers::vga {
         cursor_y = 0;
 
         clear();
+    }
+
+    kernel::console::driver_config* get_driver() {
+        return &driver;
     }
 
     void set_color(std::uint8_t fg, std::uint8_t bg) {
