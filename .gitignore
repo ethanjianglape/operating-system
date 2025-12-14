@@ -21,6 +21,8 @@ cmake-build-*/
 *.swp
 *.swo
 *~
+\#*
+\.#*
 
 # CMake files
 CMakeCache.txt
