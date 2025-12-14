@@ -5,6 +5,21 @@
 
 namespace kernel::log {
     namespace detail {
+        void log_with_color(console::color fg, const char* str) {
+            const auto saved_color = console::get_color();
+
+            console::set_color(fg, console::color::BLACK);
+
+            kprintf("%s", str);
+
+            // Restore original color
+            std::uint8_t saved_fg = saved_color & 0x0F;
+            std::uint8_t saved_bg = (saved_color >> 4) & 0x0F;
+
+            console::set_color(static_cast<console::color>(saved_fg),
+                               static_cast<console::color>(saved_bg));
+        }
+        
         void log_with_color(console::color fg,
                             const char* prefix,
                             const char* format,
@@ -45,15 +60,15 @@ namespace kernel::log {
     void init_start(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_BLUE, "[INIT] ", format, args);
-        kprintf("\n");
+        detail::log_with_color(console::color::LIGHT_GREY, "[INIT] ", format, args);
+        kprintf("...\n");
         va_end(args);
     }
 
     void init_end(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_GREEN, "[SUCC] ", format, args);
+        detail::log_with_color(console::color::LIGHT_GREEN, "[INIT] ", format, args);
         kprintf(" Initialized\n");
         va_end(args);
     }

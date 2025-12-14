@@ -62,18 +62,19 @@ void apic::init() {
     // Clear task priority to enable all interrupts
     lapic_write(LAPIC_TPR, 0);
 
+    timer_init();
+
     kernel::log::init_end("APIC");
 }
 
 void apic::timer_init() {
-    kernel::log::init_start("APIC timer at IRQ0");
-    
     constexpr std::uint32_t initial_count = 0xFFFFFFFF;
+    constexpr std::uint32_t ms = 10;
     
     lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
     lapic_write(LAPIC_TIMER_INIT_COUNT, initial_count);
     
-    pit::sleep_ms(10);
+    pit::sleep_ms(ms);
 
     lapic_write(LAPIC_TIMER, APIC_LVT_INT_MASKED);
 
@@ -84,8 +85,8 @@ void apic::timer_init() {
     lapic_write(LAPIC_TIMER_INIT_COUNT, ticks);
 
     irq::register_irq_handler(32, timer::timer_tick);
-    
-    kernel::log::init_end("APIC timer at IRQ0");
+
+    kernel::log::info("APIC timer initialized on ISR32 (IRQ0) at %dms resoluation.", ms);
 }
 
 // Send End of Interrupt signal

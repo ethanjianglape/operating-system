@@ -28,7 +28,6 @@ void kernel_main(void) {
     
     i686::drivers::pic::init();
     i686::drivers::apic::init();
-    i686::drivers::apic::timer_init();
 
     i686::cpu::sti();
 

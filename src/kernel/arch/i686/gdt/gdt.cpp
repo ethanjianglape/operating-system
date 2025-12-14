@@ -57,6 +57,7 @@ void init_gdt_table() {
     std::uint32_t tss_limit = sizeof(gdt::tss_entry) - 1;
     
     gdt_table[5] = make_entry(tss_base, tss_limit, gdt::TSS_ACCESS, 0x00);
+
 }
 
 void init_tss() {
@@ -77,6 +78,14 @@ void gdt::init() {
 
     load_gdt(&gdtr);
     load_tss();
+
+    kernel::log::info("GDT created with 6 entries");
+    kernel::log::info("GDT[0] = null descriptor");
+    kernel::log::info("GDT[1] = kernel code");
+    kernel::log::info("GDT[2] = kernel data");
+    kernel::log::info("GDT[3] = user code");
+    kernel::log::info("GDT[4] = user data");
+    kernel::log::info("GDT[5] = TSS (ss0=%u, esp0=%u)", tss.ss0, tss.esp0);
 
     kernel::log::init_end("GDT");
 }
