@@ -2,7 +2,7 @@
 #include "arch/i686/cpu/cpu.hpp"
 #include "arch/i686/interrupts/idt.hpp"
 #include "arch/i686/syscall/syscall.hpp"
-#include "arch/i686/paging/paging.hpp"
+#include "arch/i686/vmm/vmm.hpp"
 
 #include "arch/i686/drivers/pic/pic.hpp"
 #include "arch/i686/drivers/vga/vga.hpp"
@@ -68,7 +68,7 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
     //kernel::log::info("multiboot info addr = %x", multiboot_info_addr);
 
     i686::gdt::init();
-    i686::paging::init();
+    i686::vmm::init();
     i686::idt::init();
     i686::syscall::init();
     

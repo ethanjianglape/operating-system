@@ -1,4 +1,4 @@
-#include "paging.hpp"
+#include "vmm.hpp"
 
 #include "kernel/log/log.hpp"
 #include "kernel/memory/memory.hpp"
@@ -10,29 +10,29 @@
 using namespace i686;
 
 [[gnu::aligned(4096)]]
-static paging::page_directory_entry pdt[paging::NUM_PDT_ENTRIES];
+static vmm::page_directory_entry pdt[vmm::NUM_PDT_ENTRIES];
 
 // The kernel is in higher-half mode now (0xC0000000, 3GB) but the very low end of the
 // address space (0-32 MB) cannot safely be given to userspace, this memory range is
 // used by many hardware and boot processes that are not safe to expose. So userspace
 // will instead start at 32MB.
 [[gnu::aligned(4096)]]
-static paging::page_table_entry kernel_low_pte[paging::KERNEL_LOW_PT_SIZE][paging::NUM_PT_ENTRIES];
+static vmm::page_table_entry kernel_low_pte[vmm::KERNEL_LOW_PT_SIZE][vmm::NUM_PT_ENTRIES];
 
 // This is the higher-half address space for the kernel to use, at pdt[768-832] starts at 0xC0000000 and covers 256MB
 [[gnu::aligned(4096)]]
-static paging::page_table_entry kernel_high_pte[paging::KERNEL_HIGH_PT_SIZE][paging::NUM_PT_ENTRIES];
+static vmm::page_table_entry kernel_high_pte[vmm::KERNEL_HIGH_PT_SIZE][vmm::NUM_PT_ENTRIES];
 
 // Until we have dynamic memory allocation, just statically give userspace 32MB of address space
 // starting at 32MB (0-32MB reserved for hardware)
 [[gnu::aligned(4096)]]
-static paging::page_table_entry user_pte[paging::USER_PT_SIZE][paging::NUM_PT_ENTRIES];
+static vmm::page_table_entry user_pte[vmm::USER_PT_SIZE][vmm::NUM_PT_ENTRIES];
 
 // The APIC uses MMIO at a very specific memory address, so this needs to be mapped
 [[gnu::aligned(4096)]]
-static paging::page_table_entry apic_pte[paging::NUM_PT_ENTRIES];
+static vmm::page_table_entry apic_pte[vmm::NUM_PT_ENTRIES];
 
-void init_kernel_pde(paging::page_directory_entry* pde, paging::page_table_entry* pte) {
+void init_kernel_pde(vmm::page_directory_entry* pde, vmm::page_table_entry* pte) {
     pde->p = 1;   // Present
     pde->rw = 1;  // Writable
     pde->us = 0;  // ring0 only
@@ -45,29 +45,29 @@ void init_kernel_pde(paging::page_directory_entry* pde, paging::page_table_entry
 
     // Our page tables are static variables created within our c++ file, so they have a virtual address
     // that is in our higher-half address space, but the PDT must have physical addresses
-    pde->addr = paging::virt_to_phys(pte) >> 12;
+    pde->addr = vmm::virt_to_phys(pte) >> 12;
 }
 
 void init_pdt() {
     // Kernel low address space (0-32MB)
-    for (std::uint32_t i = 0; i < paging::KERNEL_LOW_PT_SIZE; i++) {
-        auto* pde = &pdt[paging::KERNEL_LOW_PDE_START + i];
+    for (std::uint32_t i = 0; i < vmm::KERNEL_LOW_PT_SIZE; i++) {
+        auto* pde = &pdt[vmm::KERNEL_LOW_PDE_START + i];
         auto* pte = kernel_low_pte[i];
 
         init_kernel_pde(pde, pte);
     }
 
     // Kernel high address space (3GB+)
-    for (std::uint32_t i = 0; i < paging::KERNEL_HIGH_PT_SIZE; i++) {
-        auto* pde = &pdt[paging::KERNEL_HIGH_PDE_START + i];
+    for (std::uint32_t i = 0; i < vmm::KERNEL_HIGH_PT_SIZE; i++) {
+        auto* pde = &pdt[vmm::KERNEL_HIGH_PDE_START + i];
         auto* pte = kernel_high_pte[i];
 
         init_kernel_pde(pde, pte);
     }
 
     // Userspace (32-64MB)
-    for (std::uint32_t i = 0; i < paging::USER_PT_SIZE; i++) {
-        auto* pde = &pdt[paging::USER_PDE_START + i];
+    for (std::uint32_t i = 0; i < vmm::USER_PT_SIZE; i++) {
+        auto* pde = &pdt[vmm::USER_PDE_START + i];
         auto* pte = user_pte[i];
 
         pde->p = 1;
@@ -79,14 +79,14 @@ void init_pdt() {
         pde->ign = 0;
         pde->ps = 0;
         pde->avl = 0;
-        pde->addr = paging::virt_to_phys(pte) >> 12;
+        pde->addr = vmm::virt_to_phys(pte) >> 12;
     }
 
     // The APIC uses memory mapped IO calls at address (0xFEE00000)
     // Until we have all of pdt mapped, this needs to be explicitly set
     // 0xFEE00000 >> 22 = 0x3FB (1019) = PDE index
     // 0xFEE00000 >> 12 = 0xFEE00 & 0x3FB = 0x000 = PTE index
-    auto* apic_pde = &pdt[paging::APIC_PDE_START];
+    auto* apic_pde = &pdt[vmm::APIC_PDE_START];
 
     apic_pde->p = 1;
     apic_pde->rw = 1;
@@ -97,14 +97,14 @@ void init_pdt() {
     apic_pde->ign = 0;
     apic_pde->ps = 0;
     apic_pde->avl = 0;
-    apic_pde->addr = paging::virt_to_phys(apic_pte) >> 12;
+    apic_pde->addr = vmm::virt_to_phys(apic_pte) >> 12;
 }
 
 void init_pte() {
     // Kernel low address space (0-32MB)
-    for (std::uint32_t table = 0; table < paging::KERNEL_LOW_PT_SIZE; table++) {
-        for (std::uint32_t i = 0; i < paging::NUM_PT_ENTRIES; i++) {
-            std::uint32_t page_frame = (table * paging::NUM_PT_ENTRIES) + i;
+    for (std::uint32_t table = 0; table < vmm::KERNEL_LOW_PT_SIZE; table++) {
+        for (std::uint32_t i = 0; i < vmm::NUM_PT_ENTRIES; i++) {
+            std::uint32_t page_frame = (table * vmm::NUM_PT_ENTRIES) + i;
             
             kernel_low_pte[table][i].p = 1;
             kernel_low_pte[table][i].rw = 1;
@@ -114,9 +114,9 @@ void init_pte() {
     }
 
     // Kernel high address space (3GB+)
-    for (std::uint32_t table = 0; table < paging::KERNEL_HIGH_PT_SIZE; table++) {
-        for (std::uint32_t i = 0; i < paging::NUM_PT_ENTRIES; i++) {
-            std::uint32_t page_frame = (table * paging::NUM_PT_ENTRIES) + i;
+    for (std::uint32_t table = 0; table < vmm::KERNEL_HIGH_PT_SIZE; table++) {
+        for (std::uint32_t i = 0; i < vmm::NUM_PT_ENTRIES; i++) {
+            std::uint32_t page_frame = (table * vmm::NUM_PT_ENTRIES) + i;
             
             kernel_high_pte[table][i].p = 1;
             kernel_high_pte[table][i].rw = 1;
@@ -126,10 +126,10 @@ void init_pte() {
     }
 
     // Userspace (32-64MB)
-    for (std::uint32_t table = 0; table < paging::USER_PT_SIZE; table++) {
-        for (std::uint32_t i = 0; i < paging::NUM_PT_ENTRIES; i++) {
-            std::uint32_t base_frame = paging::KERNEL_LOW_PT_SIZE * paging::NUM_PT_ENTRIES;
-            std::uint32_t page_frame = base_frame + (table * paging::NUM_PT_ENTRIES) + i;
+    for (std::uint32_t table = 0; table < vmm::USER_PT_SIZE; table++) {
+        for (std::uint32_t i = 0; i < vmm::NUM_PT_ENTRIES; i++) {
+            std::uint32_t base_frame = vmm::KERNEL_LOW_PT_SIZE * vmm::NUM_PT_ENTRIES;
+            std::uint32_t page_frame = base_frame + (table * vmm::NUM_PT_ENTRIES) + i;
             
             user_pte[table][i].p = 1;
             user_pte[table][i].rw = 1;
@@ -139,7 +139,7 @@ void init_pte() {
     }
 
     // APIC address space
-    for (std::uint32_t i = 0; i < paging::NUM_PT_ENTRIES; i++) {
+    for (std::uint32_t i = 0; i < vmm::NUM_PT_ENTRIES; i++) {
         apic_pte[i].p = 1;
         apic_pte[i].rw = 1;
         apic_pte[i].us = 0;
@@ -150,7 +150,7 @@ void init_pte() {
 
 void enable_paging() {
     std::uint32_t cr0;
-    std::uintptr_t pdt_addr = paging::virt_to_phys(pdt);
+    std::uintptr_t pdt_addr = vmm::virt_to_phys(pdt);
     
     asm volatile("mov %0, %%cr3" : : "r"(pdt_addr) : "memory");
     asm volatile("mov %%cr0, %0" : "=r"(cr0));
@@ -160,7 +160,7 @@ void enable_paging() {
     asm volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
-void paging::map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags) {
+void vmm::map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags) {
     std::uint32_t pde_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 22;
     std::uint32_t pte_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 12 & 0x3FF;
 
@@ -184,13 +184,13 @@ void paging::map_page(void* virtual_addr, void* physical_addr, std::uint32_t fla
     asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
 }
 
-void* paging::alloc_kernel_memory(std::size_t bytes) {
+void* vmm::alloc_kernel_memory(std::size_t bytes) {
     std::size_t pages = (bytes / PAGE_SIZE) + 1;
 
     return alloc_kernel_pages(pages);
 }
 
-void* paging::alloc_kernel_pages(std::size_t num_pages) {
+void* vmm::alloc_kernel_pages(std::size_t num_pages) {
     static std::uint8_t* current_heap = reinterpret_cast<std::uint8_t*>(KERNEL_HEAP_VIRT_BASE);
     const auto heap = reinterpret_cast<std::uint32_t>(current_heap);
 
@@ -216,7 +216,7 @@ void* paging::alloc_kernel_pages(std::size_t num_pages) {
     return page_start;
 }
 
-void paging::init() {
+void vmm::init() {
     kernel::log::init_start("Paging");
     
     init_pdt();

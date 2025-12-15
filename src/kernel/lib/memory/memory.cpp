@@ -12,7 +12,7 @@ namespace kernel {
             return nullptr;
         }
 
-        return arch::paging::alloc_kernel_memory(size);
+        return arch::vmm::alloc_kernel_memory(size);
     }
 
     void kfree(void* ptr) {

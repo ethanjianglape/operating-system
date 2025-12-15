@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace i686::paging {
+namespace i686::vmm {
     inline constexpr std::uint32_t NUM_PDT_ENTRIES = 1024;
     inline constexpr std::uint32_t NUM_PT_ENTRIES  = 1024;
     inline constexpr std::uint32_t PAGE_SIZE       = 4096;
