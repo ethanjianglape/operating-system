@@ -16,6 +16,12 @@ multiboot_start:
 multiboot_end:
 
 .section .boot.data, "aw"
+.align 4
+multiboot_magic:    
+    .long 0
+multiboot_header_addr:
+    .long 0
+
 .align 4096
 boot_page_directory:
     .skip 4096
@@ -57,7 +63,8 @@ gdt32_ptr:
 
 _start:
     # Save multiboot info pointer (ebx contains multiboot info from GRUB)
-    movl %ebx, %edi
+    movl %eax, multiboot_magic
+    movl %ebx, multiboot_header_addr
 
     # Verify we were loaded by a multiboot2 bootloader
     call check_multiboot
@@ -93,6 +100,10 @@ reload_segments:
 
 higher_half:
     movl $stack_top, %esp
+
+    pushl multiboot_header_addr
+    pushl multiboot_magic
+
     call kernel_main
 
 # Prints `ERR: ` and the given error code to screen and hangs.
