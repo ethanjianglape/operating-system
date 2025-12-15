@@ -184,7 +184,13 @@ void paging::map_page(void* virtual_addr, void* physical_addr, std::uint32_t fla
     asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
 }
 
-void* paging::alloc_kernel_page(std::size_t num_pages) {
+void* paging::alloc_kernel_memory(std::size_t bytes) {
+    std::size_t pages = (bytes / PAGE_SIZE) + 1;
+
+    return alloc_kernel_pages(pages);
+}
+
+void* paging::alloc_kernel_pages(std::size_t num_pages) {
     static std::uint8_t* current_heap = reinterpret_cast<std::uint8_t*>(KERNEL_HEAP_VIRT_BASE);
     const auto heap = reinterpret_cast<std::uint32_t>(current_heap);
 
@@ -215,60 +221,6 @@ void paging::init() {
     
     init_pdt();
     init_pte();
-
-    /*
-    printf("pdt addr: ");
-    terminal_putint((int)(void*)pdt);
-    printf("\n");
-
-    printf("page_tables[4]: ");
-    terminal_putint((int)(void*)page_tables[4]);
-    printf("\n");
-
-    printf("pdt[4].p: ");
-    terminal_putint(pdt[4].p);
-    printf("\n");
-
-    printf("pdt[4].addr: ");
-    terminal_putint(pdt[4].addr);
-    printf("\n");
-
-    printf("page_tables[4][510].p: ");
-    terminal_putint(page_tables[4][510].p);
-    printf("\n");
-
-    printf("page_tables[4][510].addr: ");
-    terminal_putint(page_tables[4][510].addr);
-    printf("\n");
-
-    printf("pt_apic addr: ");
-    terminal_putuint((uint32_t)(void*)(pt_apic));
-    printf("\n");
-
-    printf("pdt[1019].p =: ");
-    terminal_putuint(pdt[1019].p);
-    printf("\n");
-
-    printf("pdt[1019].addr =: ");
-    terminal_putuint(pdt[1019].addr);
-    printf("\n");
-
-    printf("p = ");
-    terminal_putuint(pt_apic[0].p);
-    printf("\n");
-
-    printf("rw = ");
-    terminal_putuint(pt_apic[0].rw);
-    printf("\n");
-
-    printf("addr = ");
-    terminal_putuint(pt_apic[0].addr);
-    printf("\n");
-
-    printf("pcd = ");
-    terminal_putuint(pt_apic[0].pcd);
-    printf("\n");
-    */
     
     enable_paging();
 

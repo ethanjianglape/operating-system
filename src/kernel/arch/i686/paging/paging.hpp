@@ -70,5 +70,7 @@ namespace i686::paging {
 
     void map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags);
 
-    void* alloc_kernel_page(std::size_t num_pages);
+    void* alloc_kernel_memory(std::size_t bytes);
+
+    void* alloc_kernel_pages(std::size_t num_pages);
 }

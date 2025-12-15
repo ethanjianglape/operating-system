@@ -57,6 +57,14 @@ namespace kernel::log {
         va_end(args);
     }
 
+    void warn(const char* format, ...) {
+        std::va_list args;
+        va_start(args, format);
+        detail::log_with_color(console::color::LIGHT_BROWN, "[WARN] ", format, args);
+        kprintf("\n");
+        va_end(args);
+    }
+
     void init_start(const char* format, ...) {
         std::va_list args;
         va_start(args, format);

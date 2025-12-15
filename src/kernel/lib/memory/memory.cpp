@@ -1,13 +1,18 @@
-#include "arch/i686/paging/paging.hpp"
+#include "kernel/log/log.hpp"
 #include <kernel/memory/memory.hpp>
+#include <kernel/arch/arch.hpp>
 
 #include <cstddef>
 
 namespace kernel {
     void* kmalloc(std::size_t size) {
-        std::size_t pages_needed = (size / 4096) + 1;
+        if (size == 0) {
+            log::warn("kmalloc(0) returns NULL");
+            
+            return nullptr;
+        }
 
-        return i686::paging::alloc_kernel_page(pages_needed);
+        return arch::paging::alloc_kernel_memory(size);
     }
 
     void kfree(void* ptr) {
