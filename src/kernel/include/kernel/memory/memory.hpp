@@ -40,6 +40,6 @@ namespace kernel {
         
         void init(std::size_t total_memory_bytes);
 
-        void* alloc_page();
+        void* alloc_frame();
     }
 }

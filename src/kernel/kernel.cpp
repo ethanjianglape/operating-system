@@ -84,9 +84,9 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
     auto* ptr2 = (std::uint32_t*)kernel::kmalloc(8654);
     auto* ptr3 = (std::uint32_t*)kernel::kmalloc(64);
 
-    kernel::log::info("ptr addr = %x", ptr1);
-    kernel::log::info("ptr addr = %x", ptr2);
-    kernel::log::info("ptr addr = %x", ptr3);
+    //kernel::log::info("ptr addr = %x", ptr1);
+    //kernel::log::info("ptr addr = %x", ptr2);
+    //kernel::log::info("ptr addr = %x", ptr3);
 
     //i686::process::init();
 

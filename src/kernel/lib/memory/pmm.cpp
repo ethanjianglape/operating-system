@@ -65,7 +65,7 @@ namespace kernel::pmm {
         log::init_end("Physical Memory Management");
     }
 
-    void* alloc_page() {
+    void* alloc_frame() {
         std::size_t frame = frame_bitmap_start;
 
         while (frame < frame_bitmap_end) {

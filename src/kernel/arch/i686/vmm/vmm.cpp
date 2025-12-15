@@ -201,7 +201,7 @@ void* vmm::alloc_kernel_pages(std::size_t num_pages) {
     void* page_start = current_heap;
 
     for (std::size_t page = 0; page < num_pages; page++) {
-        void* phys_addr = kernel::pmm::alloc_page();
+        void* phys_addr = kernel::pmm::alloc_frame();
         void* virt_addr = current_heap + (page * PAGE_SIZE);
 
         if (phys_addr == nullptr) {
