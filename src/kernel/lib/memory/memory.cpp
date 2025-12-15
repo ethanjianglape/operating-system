@@ -1,5 +1,5 @@
-#include "kernel/log/log.hpp"
 #include <kernel/memory/memory.hpp>
+#include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 
 #include <cstddef>
@@ -16,6 +16,8 @@ namespace kernel {
     }
 
     void kfree(void* ptr) {
-
+        if (ptr == nullptr) {
+            log::warn("kfree(NULL) is undefined behavior");
+        }
     }
 }

@@ -77,11 +77,16 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
 
     i686::cpu::sti();
 
-    kernel::pmm::init();
+    // 1GiB to test with
+    kernel::pmm::init(1'073'741'824);
 
     auto* ptr1 = (std::uint32_t*)kernel::kmalloc(128);
     auto* ptr2 = (std::uint32_t*)kernel::kmalloc(8654);
     auto* ptr3 = (std::uint32_t*)kernel::kmalloc(64);
+
+    kernel::log::info("ptr addr = %x", ptr1);
+    kernel::log::info("ptr addr = %x", ptr2);
+    kernel::log::info("ptr addr = %x", ptr3);
 
     //i686::process::init();
 

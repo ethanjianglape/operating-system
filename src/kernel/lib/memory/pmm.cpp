@@ -1,85 +1,83 @@
-#include "kernel/log/log.hpp"
-#include "kernel/panic/panic.hpp"
 #include <kernel/memory/memory.hpp>
+#include <kernel/log/log.hpp>
+#include <kernel/panic/panic.hpp>
+#include <kernel/arch/arch.hpp>
 
 #include <cstdint>
 #include <cstddef>
 
 namespace kernel::pmm {
-    constexpr std::uint32_t PAGE_BITMAP_ENTRY_SIZE = sizeof(std::uint32_t) * 8;
-    constexpr std::uint32_t PAGE_BITMAP_SIZE = NUM_PAGES / PAGE_BITMAP_ENTRY_SIZE;
-    constexpr std::uint32_t PAGE_FREE = 0;
-    constexpr std::uint32_t PAGE_USED = 1;
-    
-    // 1 bit used per page, 0 = free, 1 = used
-    static std::uint32_t page_bitmap[PAGE_BITMAP_SIZE];
+    // 1 bit used per frame, 0 = free, 1 = used
+    static std::uint32_t frame_bitmap[FRAME_BITMAP_SIZE];
+    static std::uint32_t frame_bitmap_start;
+    static std::uint32_t frame_bitmap_end;
 
-    bool is_page_free(std::size_t page) {
-        const std::size_t index = page / PAGE_BITMAP_ENTRY_SIZE;
-        const std::size_t offset = page % PAGE_BITMAP_ENTRY_SIZE;
-        const std::uint32_t entry = page_bitmap[index];
-        const std::uint32_t value = entry & (PAGE_USED << offset);
+    bool is_frame_free(std::size_t frame) {
+        const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
+        const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
+        const std::uint32_t entry = frame_bitmap[index];
+        const std::uint32_t value = entry & (FRAME_USED << offset);
 
-        return value == PAGE_FREE;
+        return value == FRAME_FREE;
     }
 
-    void set_page_used(std::size_t page) {
-        const std::size_t index = page / PAGE_BITMAP_ENTRY_SIZE;
-        const std::size_t offset = page % PAGE_BITMAP_ENTRY_SIZE;
+    void set_frame_used(std::size_t frame) {
+        const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
+        const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
 
-        page_bitmap[index] |= (PAGE_USED << offset);
+        frame_bitmap[index] |= (FRAME_USED << offset);
     }
 
-    void set_page_free(std::size_t page) {
-        const std::size_t index = page / PAGE_BITMAP_ENTRY_SIZE;
-        const std::size_t offset = page % PAGE_BITMAP_ENTRY_SIZE;
-        const std::size_t mask = ~(PAGE_USED << offset);
+    void set_frame_free(std::size_t frame) {
+        const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
+        const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
+        const std::size_t mask = ~(FRAME_USED << offset);
 
-        page_bitmap[index] &= mask;
+        frame_bitmap[index] &= mask;
     }
 
-    void init() {
+    void init(std::size_t total_memory_bytes) {
         log::init_start("Physical Memory Management");
         
+        if (total_memory_bytes > MAX_MEMORY_BYTES) {
+            log::warn("System booted with %u bytes of RAM, defaulting to 2GiB", total_memory_bytes);
+            total_memory_bytes = MAX_MEMORY_BYTES;
+        }
+        
         // all pages set to used by default
-        for (std::size_t i = 0; i < PAGE_BITMAP_SIZE; i++) {
-            page_bitmap[i] = 0xFFFFFFFF;
+        for (std::size_t i = 0; i < FRAME_BITMAP_SIZE; i++) {
+            frame_bitmap[i] = 0xFFFFFFFF;
         }
 
-        std::size_t first_page = 256; // skip first 1MiB of pages
-        std::size_t last_page = NUM_PAGES - 1;
-
-        for (std::size_t page = first_page; page <= last_page; page++) {
-            set_page_free(page);
+        // mark the kernel code as used
+        for (std::size_t frame = KERNEL_CODE_START_FRAME; frame <= KERNEL_CODE_END_FRAME; frame++) {
+            set_frame_used(frame);
         }
 
-        // kernel exists from 2-4MiB in physical memory
-        std::size_t kernel_first_page = 512;
-        std::size_t kernel_last_page = 1024;
-
-        for (std::size_t page = kernel_first_page; page <= kernel_last_page; page++) {
-            set_page_used(page);
+        // mark kernel data as free
+        for (std::size_t frame = KERNEL_DATA_START_FRAME; frame <= KERNEL_DATA_END_FRAME; frame++) {
+            set_frame_free(frame);
         }
 
+        frame_bitmap_start = KERNEL_DATA_START_FRAME;
+        frame_bitmap_end = total_memory_bytes / FRAME_SIZE;
+        
         log::init_end("Physical Memory Management");
     }
 
     void* alloc_page() {
-        std::size_t page = 0;
+        std::size_t frame = frame_bitmap_start;
 
-        while (page < NUM_PAGES) {
-            if (is_page_free(page)) {
-                set_page_used(page);
-                break;
+        while (frame < frame_bitmap_end) {
+            if (is_frame_free(frame)) {
+                set_frame_used(frame);
+                frame_bitmap_start = frame + 1;
+                return (void*)(frame * FRAME_SIZE);
             }
 
-            page++;
+            frame++;
         }
 
-        if (page >= NUM_PAGES) {
-            kernel::panic("Cannot allocate any more physical memory pages");
-        }
-        
-        return (void*)(page * PAGE_SIZE);
+        kernel::panic("PMM: Out of physical memory");
     }
 }
