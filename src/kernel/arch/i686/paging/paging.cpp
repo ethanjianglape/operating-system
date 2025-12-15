@@ -1,6 +1,10 @@
 #include "paging.hpp"
-#include "kernel/log/log.hpp"
 
+#include "kernel/log/log.hpp"
+#include "kernel/memory/memory.hpp"
+#include "kernel/panic/panic.hpp"
+
+#include <cstddef>
 #include <cstdint>
 
 using namespace i686;
@@ -15,7 +19,7 @@ static paging::page_directory_entry pdt[paging::NUM_PDT_ENTRIES];
 [[gnu::aligned(4096)]]
 static paging::page_table_entry kernel_low_pte[paging::KERNEL_LOW_PT_SIZE][paging::NUM_PT_ENTRIES];
 
-// This is the higher-half address space for the kernel to use, at pdt[768-832] and covers 256MB
+// This is the higher-half address space for the kernel to use, at pdt[768-832] starts at 0xC0000000 and covers 256MB
 [[gnu::aligned(4096)]]
 static paging::page_table_entry kernel_high_pte[paging::KERNEL_HIGH_PT_SIZE][paging::NUM_PT_ENTRIES];
 
@@ -154,6 +158,56 @@ void enable_paging() {
     cr0 |= 0x80000000; // set bit 31 to enable paging
 
     asm volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
+}
+
+void paging::map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags) {
+    std::uint32_t pde_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 22;
+    std::uint32_t pte_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 12 & 0x3FF;
+
+    page_table_entry* pte = nullptr;
+
+    if (pde_index >= KERNEL_LOW_PDE_START && pde_index <= KERNEL_LOW_PDE_END) {
+        pte = &kernel_low_pte[pde_index - KERNEL_LOW_PDE_START][pte_index];
+    } else if (pde_index >= KERNEL_HIGH_PDE_START && pde_index <= KERNEL_HIGH_PDE_END) {
+        pte = &kernel_high_pte[pde_index - KERNEL_HIGH_PDE_START][pte_index];
+    }
+
+    if (pte == nullptr) {
+        kernel::panicf("Attempt to map invalid virtual address = %u", virtual_addr);
+    }
+
+    pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
+    pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
+    pte->us = (flags & PAGE_USER) ? 1 : 0;
+    pte->addr = reinterpret_cast<std::uint32_t>(physical_addr) >> 12;
+
+    asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
+}
+
+void* paging::alloc_kernel_page(std::size_t num_pages) {
+    static std::uint8_t* current_heap = reinterpret_cast<std::uint8_t*>(KERNEL_HEAP_VIRT_BASE);
+    const auto heap = reinterpret_cast<std::uint32_t>(current_heap);
+
+    if (heap + (num_pages * PAGE_SIZE) > KERNEL_HEAP_VIRT_END) {
+        kernel::panicf("Out of virtual memory, cannot allocate %d pages", num_pages);
+    }
+
+    void* page_start = current_heap;
+
+    for (std::size_t page = 0; page < num_pages; page++) {
+        void* phys_addr = kernel::pmm::alloc_page();
+        void* virt_addr = current_heap + (page * PAGE_SIZE);
+
+        if (phys_addr == nullptr) {
+            kernel::panic("Physical Memory Manager returned NULL, system is out of memory");
+        }
+
+        map_page(virt_addr, phys_addr, PAGE_PRESENT | PAGE_WRITE);
+    }
+
+    current_heap += (num_pages * PAGE_SIZE);
+
+    return page_start;
 }
 
 void paging::init() {

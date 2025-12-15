@@ -10,6 +10,8 @@
 
 #include "kernel/kprintf/kprintf.hpp"
 #include "kernel/log/log.hpp"
+#include "kernel/memory/memory.hpp"
+#include <cstdint>
 
 extern "C"
 [[noreturn]]
@@ -30,6 +32,23 @@ void kernel_main(void) {
     i686::drivers::apic::init();
 
     i686::cpu::sti();
+
+    kernel::pmm::init();
+
+    auto* ptr1 = (std::uint32_t*)kernel::kmalloc(128);
+    auto* ptr2 = (std::uint32_t*)kernel::kmalloc(8654);
+    auto* ptr3 = (std::uint32_t*)kernel::kmalloc(64);
+
+    kernel::kprintf("kmalloc 1 addr = %x\n", (std::uint32_t)ptr1);
+    kernel::kprintf("kmalloc 2 addr = %x\n", (std::uint32_t)ptr2);
+    kernel::kprintf("kmalloc 3 addr = %x\n", (std::uint32_t)ptr3);
+
+    ptr1[0] = 0x12345678;
+    ptr2[0] = 0xDEADBEEF;
+    ptr2[54] = 0xABABABAB;
+    ptr2[256] = 123;
+
+    kernel::kprintf("ptr1[0] = %x ptr2[54] = %x\n", ptr1[0], ptr2[54]);
 
     kernel::log::success("Kernel initialization complete!");
     kernel::log::info("Entering userspace...");
