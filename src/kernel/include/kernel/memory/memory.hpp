@@ -38,7 +38,12 @@ namespace kernel {
         inline constexpr std::uint32_t FRAME_FREE = 0;
         inline constexpr std::uint32_t FRAME_USED = 1;
         
-        void init(std::size_t total_memory_bytes);
+        void init(std::size_t total_memory_bytes,
+                  std::size_t free_mem_addr,
+                  std::size_t free_mem_len);
+
+        void set_addr_free(std::size_t addr, std::size_t length);
+        void set_addr_used(std::size_t addr, std::size_t length);
 
         void* alloc_frame();
     }

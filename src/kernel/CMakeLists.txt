@@ -39,6 +39,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
+    ${LIB_DIR}/boot/boot.cpp
     ${LIB_DIR}/kprintf/kprintf.cpp
     ${LIB_DIR}/log/log.cpp
     ${LIB_DIR}/panic/panic.cpp

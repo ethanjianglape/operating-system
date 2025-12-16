@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <cstddef>
 
+extern "C" std::uint32_t kernel_physical_start;
+extern "C" std::uint32_t kernel_physical_end;
+
 namespace kernel::pmm {
     // 1 bit used per frame, 0 = free, 1 = used
     static std::uint32_t frame_bitmap[FRAME_BITMAP_SIZE];
@@ -36,33 +39,65 @@ namespace kernel::pmm {
         frame_bitmap[index] &= mask;
     }
 
-    void init(std::size_t total_memory_bytes) {
+    void init(std::size_t total_mem_bytes,
+              std::size_t free_mem_addr,
+              std::size_t free_mem_len) {
         log::init_start("Physical Memory Management");
         
-        if (total_memory_bytes > MAX_MEMORY_BYTES) {
-            log::warn("System booted with %u bytes of RAM, defaulting to 2GiB", total_memory_bytes);
-            total_memory_bytes = MAX_MEMORY_BYTES;
+        if (total_mem_bytes > MAX_MEMORY_BYTES) {
+            log::warn("System booted with %u bytes of RAM, defaulting to 2GiB", total_mem_bytes);
+            total_mem_bytes = MAX_MEMORY_BYTES;
         }
+
+        if (free_mem_addr + free_mem_len >= total_mem_bytes) {
+            kernel::panicf("Memory address %x (length=%x) is outside of available memory",
+                           free_mem_addr,
+                           free_mem_len);
+        }
+
+        log::info("Total system memory: %u bytes", total_mem_bytes);
+        log::info("Free memory start: %x", free_mem_addr);
+        log::info("Free memory length: %u bytes", free_mem_len);
         
         // all pages set to used by default
         for (std::size_t i = 0; i < FRAME_BITMAP_SIZE; i++) {
             frame_bitmap[i] = 0xFFFFFFFF;
         }
 
-        // mark the kernel code as used
-        for (std::size_t frame = KERNEL_CODE_START_FRAME; frame <= KERNEL_CODE_END_FRAME; frame++) {
-            set_frame_used(frame);
-        }
+        // allocate the free memory range
+        set_addr_free(free_mem_addr, free_mem_len);
 
-        // mark kernel data as free
-        for (std::size_t frame = KERNEL_DATA_START_FRAME; frame <= KERNEL_DATA_END_FRAME; frame++) {
-            set_frame_free(frame);
-        }
+        auto kernel_start_addr = reinterpret_cast<std::size_t>(&kernel_physical_start);
+        auto kernel_end_addr = reinterpret_cast<std::size_t>(&kernel_physical_end);
+        auto kernel_len = kernel_end_addr - kernel_start_addr;
 
-        frame_bitmap_start = KERNEL_DATA_START_FRAME;
-        frame_bitmap_end = total_memory_bytes / FRAME_SIZE;
+        log::info("Kernel starts at %x", kernel_start_addr);
+        log::info("Kernel length %u bytes", kernel_len);
+
+        set_addr_used(kernel_start_addr, kernel_len);
         
         log::init_end("Physical Memory Management");
+    }
+
+    void set_addr_free(std::size_t addr, std::size_t length) {
+        std::size_t frame_start = addr / FRAME_SIZE;
+        std::size_t frame_end = (addr + length) / FRAME_SIZE;
+
+        frame_bitmap_start = frame_start;
+        frame_bitmap_end = frame_end;
+
+        while (frame_start <= frame_end) {
+            set_frame_free(frame_start++);
+        }
+    }
+
+    void set_addr_used(std::size_t addr, std::size_t length) {
+        std::size_t frame_start = addr / FRAME_SIZE;
+        std::size_t frame_end = (addr + length) / FRAME_SIZE;
+
+        while (frame_start <= frame_end) {
+            set_frame_used(frame_start++);
+        }
     }
 
     void* alloc_frame() {
