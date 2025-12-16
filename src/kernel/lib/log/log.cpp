@@ -1,41 +1,39 @@
-#include "kernel/kprintf/kprintf.hpp"
+#include <kernel/log/log.hpp>
+#include <kernel/kprintf/kprintf.hpp>
+#include <kernel/console/console.hpp>
+
 #include <cstdarg>
 #include <cstdint>
-#include <kernel/log/log.hpp>
+
 
 namespace kernel::log {
     namespace detail {
-        void log_with_color(console::color fg, const char* str) {
-            const auto saved_color = console::get_color();
+        void log_with_color(console::RgbColor fg, console::RgbColor bg, const char* str) {
+            const auto saved_fg = console::get_current_fg();
+            const auto saved_bg = console::get_current_bg();
 
-            console::set_color(fg, console::color::BLACK);
+            console::set_color(fg, bg);
 
             kprintf("%s", str);
 
-            // Restore original color
-            std::uint8_t saved_fg = saved_color & 0x0F;
-            std::uint8_t saved_bg = (saved_color >> 4) & 0x0F;
-
-            console::set_color(static_cast<console::color>(saved_fg),
-                               static_cast<console::color>(saved_bg));
+            console::set_color(static_cast<console::RgbColor>(saved_fg),
+                               static_cast<console::RgbColor>(saved_bg));
         }
         
-        void log_with_color(console::color fg,
+        void log_with_color(console::RgbColor fg,
+                            console::RgbColor bg,
                             const char* prefix,
                             const char* format,
                             std::va_list args) {
-            const auto saved_color = console::get_color();
+            const auto saved_fg = console::get_current_fg();
+            const auto saved_bg = console::get_current_bg();
 
-            console::set_color(fg, console::color::BLACK);
+            console::set_color(fg, bg);
 
             kprintf("%s", prefix);
 
-            // Restore original color
-            std::uint8_t saved_fg = saved_color & 0x0F;
-            std::uint8_t saved_bg = (saved_color >> 4) & 0x0F;
-
-            console::set_color(static_cast<console::color>(saved_fg),
-                               static_cast<console::color>(saved_bg));
+            console::set_color(static_cast<console::RgbColor>(saved_fg),
+                               static_cast<console::RgbColor>(saved_bg));
 
             kvprintf(format, args);
         }
@@ -44,7 +42,7 @@ namespace kernel::log {
     void info(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_CYAN, "[INFO] ", format, args);
+        detail::log_with_color(console::RgbColor::CYAN, console::RgbColor::BLACK, "[INFO] ", format, args);
         kprintf("\n");
         va_end(args);
     }
@@ -52,7 +50,7 @@ namespace kernel::log {
     void error(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::RED, "[ERROR] ", format, args);
+        detail::log_with_color(console::RgbColor::RED, console::RgbColor::BLACK, "[ERROR] ", format, args);
         kprintf("\n");
         va_end(args);
     }
@@ -60,7 +58,7 @@ namespace kernel::log {
     void warn(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_BROWN, "[WARN] ", format, args);
+        detail::log_with_color(console::RgbColor::WHITE, console::RgbColor::BLACK, "[WARN] ", format, args);
         kprintf("\n");
         va_end(args);
     }
@@ -68,7 +66,7 @@ namespace kernel::log {
     void init_start(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_GREY, "[INIT] ", format, args);
+        detail::log_with_color(console::RgbColor::WHITE, console::RgbColor::BLACK, "[INIT] ", format, args);
         kprintf("...\n");
         va_end(args);
     }
@@ -76,7 +74,7 @@ namespace kernel::log {
     void init_end(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_GREEN, "[INIT] ", format, args);
+        detail::log_with_color(console::RgbColor::GREEN, console::RgbColor::BLACK, "[INIT] ", format, args);
         kprintf(" Initialized\n");
         va_end(args);
     }
@@ -84,7 +82,7 @@ namespace kernel::log {
     void success(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
-        detail::log_with_color(console::color::LIGHT_GREEN, "[SUCC] ", format, args);
+        detail::log_with_color(console::RgbColor::GREEN, console::RgbColor::BLACK, "[SUCC] ", format, args);
         kprintf("\n");
         va_end(args);
     }

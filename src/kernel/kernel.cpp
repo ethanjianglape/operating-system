@@ -5,14 +5,14 @@
 #include "arch/i686/vmm/vmm.hpp"
 
 #include "arch/i686/drivers/pic/pic.hpp"
-#include "arch/i686/drivers/vga/vga.hpp"
 #include "arch/i686/drivers/apic/apic.hpp"
 
-#include "kernel/drivers/framebuffer/framebuffer.hpp"
 #include "kernel/kprintf/kprintf.hpp"
 #include "kernel/log/log.hpp"
 #include "kernel/memory/memory.hpp"
 #include <kernel/boot/boot.hpp>
+#include <kernel/console/console.hpp>
+#include <kernel/drivers/framebuffer/framebuffer.hpp>
 
 #include <cstdint>
 
@@ -36,7 +36,7 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
 
     i686::cpu::sti();
 
-    kernel::console::clear();
+    kernel::drivers::framebuffer::log();
 
     auto* ptr1 = (std::uint32_t*)kernel::kmalloc(128);
     auto* ptr2 = (std::uint32_t*)kernel::kmalloc(8654);

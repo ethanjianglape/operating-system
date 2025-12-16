@@ -1,6 +1,7 @@
 #pragma once
 
-#include "kernel/kprintf/kprintf.hpp"
+#include <kernel/console/console.hpp>
+
 #include <cstdint>
 
 namespace kernel::drivers::framebuffer {
@@ -25,4 +26,6 @@ namespace kernel::drivers::framebuffer {
 
     void clear_black();
     void clear(std::uint32_t color);
+
+    void log();
 }

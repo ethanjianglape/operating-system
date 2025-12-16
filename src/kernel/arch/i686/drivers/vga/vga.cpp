@@ -1,5 +1,4 @@
 #include "vga.hpp"
-#include "kernel/kprintf/kprintf.hpp"
 
 #include <cstddef>
 #include <cstdint>

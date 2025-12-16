@@ -1,6 +1,5 @@
-#include "kernel/kprintf/kprintf.hpp"
-#include "kernel/log/log.hpp"
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include "kernel/log/log.hpp"
 
 #include <cstdint>
 
@@ -12,11 +11,22 @@ namespace kernel::drivers::framebuffer {
 
     static std::uint8_t* vram = nullptr;
 
+    static std::uint32_t get_screen_width() {
+        return fb_width;
+    }
+
+    static std::uint32_t get_screen_height() {
+        return fb_height;
+    }
+
     static kernel::console::driver_config console_driver = {
         .putchar_fn = nullptr,
         .get_color_fn = nullptr,
         .set_color_fn = nullptr,
-        .clear_fn = clear_black
+        .clear_fn = clear_black,
+        .put_pixel_fn = put_pixel,
+        .get_screen_width_fn = get_screen_width,
+        .get_screen_height_fn = get_screen_height,
     };
 
     kernel::console::driver_config* get_console_driver() {
@@ -28,12 +38,6 @@ namespace kernel::drivers::framebuffer {
     }
 
     void init(const FrameBufferInfo& info) {
-        kernel::log::init_start("Framebuffer");
-        kernel::log::info("Screen = %dx%d", info.width, info.height);
-        kernel::log::info("Pitch  = %d", info.pitch);
-        kernel::log::info("BPP    = %d", info.bpp);
-        kernel::log::info("VRAM   = %x", info.vram);
-
         fb_width = info.width;
         fb_height = info.height;
         fb_pitch = info.pitch;
@@ -53,7 +57,7 @@ namespace kernel::drivers::framebuffer {
     }
 
     void clear_black() {
-        clear(RGB_RED);
+        clear(RGB_BLACK);
     }
 
     void clear(std::uint32_t color) {
@@ -62,5 +66,12 @@ namespace kernel::drivers::framebuffer {
                 put_pixel(x, y, color);
             }
         }
+    }
+
+    void log() {
+        kernel::log::info("Screen = %dx%d", fb_width, fb_height);
+        kernel::log::info("Pitch  = %d", fb_pitch);
+        kernel::log::info("BPP    = %d", fb_bpp);
+        kernel::log::info("VRAM   = %x", vram);
     }
 }

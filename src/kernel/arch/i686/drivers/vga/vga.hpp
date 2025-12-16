@@ -1,6 +1,7 @@
 #pragma once
 
-#include "kernel/kprintf/kprintf.hpp"
+#include <kernel/console/console.hpp>
+
 #include <cstddef>
 #include <cstdint>
 

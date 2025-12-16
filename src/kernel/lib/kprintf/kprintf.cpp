@@ -1,7 +1,7 @@
 #include <kernel/kprintf/kprintf.hpp>
+#include <kernel/console/console.hpp>
 
 #include <cstdarg>
-#include <cstddef>
 
 namespace kernel {
     int kprintf(const char* format, ...) {
@@ -141,54 +141,5 @@ namespace kernel {
         }
         
         return written;
-    }
-}
-
-namespace kernel::console {
-    static driver_config null_driver = {
-        .putchar_fn = nullptr,
-        .get_color_fn = nullptr,
-        .set_color_fn = nullptr,
-        .clear_fn = nullptr
-    };
-    
-    static driver_config* driver = &null_driver;
-
-    void init(driver_config* config) {
-        driver = config;
-
-        set_color(color::WHITE, color::BLACK);
-    }
-
-    void putchar(char c) {
-        if (driver->putchar_fn != nullptr) {
-            driver->putchar_fn(c);
-        }
-    }
-
-    void puts(const char* str, std::size_t length) {
-        for (std::size_t i = 0; i < length; i++) {
-            putchar(str[i]);
-        }
-    }
-
-    void set_color(color fg, color bg) {
-        if (driver->set_color_fn != nullptr) {
-            driver->set_color_fn(static_cast<std::uint8_t>(fg), static_cast<std::uint8_t>(bg));
-        }
-    }
-
-    std::uint8_t get_color() {
-        if (driver->get_color_fn != nullptr) {
-            return driver->get_color_fn();
-        }
-
-        return 0x0F; // Default: white on black
-    }
-
-    void clear() {
-        if (driver->clear_fn != nullptr) {
-            driver->clear_fn();
-        }
     }
 }
