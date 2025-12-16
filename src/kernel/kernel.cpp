@@ -38,6 +38,10 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
 
     kernel::drivers::framebuffer::log();
 
+    kernel::console::scroll();
+    kernel::console::scroll();
+    kernel::console::scroll();
+
     auto* ptr1 = (std::uint32_t*)kernel::kmalloc(128);
     auto* ptr2 = (std::uint32_t*)kernel::kmalloc(8654);
     auto* ptr3 = (std::uint32_t*)kernel::kmalloc(64);

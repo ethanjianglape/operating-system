@@ -8,6 +8,7 @@ namespace kernel::console {
     using console_get_color_fn = std::uint8_t (*)(void);
     using console_clear_fn = void (*)(void);
     using console_put_pixel_fn = void (*)(std::uint32_t x, std::uint32_t y, std::uint32_t color);
+    using console_get_pixel_fn = std::uint32_t (*)(std::uint32_t x, std::uint32_t y);
     using console_get_screen_width_fn = std::uint32_t (*)(void);
     using console_get_screen_height_fn = std::uint32_t (*)(void);
 
@@ -17,6 +18,7 @@ namespace kernel::console {
         console_set_color_fn set_color_fn = nullptr;
         console_clear_fn clear_fn = nullptr;
         console_put_pixel_fn put_pixel_fn = nullptr;
+        console_get_pixel_fn get_pixel_fn = nullptr;
         console_get_screen_width_fn get_screen_width_fn = nullptr;
         console_get_screen_height_fn get_screen_height_fn = nullptr;
     };
@@ -51,7 +53,9 @@ namespace kernel::console {
 
     void init(driver_config* config);
 
+    void scroll();
     void newline();
+    
     void putchar(char c);
     void puts(const char* str, std::size_t length);
 

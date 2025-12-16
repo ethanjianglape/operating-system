@@ -23,6 +23,7 @@ namespace kernel::drivers::framebuffer {
     kernel::console::driver_config* get_console_driver();
 
     void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
+    std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y);
 
     void clear_black();
     void clear(std::uint32_t color);

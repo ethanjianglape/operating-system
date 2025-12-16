@@ -8,6 +8,7 @@ namespace kernel::console {
         .set_color_fn = nullptr,
         .clear_fn = nullptr,
         .put_pixel_fn = nullptr,
+        .get_pixel_fn = nullptr,
         .get_screen_width_fn = nullptr,
         .get_screen_height_fn = nullptr,
     };
@@ -26,9 +27,27 @@ namespace kernel::console {
         cursor_y = 0;
     }
 
+    void scroll() {
+        const auto width = driver->get_screen_width_fn();
+        const auto height = driver->get_screen_height_fn();
+        
+        for (std::uint32_t pixel_y = 0; pixel_y < height - fonts::FONT_HEIGHT; pixel_y++) {
+            for (std::uint32_t pixel_x = 0; pixel_x < width; pixel_x++) {
+                const auto pixel = driver->get_pixel_fn(pixel_x, pixel_y + fonts::FONT_HEIGHT);
+                driver->put_pixel_fn(pixel_x, pixel_y, pixel);
+            }
+        }
+
+        cursor_y -= fonts::FONT_HEIGHT;
+    }
+
     void newline(){
         cursor_x = 0;
         cursor_y += fonts::FONT_HEIGHT;
+
+        if (cursor_y + fonts::FONT_HEIGHT > driver->get_screen_height_fn()) {
+            scroll();
+        }
     }
 
     void putchar(char c) {

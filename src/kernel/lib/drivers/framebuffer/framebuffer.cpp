@@ -25,6 +25,7 @@ namespace kernel::drivers::framebuffer {
         .set_color_fn = nullptr,
         .clear_fn = clear_black,
         .put_pixel_fn = put_pixel,
+        .get_pixel_fn = get_pixel,
         .get_screen_width_fn = get_screen_width,
         .get_screen_height_fn = get_screen_height,
     };
@@ -54,6 +55,17 @@ namespace kernel::drivers::framebuffer {
         vram[offset + 0] = blue;
         vram[offset + 1] = green;
         vram[offset + 2] = red;
+    }
+
+    std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y) {
+        std::uint32_t pixel = 0x00000000;
+        const auto offset = get_pixel_offset(x, y);
+
+        pixel |= vram[offset + 0];
+        pixel |= vram[offset + 1] << 8;
+        pixel |= vram[offset + 2] << 16;
+
+        return pixel;
     }
 
     void clear_black() {
