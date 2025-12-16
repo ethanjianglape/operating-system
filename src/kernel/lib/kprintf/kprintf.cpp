@@ -95,6 +95,33 @@ namespace kernel {
 
                     break;
                 }
+                case 'x': {
+                    static const char* digits = "0123456789ABCDEF";
+                    unsigned int unum = va_arg(args, unsigned int);
+                    int i = 0;
+                    char buff[16];
+
+                    console::puts("0x", 2);
+                    written += 2;
+
+                    if (unum == 0) {
+                        console::putchar('0');
+                        written++;
+                    } else {
+                        while (unum > 0) {
+                            char digit = digits[unum % 16];
+                            buff[i++] = digit;
+                            unum /= 16;
+                        }
+
+                        while (i > 0) {
+                            console::putchar(buff[--i]);
+                            written++;
+                        }
+                    }
+
+                    break;
+                }
                 case '%':
                     console::putchar('%');
                     written++;

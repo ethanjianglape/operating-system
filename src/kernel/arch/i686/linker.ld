@@ -17,6 +17,7 @@ SECTIONS
 
     /* Boot section at physical address for GRUB and early boot) */
     . = KERNEL_PHYS_BASE;
+    kernel_physical_start = .;
 
     /* Multiboot header section (must be at the beginning) */
     .boot ALIGN(4K) : AT(ADDR(.boot))

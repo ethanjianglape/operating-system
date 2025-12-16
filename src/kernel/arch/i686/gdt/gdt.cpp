@@ -79,6 +79,7 @@ void gdt::init() {
     load_gdt(&gdtr);
     load_tss();
 
+    /*
     kernel::log::info("GDT created with 6 entries");
     kernel::log::info("GDT[0] = null descriptor");
     kernel::log::info("GDT[1] = kernel code");
@@ -86,6 +87,7 @@ void gdt::init() {
     kernel::log::info("GDT[3] = user code");
     kernel::log::info("GDT[4] = user data");
     kernel::log::info("GDT[5] = TSS (ss0=%u, esp0=%u)", tss.ss0, tss.esp0);
+    */
 
     kernel::log::init_end("GDT");
 }

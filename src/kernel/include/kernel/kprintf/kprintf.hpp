@@ -50,5 +50,3 @@ namespace kernel {
         std::uint8_t get_color();
     }
 }
-
-

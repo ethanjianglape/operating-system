@@ -4,3 +4,8 @@ CompileFlags:
         - fno-exceptions
         - fno-rtti
     CompilationDatabase: build/
+
+Diagnostics:
+    ClangTidy:
+        Remove:
+            - misc-unused-alias-decls

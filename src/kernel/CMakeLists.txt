@@ -25,7 +25,7 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/timers/timer.cpp
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
-    ${ARCH_DIR}/paging/paging.cpp
+    ${ARCH_DIR}/vmm/vmm.cpp
     ${ARCH_DIR}/process/process.cpp
     ${ARCH_DIR}/process/process.s
 )
@@ -39,9 +39,12 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
+    ${LIB_DIR}/boot/boot.cpp
     ${LIB_DIR}/kprintf/kprintf.cpp
     ${LIB_DIR}/log/log.cpp
     ${LIB_DIR}/panic/panic.cpp
+    ${LIB_DIR}/memory/memory.cpp
+    ${LIB_DIR}/memory/pmm.cpp
 )
 
 # Architecture-specific boot files
