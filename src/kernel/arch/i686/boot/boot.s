@@ -9,7 +9,17 @@ multiboot_start:
     .long multiboot_end - multiboot_start  # Header length
     .long 0x100000000 - (0xe85250d6 + 0 + (multiboot_end - multiboot_start)) # Checksum
 
+    # Framebuffer tag
+    .align 8
+    .word 5    # MULTIBOOT_HEADER_TAG_FRAMEBUFFER
+    .word 0    # flags
+    .long 20   # tag size
+    .long 1024 # screen width
+    .long 768  # screen height
+    .long 32   # bpp
+
     # End tag
+    .align 8
     .word 0    # type
     .word 0    # flags
     .long 8    # size

@@ -48,5 +48,7 @@ namespace kernel {
 
         void set_color(color fg, color bg);
         std::uint8_t get_color();
+
+        void clear();
     }
 }

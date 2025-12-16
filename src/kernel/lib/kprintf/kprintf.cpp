@@ -145,7 +145,14 @@ namespace kernel {
 }
 
 namespace kernel::console {
-    static driver_config* driver = nullptr;
+    static driver_config null_driver = {
+        .putchar_fn = nullptr,
+        .get_color_fn = nullptr,
+        .set_color_fn = nullptr,
+        .clear_fn = nullptr
+    };
+    
+    static driver_config* driver = &null_driver;
 
     void init(driver_config* config) {
         driver = config;
@@ -177,5 +184,11 @@ namespace kernel::console {
         }
 
         return 0x0F; // Default: white on black
+    }
+
+    void clear() {
+        if (driver->clear_fn != nullptr) {
+            driver->clear_fn();
+        }
     }
 }

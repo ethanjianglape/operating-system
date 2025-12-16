@@ -1,5 +1,28 @@
 #pragma once
 
-namespace kernel::drivers::framebuffer {
+#include "kernel/kprintf/kprintf.hpp"
+#include <cstdint>
 
+namespace kernel::drivers::framebuffer {
+    inline constexpr std::uint32_t RGB_BLACK = 0x00000000;
+    inline constexpr std::uint32_t RGB_RED   = 0x00FF0000;
+    inline constexpr std::uint32_t RGB_GREEN = 0x0000FF00;
+    inline constexpr std::uint32_t RGB_BLUE  = 0x000000FF;
+    
+    struct FrameBufferInfo {
+        std::uint32_t width;
+        std::uint32_t height;
+        std::uint32_t pitch;
+        std::uint8_t bpp;
+        std::uint8_t* vram;
+    };
+
+    void init(const FrameBufferInfo& info);
+
+    kernel::console::driver_config* get_console_driver();
+
+    void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
+
+    void clear_black();
+    void clear(std::uint32_t color);
 }
