@@ -31,7 +31,6 @@ set(ARCH_KERNEL_SOURCES
 )
 
 set(ARCH_DRIVER_KERNEL_SOURCES
-    ${ARCH_DRIVERS_DIR}/vga/vga.cpp
     ${ARCH_DRIVERS_DIR}/pic/pic.cpp
     ${ARCH_DRIVERS_DIR}/pit/pit.cpp
     ${ARCH_DRIVERS_DIR}/apic/apic.cpp
