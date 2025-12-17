@@ -67,7 +67,7 @@ namespace kernel::log {
         std::va_list args;
         va_start(args, format);
         detail::log_with_color(console::RgbColor::WHITE, console::RgbColor::BLACK, "[INIT] ", format, args);
-        kprintf("...\n");
+        kprintf(" initializing...\n");
         va_end(args);
     }
 
@@ -75,7 +75,7 @@ namespace kernel::log {
         std::va_list args;
         va_start(args, format);
         detail::log_with_color(console::RgbColor::GREEN, console::RgbColor::BLACK, "[INIT] ", format, args);
-        kprintf(" Initialized\n");
+        kprintf(" initialized!\n");
         va_end(args);
     }
 
