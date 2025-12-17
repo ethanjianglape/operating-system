@@ -1,15 +1,15 @@
+#include "arch/i686/drivers/serial/serial.hpp"
 #include "arch/i686/gdt/gdt.hpp"
 #include "arch/i686/cpu/cpu.hpp"
 #include "arch/i686/interrupts/idt.hpp"
+#include "arch/i686/process/process.hpp"
 #include "arch/i686/syscall/syscall.hpp"
 #include "arch/i686/vmm/vmm.hpp"
 
 #include "arch/i686/drivers/pic/pic.hpp"
 #include "arch/i686/drivers/apic/apic.hpp"
-
 #include "kernel/kprintf/kprintf.hpp"
-#include "kernel/log/log.hpp"
-#include "kernel/memory/memory.hpp"
+
 #include <kernel/boot/boot.hpp>
 #include <kernel/console/console.hpp>
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
@@ -19,38 +19,25 @@
 extern "C"
 [[noreturn]]
 void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_addr) {
-    //i686::drivers::vga::init();
-    //kernel::console::init(i686::drivers::vga::get_driver());
-
+    i686::drivers::serial::init();
+    kernel::console::init(i686::drivers::serial::get_console_driver());
+    
     i686::gdt::init();
     i686::idt::init();
     i686::vmm::init();
-
-    kernel::boot::init(multiboot_magic, multiboot_info_addr);
-    kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
-    
     i686::syscall::init();
     
     i686::drivers::pic::init();
     i686::drivers::apic::init();
 
+    kernel::boot::init(multiboot_magic, multiboot_info_addr);
+    kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
+
     i686::cpu::sti();
 
-    kernel::drivers::framebuffer::log();
+    kernel::kprintf("hello world\n");
 
-    kernel::console::scroll();
-    kernel::console::scroll();
-    kernel::console::scroll();
-
-    auto* ptr1 = (std::uint32_t*)kernel::kmalloc(128);
-    auto* ptr2 = (std::uint32_t*)kernel::kmalloc(8654);
-    auto* ptr3 = (std::uint32_t*)kernel::kmalloc(64);
-
-    kernel::log::info("ptr addr = %x", ptr1);
-    kernel::log::info("ptr addr = %x", ptr2);
-    kernel::log::info("ptr addr = %x", ptr3);
-
-    //i686::process::init();
+    // future work, userspace will start here
 
     // Infinite loop - kernel_main should never exit
     while (true) {

@@ -35,6 +35,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
     ${ARCH_DRIVERS_DIR}/pic/pic.cpp
     ${ARCH_DRIVERS_DIR}/pit/pit.cpp
     ${ARCH_DRIVERS_DIR}/apic/apic.cpp
+    ${ARCH_DRIVERS_DIR}/serial/serial.cpp
 )
 
 # General purpose kernel library sources (not arch specific)

@@ -20,7 +20,7 @@ namespace kernel::drivers::framebuffer {
 
     void init(const FrameBufferInfo& info);
 
-    kernel::console::driver_config* get_console_driver();
+    kernel::console::ConsoleDriver* get_console_driver();
 
     void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
     std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y);

@@ -13,7 +13,7 @@ namespace i686::drivers::vga {
     
     void init();
 
-    kernel::console::driver_config* get_driver();
+    kernel::console::ConsoleDriver* get_driver();
 
     void putchar(char c);
 

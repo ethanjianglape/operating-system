@@ -2,15 +2,15 @@
 #include <kernel/console/font8x16.hpp>
 
 namespace kernel::console {
-    static driver_config null_driver = {
-        .putchar_fn = nullptr,
-        .get_color_fn = nullptr,
-        .set_color_fn = nullptr,
-        .clear_fn = nullptr,
-        .put_pixel_fn = nullptr,
-        .get_pixel_fn = nullptr,
-        .get_screen_width_fn = nullptr,
-        .get_screen_height_fn = nullptr,
+    // simulates writing to /dev/null, calls to kprintf() and kernel::log() will do nothing
+    static ConsoleDriver null_driver = {
+        .putchar = nullptr,
+        .clear = nullptr,
+        .put_pixel = nullptr,
+        .get_pixel = nullptr,
+        .get_screen_width = nullptr,
+        .get_screen_height = nullptr,
+        .mode = ConsoleMode::TEXT
     };
 
     static std::uint32_t cursor_x = 0;
@@ -18,40 +18,49 @@ namespace kernel::console {
 
     static std::uint32_t current_fg = static_cast<std::uint32_t>(RgbColor::WHITE);
     static std::uint32_t current_bg = static_cast<std::uint32_t>(RgbColor::BLACK);
-    
-    static driver_config* driver = &null_driver;
 
-    void init(driver_config* config) {
-        driver = config;
+    static ConsoleDriver* driver = &null_driver;
+
+    void init(ConsoleDriver* d) {
+        driver = d;
         cursor_x = 0;
         cursor_y = 0;
     }
 
     void scroll() {
-        const auto width = driver->get_screen_width_fn();
-        const auto height = driver->get_screen_height_fn();
+        if (driver->mode == ConsoleMode::SERIAL) {
+            return;
+        }
+        
+        const auto width = driver->get_screen_width();
+        const auto height = driver->get_screen_height();
         
         for (std::uint32_t pixel_y = 0; pixel_y < height - fonts::FONT_HEIGHT; pixel_y++) {
             for (std::uint32_t pixel_x = 0; pixel_x < width; pixel_x++) {
-                const auto pixel = driver->get_pixel_fn(pixel_x, pixel_y + fonts::FONT_HEIGHT);
-                driver->put_pixel_fn(pixel_x, pixel_y, pixel);
+                const auto pixel = driver->get_pixel(pixel_x, pixel_y + fonts::FONT_HEIGHT);
+                driver->put_pixel(pixel_x, pixel_y, pixel);
             }
         }
 
         cursor_y -= fonts::FONT_HEIGHT;
     }
 
-    void newline(){
+    void newline() {
         cursor_x = 0;
-        cursor_y += fonts::FONT_HEIGHT;
+        cursor_y++;
 
-        if (cursor_y + fonts::FONT_HEIGHT > driver->get_screen_height_fn()) {
+        if (cursor_y + fonts::FONT_HEIGHT > driver->get_screen_height()) {
             scroll();
         }
     }
 
     void putchar(char c) {
-        if (driver->put_pixel_fn == nullptr) {
+        if (driver->putchar != nullptr) {
+            driver->putchar(c);
+            return;
+        }
+        
+        if (driver->put_pixel == nullptr) {
             return;
         }
 
@@ -62,26 +71,26 @@ namespace kernel::console {
 
         const std::uint8_t* glyph = fonts::get_glyph(c);
 
-        auto pixel_x = cursor_x;
-        auto pixel_y = cursor_y;
+        const std::uint32_t pixel_x = cursor_x * fonts::FONT_WIDTH;
+        const std::uint32_t pixel_y = cursor_y * fonts::FONT_HEIGHT;
 
-        for (std::uint8_t gi = 0; gi < fonts::FONT_HEIGHT; gi++) {
-            const std::uint8_t byte = glyph[gi];
+        for (std::uint8_t y = 0; y < fonts::FONT_HEIGHT; y++) {
+            const std::uint8_t byte = glyph[y];
 
-            for (std::uint8_t pi = 0; pi < fonts::FONT_WIDTH; pi++) {
-                const std::uint8_t pixel = (byte >> (fonts::FONT_WIDTH - pi - 1)) & 1;
+            for (std::uint8_t x = 0; x < fonts::FONT_WIDTH; x++) {
+                const std::uint8_t pixel = (byte >> (fonts::FONT_WIDTH - x - 1)) & 1;
 
                 if (pixel == 1) {
-                    driver->put_pixel_fn(pixel_x + pi, pixel_y + gi, current_fg);
+                    driver->put_pixel(pixel_x + x, pixel_y + y, current_fg);
                 } else {
-                    driver->put_pixel_fn(pixel_x + pi, pixel_y + gi, current_bg);
+                    driver->put_pixel(pixel_x + x, pixel_y + y, current_bg);
                 }
             }
         }
 
-        cursor_x += fonts::FONT_WIDTH;
+        cursor_x++;
 
-        if (cursor_x >= driver->get_screen_width_fn()) {
+        if (cursor_x >= driver->get_screen_width()) {
             newline();
         }
     }
@@ -92,9 +101,13 @@ namespace kernel::console {
         }
     }
 
+    void set_color(std::uint32_t fg, std::uint32_t bg) {
+        current_fg = fg;
+        current_bg = bg;
+    }
+
     void set_color(RgbColor fg, RgbColor bg) {
-        current_fg = static_cast<std::uint32_t>(fg);
-        current_bg = static_cast<std::uint32_t>(bg);
+        set_color(static_cast<std::uint32_t>(fg), static_cast<std::uint32_t>(bg));
     }
 
     std::uint32_t get_current_fg() {
@@ -105,17 +118,9 @@ namespace kernel::console {
         return current_bg;
     }
 
-    std::uint8_t get_color() {
-        if (driver->get_color_fn != nullptr) {
-            return driver->get_color_fn();
-        }
-
-        return 0x0F; // Default: white on black
-    }
-
     void clear() {
-        if (driver->clear_fn != nullptr) {
-            driver->clear_fn();
+        if (driver->clear != nullptr) {
+            driver->clear();
             cursor_x = 0;
             cursor_y = 0;
         }

@@ -1,4 +1,5 @@
 #include "vga.hpp"
+#include "kernel/console/console.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,11 +12,9 @@ namespace i686::drivers::vga {
 
     static std::uint16_t* vga_buffer = reinterpret_cast<std::uint16_t*>(VGA_BUFFER_ADDR);
 
-    static kernel::console::driver_config driver {
-        .putchar_fn = putchar,
-        .get_color_fn = get_color,
-        .set_color_fn = set_color,
-        .clear_fn = clear
+    static kernel::console::ConsoleDriver driver {
+        .clear = clear,
+        .mode = kernel::console::ConsoleMode::TEXT
     };
 
     inline constexpr std::uint16_t vga_entry(std::uint8_t c, std::uint8_t color) {
@@ -29,7 +28,7 @@ namespace i686::drivers::vga {
         clear();
     }
 
-    kernel::console::driver_config* get_driver() {
+    kernel::console::ConsoleDriver* get_driver() {
         return &driver;
     }
 

@@ -3,24 +3,27 @@
 #include <cstdint>
 
 namespace kernel::console {
-    using console_putchar_fn = void (*)(char);
-    using console_set_color_fn = void (*)(std::uint8_t fg, std::uint8_t bg);
-    using console_get_color_fn = std::uint8_t (*)(void);
-    using console_clear_fn = void (*)(void);
-    using console_put_pixel_fn = void (*)(std::uint32_t x, std::uint32_t y, std::uint32_t color);
-    using console_get_pixel_fn = std::uint32_t (*)(std::uint32_t x, std::uint32_t y);
-    using console_get_screen_width_fn = std::uint32_t (*)(void);
-    using console_get_screen_height_fn = std::uint32_t (*)(void);
+    using putchar_fn = void (*)(char);
+    using clear_fn = void (*)(void);
+    using put_pixel_fn = void (*)(std::uint32_t x, std::uint32_t y, std::uint32_t color);
+    using get_pixel_fn = std::uint32_t (*)(std::uint32_t x, std::uint32_t y);
+    using get_screen_width_fn = std::uint32_t (*)(void);
+    using get_screen_height_fn = std::uint32_t (*)(void);
 
-    struct driver_config {
-        console_putchar_fn putchar_fn = nullptr;
-        console_get_color_fn get_color_fn = nullptr;
-        console_set_color_fn set_color_fn = nullptr;
-        console_clear_fn clear_fn = nullptr;
-        console_put_pixel_fn put_pixel_fn = nullptr;
-        console_get_pixel_fn get_pixel_fn = nullptr;
-        console_get_screen_width_fn get_screen_width_fn = nullptr;
-        console_get_screen_height_fn get_screen_height_fn = nullptr;
+    enum class ConsoleMode : std::uint32_t {
+        TEXT = 1,
+        SERIAL = 2,
+        PIXEL_BUFFER = 3
+    };
+
+    struct ConsoleDriver {
+        putchar_fn putchar = nullptr;
+        clear_fn clear = nullptr;
+        put_pixel_fn put_pixel = nullptr;
+        get_pixel_fn get_pixel = nullptr;
+        get_screen_width_fn get_screen_width = nullptr;
+        get_screen_height_fn get_screen_height = nullptr;
+        ConsoleMode mode;
     };
 
     enum class RgbColor : std::uint32_t {
@@ -51,7 +54,7 @@ namespace kernel::console {
         WHITE = 15,
     };
 
-    void init(driver_config* config);
+    void init(ConsoleDriver* driver);
 
     void scroll();
     void newline();
@@ -59,10 +62,11 @@ namespace kernel::console {
     void putchar(char c);
     void puts(const char* str, std::size_t length);
 
+    void set_color(std::uint32_t fg, std::uint32_t bg);
     void set_color(RgbColor fg, RgbColor bg);
+    
     std::uint32_t get_current_fg();
     std::uint32_t get_current_bg();
-    std::uint8_t get_color();
 
     void clear();
 }

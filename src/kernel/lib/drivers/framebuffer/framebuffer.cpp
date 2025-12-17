@@ -1,5 +1,6 @@
+#include "kernel/console/console.hpp"
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
-#include "kernel/log/log.hpp"
+#include <kernel/log/log.hpp>
 
 #include <cstdint>
 
@@ -19,18 +20,16 @@ namespace kernel::drivers::framebuffer {
         return fb_height;
     }
 
-    static kernel::console::driver_config console_driver = {
-        .putchar_fn = nullptr,
-        .get_color_fn = nullptr,
-        .set_color_fn = nullptr,
-        .clear_fn = clear_black,
-        .put_pixel_fn = put_pixel,
-        .get_pixel_fn = get_pixel,
-        .get_screen_width_fn = get_screen_width,
-        .get_screen_height_fn = get_screen_height,
+    static kernel::console::ConsoleDriver console_driver = {
+        .clear = clear_black,
+        .put_pixel = put_pixel,
+        .get_pixel = get_pixel,
+        .get_screen_width = get_screen_width,
+        .get_screen_height = get_screen_height,
+        .mode = console::ConsoleMode::PIXEL_BUFFER
     };
 
-    kernel::console::driver_config* get_console_driver() {
+    kernel::console::ConsoleDriver* get_console_driver() {
         return &console_driver;
     }
 
@@ -81,9 +80,7 @@ namespace kernel::drivers::framebuffer {
     }
 
     void log() {
-        kernel::log::info("Screen = %dx%d", fb_width, fb_height);
-        kernel::log::info("Pitch  = %d", fb_pitch);
-        kernel::log::info("BPP    = %d", fb_bpp);
+        kernel::log::info("Screen = %dx%dx%d", fb_width, fb_height, fb_bpp);
         kernel::log::info("VRAM   = %x", vram);
     }
 }
