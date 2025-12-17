@@ -20,6 +20,7 @@ namespace i686::drivers::serial {
 
     void init();
     void putchar(char c);
+    void puts(const char* str);
 
     kernel::console::ConsoleDriver* get_console_driver();
 }

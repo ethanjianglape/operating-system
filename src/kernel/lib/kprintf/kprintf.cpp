@@ -4,6 +4,16 @@
 #include <cstdarg>
 
 namespace kernel {
+    int kprintf2(const char* str) {
+        int written = 0;
+
+        while (*str) {
+            written += kernel::console::put(*str++);
+        }
+
+        return written;
+    }
+    
     int kprintf(const char* format, ...) {
         std::va_list args;
         va_start(args, format);
@@ -101,7 +111,7 @@ namespace kernel {
                     int i = 0;
                     char buff[16];
 
-                    console::puts("0x", 2);
+                    console::put("0x");
                     written += 2;
 
                     if (unum == 0) {

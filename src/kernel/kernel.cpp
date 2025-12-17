@@ -7,6 +7,7 @@
 
 #include "arch/i686/drivers/pic/pic.hpp"
 #include "arch/i686/drivers/apic/apic.hpp"
+#include "kernel/kprintf/kprintf.hpp"
 
 #include <kernel/boot/boot.hpp>
 #include <kernel/console/console.hpp>
@@ -44,6 +45,18 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
 
     kernel::log::info("Welcome to MyOS!");
 
+    std::uint32_t i = 456;
+
+    int ret = kernel::kprintf2("this is a string %x, %d, %o, %b\n", 100, i, 167, 398);
+
+    kernel::kprintf("printed %x chars\n", ret);
+
+    kernel::log::info("This is an info log");
+    kernel::log::success("this is a success");
+    kernel::log::warn("this is a warning");
+    kernel::log::error("this is an error");
+    kernel::log::debug("this is a debug %x", 12345);
+    
     // future work, userspace will start here
 
     // Infinite loop - kernel_main should never exit

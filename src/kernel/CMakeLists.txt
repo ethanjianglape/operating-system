@@ -41,7 +41,6 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/boot/boot.cpp
     ${LIB_DIR}/kprintf/kprintf.cpp
-    ${LIB_DIR}/log/log.cpp
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp

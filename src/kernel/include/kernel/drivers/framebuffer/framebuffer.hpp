@@ -25,6 +25,14 @@ namespace kernel::drivers::framebuffer {
     void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
     std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y);
 
+    void draw_bitmap(std::uint32_t x,
+                     std::uint32_t y,
+                     std::uint32_t width,
+                     std::uint32_t height,
+                     std::uint8_t* bitmap,
+                     std::uint32_t fg,
+                     std::uint32_t bg);
+
     void clear_black();
     void clear(std::uint32_t color);
 

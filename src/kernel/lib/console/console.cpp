@@ -1,3 +1,4 @@
+#include <concepts>
 #include <kernel/console/console.hpp>
 #include <kernel/console/font8x16.hpp>
 
@@ -19,12 +20,70 @@ namespace kernel::console {
     static std::uint32_t current_fg = static_cast<std::uint32_t>(RgbColor::WHITE);
     static std::uint32_t current_bg = static_cast<std::uint32_t>(RgbColor::BLACK);
 
+    static std::uint32_t prev_fg = current_fg;
+    static std::uint32_t prev_bg = current_bg;
+
     static ConsoleDriver* driver = &null_driver;
+
+    static NumberFormat prev_number_format = NumberFormat::DEC;
+
+    static NumberFormat number_format = NumberFormat::DEC;
+
+    constexpr char DEC_CHARS[] = "0123456789";
+
+    constexpr char HEX_CHARS[] = "0123456789ABCDEF";
+
+    constexpr char OCT_CHARS[] = "01234567";
+
+    constexpr char BIN_CHARS[] = "01";
 
     void init(ConsoleDriver* d) {
         driver = d;
         cursor_x = 0;
         cursor_y = 0;
+    }
+
+    void set_number_format(NumberFormat f) {
+        prev_number_format = number_format;
+        number_format = f;
+    }
+
+    void reset_number_format() {
+        number_format = prev_number_format;
+    }
+
+    NumberFormat get_number_format() {
+        return number_format;
+    }
+
+    int number_format_divisor() {
+        switch (number_format) {
+        case NumberFormat::DEC:
+            return 10;
+        case NumberFormat::HEX:
+            return 16;
+        case NumberFormat::OCT:
+            return 8;
+        case NumberFormat::BIN:
+            return 2;
+        default:
+            return 10;
+        }
+    }
+
+    char number_format_char(int i) {
+        switch (number_format) {
+        case NumberFormat::DEC:
+            return DEC_CHARS[i];
+        case NumberFormat::HEX:
+            return HEX_CHARS[i];
+        case NumberFormat::OCT:
+            return OCT_CHARS[i];
+        case NumberFormat::BIN:
+            return BIN_CHARS[i];
+        default:
+            return ' ';
+        }
     }
 
     void scroll() {
@@ -52,6 +111,35 @@ namespace kernel::console {
         if (cursor_y + fonts::FONT_HEIGHT > driver->get_screen_height()) {
             scroll();
         }
+    }
+
+    template <>
+    int put(char c) {
+        putchar(c);
+
+        return 1;
+    }
+
+    template <>
+    int put(const unsigned char* str) {
+        int written = 0;
+        
+        while (*str) {
+            written += put(*str++);
+        }
+
+        return written;
+    }
+
+    template <>
+    int put(const char* str) {
+        int written = 0;
+        
+        while (*str) {
+            written += put(*str++);
+        }
+
+        return written;
     }
 
     void putchar(char c) {
@@ -102,12 +190,20 @@ namespace kernel::console {
     }
 
     void set_color(std::uint32_t fg, std::uint32_t bg) {
+        prev_fg = current_fg;
+        prev_bg = current_bg;
+        
         current_fg = fg;
         current_bg = bg;
     }
 
     void set_color(RgbColor fg, RgbColor bg) {
         set_color(static_cast<std::uint32_t>(fg), static_cast<std::uint32_t>(bg));
+    }
+
+    void reset_color() {
+        current_fg = prev_fg;
+        current_bg = prev_bg;
     }
 
     std::uint32_t get_current_fg() {
