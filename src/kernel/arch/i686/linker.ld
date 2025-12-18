@@ -4,7 +4,8 @@ ENTRY(_start)
 
 PHDRS
 {
-    boot PT_LOAD FLAGS(7);
+    boot PT_LOAD FLAGS(5);
+    boot_data PT_LOAD FLAGS(6);
     text PT_LOAD FLAGS(5);
     data PT_LOAD FLAGS(6);
 }
@@ -35,7 +36,7 @@ SECTIONS
     .boot.data ALIGN(4K) : AT(ADDR(.boot.data))
     {
         *(.boot.data)
-    } :boot
+    } :boot_data
 
     /* Switch to higher-half for kernel_main() */
     . += KERNEL_VIRT_BASE;

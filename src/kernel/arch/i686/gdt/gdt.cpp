@@ -57,7 +57,6 @@ void init_gdt_table() {
     std::uint32_t tss_limit = sizeof(gdt::tss_entry) - 1;
     
     gdt_table[5] = make_entry(tss_base, tss_limit, gdt::TSS_ACCESS, 0x00);
-
 }
 
 void init_tss() {
@@ -65,6 +64,16 @@ void init_tss() {
     tss.esp0 = reinterpret_cast<std::uint32_t>(kernel_stack) + sizeof(kernel_stack);
     tss.ss0 = 0x10;
     tss.iomap_base = sizeof(gdt::tss_entry);
+}
+
+void log_gdt_entry(std::size_t i, const char* name) {
+    auto* entry = &gdt_table[i];
+
+    kernel::log::info("GDT[%d]: %s [base (%x,%x,%x) limit (%x,%x) flags (%x) access (%x)]", i, name,
+                      entry->base_low, entry->base_mid, entry->base_high,
+                      entry->limit_low, entry->limit_mid,
+                      entry->flags,
+                      entry->access);
 }
 
 void gdt::init() {
@@ -79,15 +88,17 @@ void gdt::init() {
     load_gdt(&gdtr);
     load_tss();
 
-    /*
     kernel::log::info("GDT created with 6 entries");
-    kernel::log::info("GDT[0] = null descriptor");
-    kernel::log::info("GDT[1] = kernel code");
-    kernel::log::info("GDT[2] = kernel data");
-    kernel::log::info("GDT[3] = user code");
-    kernel::log::info("GDT[4] = user data");
-    kernel::log::info("GDT[5] = TSS (ss0=%u, esp0=%u)", tss.ss0, tss.esp0);
-    */
+    kernel::log::info("GDT.limit = %x", gdtr.limit);
+    kernel::log::info("GDT.base = %x", gdtr.base);
+
+    log_gdt_entry(0, "NULL");
+    log_gdt_entry(1, "Kernel Code");
+    log_gdt_entry(2, "Kernel Data");
+    log_gdt_entry(3, "User Code");
+    log_gdt_entry(4, "User Data");
+
+    kernel::log::info("GDT[5]: TSS (ss0=%x, esp0=%x)", tss.ss0, tss.esp0);
 
     kernel::log::init_end("GDT");
 }

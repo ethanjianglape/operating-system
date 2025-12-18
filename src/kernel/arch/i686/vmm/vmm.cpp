@@ -32,6 +32,9 @@ static vmm::page_table_entry user_pte[vmm::USER_PT_SIZE][vmm::NUM_PT_ENTRIES];
 [[gnu::aligned(4096)]]
 static vmm::page_table_entry apic_pte[vmm::NUM_PT_ENTRIES];
 
+// Heap space used by the kernel for things like kmalloc()
+static std::uint8_t* kernel_heap = reinterpret_cast<std::uint8_t*>(vmm::KERNEL_HEAP_VIRT_BASE);
+
 void init_kernel_pde(vmm::page_directory_entry* pde, vmm::page_table_entry* pte) {
     pde->p = 1;   // Present
     pde->rw = 1;  // Writable
@@ -160,9 +163,26 @@ void enable_paging() {
     asm volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
+void* vmm::map_physical_region(void* physical_addr, std::size_t bytes) {
+    const std::size_t pages = (bytes / PAGE_SIZE) + 1;
+    auto physical_addr_ptr = reinterpret_cast<std::uint8_t*>(physical_addr);
+    void* page_start = kernel_heap;
+
+    for (std::size_t page = 0; page < pages; page++) {
+        void* virtual_addr = kernel_heap + (page * PAGE_SIZE);
+
+        map_page(virtual_addr, physical_addr_ptr, PAGE_PRESENT | PAGE_WRITE | PAGE_CACHE_DISABLE);
+        physical_addr_ptr += kernel::pmm::FRAME_SIZE;
+    }
+
+    kernel_heap += (pages * PAGE_SIZE);
+
+    return page_start;
+}
+
 void vmm::map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags) {
-    std::uint32_t pde_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 22;
-    std::uint32_t pte_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 12 & 0x3FF;
+    const auto pde_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 22;
+    const auto pte_index = reinterpret_cast<std::uint32_t>(virtual_addr) >> 12 & 0x3FF;
 
     page_table_entry* pte = nullptr;
 
@@ -179,6 +199,7 @@ void vmm::map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags)
     pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
     pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
     pte->us = (flags & PAGE_USER) ? 1 : 0;
+    pte->pcd = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
     pte->addr = reinterpret_cast<std::uint32_t>(physical_addr) >> 12;
 
     asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
@@ -191,18 +212,17 @@ void* vmm::alloc_kernel_memory(std::size_t bytes) {
 }
 
 void* vmm::alloc_kernel_pages(std::size_t num_pages) {
-    static std::uint8_t* current_heap = reinterpret_cast<std::uint8_t*>(KERNEL_HEAP_VIRT_BASE);
-    const auto heap = reinterpret_cast<std::uint32_t>(current_heap);
+    const auto heap = reinterpret_cast<std::uint32_t>(kernel_heap);
 
     if (heap + (num_pages * PAGE_SIZE) > KERNEL_HEAP_VIRT_END) {
         kernel::panicf("Out of virtual memory, cannot allocate %d pages", num_pages);
     }
 
-    void* page_start = current_heap;
+    void* page_start = kernel_heap;
 
     for (std::size_t page = 0; page < num_pages; page++) {
         void* phys_addr = kernel::pmm::alloc_frame();
-        void* virt_addr = current_heap + (page * PAGE_SIZE);
+        void* virt_addr = kernel_heap + (page * PAGE_SIZE);
 
         if (phys_addr == nullptr) {
             kernel::panic("Physical Memory Manager returned NULL, system is out of memory");
@@ -211,7 +231,7 @@ void* vmm::alloc_kernel_pages(std::size_t num_pages) {
         map_page(virt_addr, phys_addr, PAGE_PRESENT | PAGE_WRITE);
     }
 
-    current_heap += (num_pages * PAGE_SIZE);
+    kernel_heap += (num_pages * PAGE_SIZE);
 
     return page_start;
 }

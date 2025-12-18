@@ -31,20 +31,20 @@ set(ARCH_KERNEL_SOURCES
 )
 
 set(ARCH_DRIVER_KERNEL_SOURCES
-    ${ARCH_DRIVERS_DIR}/vga/vga.cpp
     ${ARCH_DRIVERS_DIR}/pic/pic.cpp
     ${ARCH_DRIVERS_DIR}/pit/pit.cpp
     ${ARCH_DRIVERS_DIR}/apic/apic.cpp
+    ${ARCH_DRIVERS_DIR}/serial/serial.cpp
 )
 
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/boot/boot.cpp
-    ${LIB_DIR}/kprintf/kprintf.cpp
-    ${LIB_DIR}/log/log.cpp
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp
+    ${LIB_DIR}/console/console.cpp
+    ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
 )
 
 # Architecture-specific boot files

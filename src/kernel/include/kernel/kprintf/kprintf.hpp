@@ -1,52 +1,70 @@
 #pragma once
 
-#include <cstdarg>
-#include <cstddef>
-#include <cstdint>
+#include <kernel/console/console.hpp>
+
+#include <utility>
 
 namespace kernel {
-    int kprintf(const char* str, ...);
+    inline int kprintf(const char* str) {
+        int written = 0;
 
-    int kvprintf(const char* str, std::va_list args);
+        while (*str) {
+            written += kernel::console::put(*str++);
+        }
 
-    namespace console {
-        using console_putchar_fn = void (*)(char);
-        using console_set_color_fn = void (*)(std::uint8_t fg, std::uint8_t bg);
-        using console_get_color_fn = std::uint8_t (*)(void);
-        using console_clear_fn = void (*)(void);
+        return written;
+    }
 
-        struct driver_config {
-            console_putchar_fn putchar_fn = nullptr;
-            console_get_color_fn get_color_fn = nullptr;
-            console_set_color_fn set_color_fn = nullptr;
-            console_clear_fn clear_fn = nullptr;
-        };
+    template <typename T, typename... Ts>
+    int kprintf(const char* format, T value, Ts... args) {
+        if (format == nullptr) {
+            return 0;
+        }
 
-        enum class color : std::uint8_t {
-            BLACK = 0,
-            BLUE = 1,
-            GREEN = 2,
-            CYAN = 3,
-            RED = 4,
-            MAGENTA = 5,
-            BROWN = 6,
-            LIGHT_GREY = 7,
-            DARK_GREY = 8,
-            LIGHT_BLUE = 9,
-            LIGHT_GREEN = 10,
-            LIGHT_CYAN = 11,
-            LIGHT_RED = 12,
-            LIGHT_MAGENTA = 13,
-            LIGHT_BROWN = 14,
-            WHITE = 15,
-        };
+        int written = 0;
 
-        void init(driver_config* config);
-        
-        void putchar(char c);
-        void puts(const char* str, std::size_t length);
+        for (; *format; format++) {
+            if (*format == '%' && (*format + 1)) {
+                switch (*(format + 1)) {
+                case '%':
+                    written += console::put('%');
+                    break;
+                case 'b':
+                    console::set_number_format(console::NumberFormat::BIN);
+                    written += console::put("0b");
+                    written += console::put(value);
+                    console::reset_number_format();
+                    break;
+                case 'o':
+                    console::set_number_format(console::NumberFormat::OCT);
+                    written += console::put('0');
+                    written += console::put(value);
+                    console::reset_number_format();
+                    break;
+                case 'i':
+                case 'd':
+                    console::set_number_format(console::NumberFormat::DEC);
+                    written += console::put(value);
+                    console::reset_number_format();
+                    break;
+                case 'x':
+                    console::set_number_format(console::NumberFormat::HEX);
+                    written += console::put("0x");
+                    written += console::put(value);
+                    console::reset_number_format();
+                    break;
+                default:
+                    written += console::put(value);
+                }
+                
+                written += kprintf(format + 2, std::forward<Ts>(args)...);
 
-        void set_color(color fg, color bg);
-        std::uint8_t get_color();
+                return written;
+            } 
+
+            written += console::put(*format);
+        }
+
+        return written;
     }
 }

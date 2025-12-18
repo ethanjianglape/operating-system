@@ -7,9 +7,10 @@ namespace i686::vmm {
     inline constexpr std::uint32_t NUM_PT_ENTRIES  = 1024;
     inline constexpr std::uint32_t PAGE_SIZE       = 4096;
 
-    inline constexpr uint32_t PAGE_PRESENT = 0x01;
-    inline constexpr uint32_t PAGE_WRITE   = 0x02;
-    inline constexpr uint32_t PAGE_USER    = 0x04;
+    inline constexpr std::uint32_t PAGE_PRESENT       = 0x01; // p
+    inline constexpr std::uint32_t PAGE_WRITE         = 0x02; // rw
+    inline constexpr std::uint32_t PAGE_USER          = 0x04; // us
+    inline constexpr std::uint32_t PAGE_CACHE_DISABLE = 0x06; // pcd
 
     // Map kernel to higher-half (0xC0000000)
     inline constexpr std::uint32_t KERNEL_VIRT_BASE      = 0xC0000000;                          // 0xC0000000 = 3GiB
@@ -19,7 +20,7 @@ namespace i686::vmm {
     inline constexpr std::uint32_t KERNEL_LOW_PDE_START  = 0;                                   // 0x00000000 = start of memory
     inline constexpr std::uint32_t KERNEL_LOW_PT_SIZE    = 8;                                   // 8 page tables = 32MB
     inline constexpr std::uint32_t KERNEL_LOW_PDE_END    = KERNEL_LOW_PDE_START + KERNEL_LOW_PT_SIZE;
-    inline constexpr std::uint32_t KERNEL_CODE_SIZE      = 0x00200000;                          // 2MiB for kernel code
+    inline constexpr std::uint32_t KERNEL_CODE_SIZE      = 0x00400000;                          // 2MiB for kernel code
     inline constexpr std::uint32_t KERNEL_HEAP_VIRT_BASE = KERNEL_VIRT_BASE + KERNEL_CODE_SIZE; // kernel heap starts after kernel code
     inline constexpr std::uint32_t KERNEL_HEAP_PDE_START = KERNEL_HEAP_VIRT_BASE >> 22;         // 768, same as KERNEL_HIGH_PDE_START
     inline constexpr std::uint32_t KERNEL_HEAP_SIZE      = 0x01000000;                          // 16MiB for kernel heap
@@ -68,6 +69,8 @@ namespace i686::vmm {
     
     void init();
 
+    void* map_physical_region(void* physical_addr, std::size_t byte);
+    
     void map_page(void* virtual_addr, void* physical_addr, std::uint32_t flags);
 
     void* alloc_kernel_memory(std::size_t bytes);

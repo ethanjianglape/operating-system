@@ -1,7 +1,10 @@
+#include "arch/i686/gdt/gdt.hpp"
+#include "kernel/drivers/framebuffer/framebuffer.hpp"
 #include <kernel/boot/boot.hpp>
 #include <kernel/boot/multiboot2.h>
 #include <kernel/panic/panic.hpp>
 #include <kernel/memory/memory.hpp>
+#include <kernel/arch/arch.hpp>
 
 #include <cstdint>
 #include <cstddef>
@@ -26,14 +29,14 @@ namespace kernel::boot {
         constexpr std::size_t min_free_mem_len = 0x00200000;
 
         while (tag < end) {
-            auto type = *reinterpret_cast<std::uint32_t*>(tag);
-            auto size = *reinterpret_cast<std::uint32_t*>(tag + 4);
+            auto tag_type = *reinterpret_cast<std::uint32_t*>(tag);
+            auto tag_size = *reinterpret_cast<std::uint32_t*>(tag + 4);
 
-            if (type == MULTIBOOT_TAG_TYPE_END) {
+            if (tag_type == MULTIBOOT_TAG_TYPE_END) {
                 break;
             }
 
-            if (type == MULTIBOOT_TAG_TYPE_MMAP) {
+            if (tag_type == MULTIBOOT_TAG_TYPE_MMAP) {
                 auto* mmap = reinterpret_cast<multiboot_tag_mmap*>(tag);
                 auto entry_count = (mmap->size - sizeof(multiboot_tag_mmap)) / mmap->entry_size;
                 auto* entry = mmap->entries;
@@ -53,10 +56,37 @@ namespace kernel::boot {
                     auto* entry_addr = reinterpret_cast<std::uint8_t*>(entry);
                     entry = reinterpret_cast<multiboot_mmap_entry*>(entry_addr + mmap->entry_size);
                 }
+            } else if (tag_type == MULTIBOOT_TAG_TYPE_FRAMEBUFFER) {
+                auto* fb = reinterpret_cast<multiboot_tag_framebuffer*>(tag);
+                auto* fbc = &fb->common;
+
+                const auto width = fbc->framebuffer_width;
+                const auto height = fbc->framebuffer_height;
+                const auto bpp = fbc->framebuffer_bpp;
+                const auto pitch = fbc->framebuffer_pitch;
+                const auto type = fbc->framebuffer_type;
+                const auto fb_size = pitch * height;
+
+                if (type != MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
+                    //kernel::panicf("Invalid framebuffer type %d, expected %d (RGB)", type, MULTIBOOT_FRAMEBUFFER_TYPE_RGB);
+                }
+                
+                auto phys_addr = reinterpret_cast<std::uint8_t*>(fbc->framebuffer_addr);
+                auto virt_addr = arch::vmm::map_physical_region(phys_addr, fb_size);
+
+                auto fbInfo = kernel::drivers::framebuffer::FrameBufferInfo {
+                    .width = width,
+                    .height = height,
+                    .pitch = pitch,
+                    .bpp = bpp,
+                    .vram = reinterpret_cast<std::uint8_t*>(virt_addr)
+                };
+
+                kernel::drivers::framebuffer::init(fbInfo);
             }
 
             // advance to the next tag
-            tag += (size + 7) & ~7;
+            tag += (tag_size + 7) & ~7;
         }
 
         kernel::pmm::init(total_mem, free_mem_addr, free_mem_len);
