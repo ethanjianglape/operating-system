@@ -1,4 +1,4 @@
-#include "arch/i686/gdt/gdt.hpp"
+#include "arch/x86_64/gdt/gdt.hpp"
 #include "kernel/drivers/framebuffer/framebuffer.hpp"
 #include <kernel/boot/boot.hpp>
 #include <kernel/boot/multiboot2.h>

@@ -1,6 +1,6 @@
 # MyOS
 
-A hobby operating system for x86 (i686) architecture, written in C++23 and assembly.
+A hobby operating system for x86_64 architecture, written in C++23 and assembly.
 
 ## Disclaimer
 
@@ -15,10 +15,10 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 
 ## Target Architecture
 
-**Minimum CPU:** Pentium Pro (i686) or newer
-- Requires APIC support (introduced in Pentium)
-- Targets modern 32-bit x86 systems
-- Tested on: QEMU, VirtualBox, modern x86 hardware
+**Target:** x86_64 (AMD64/Intel 64)
+- Requires APIC support
+- Targets modern 64-bit x86 systems
+- Tested on: QEMU, VirtualBox
 
 ## Features
 
@@ -48,7 +48,7 @@ os/
 ├── src/
 │   ├── kernel/
 │   │   ├── kernel.cpp              # Kernel entry point
-│   │   ├── arch/i686/              # x86-specific code
+│   │   ├── arch/x86_64/            # x86_64-specific code
 │   │   │   ├── boot/
 │   │   │   │   └── boot.s          # Bootloader, paging setup
 │   │   │   ├── gdt/                # Global Descriptor Table
