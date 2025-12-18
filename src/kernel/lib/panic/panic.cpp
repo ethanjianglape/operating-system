@@ -1,10 +1,7 @@
 #include "kernel/panic/panic.hpp"
 
-#include "kernel/kprintf/kprintf.hpp"
 #include "kernel/log/log.hpp"
 #include "arch/i686/cpu/cpu.hpp"
-
-#include <cstdarg>
 
 namespace kernel {
     // TODO: kernel library code should not have arch specific dependencies
@@ -26,6 +23,7 @@ namespace kernel {
     void panicf(const char* format, ...) {
         i686::cpu::cli();
 
+        /*
         std::va_list args;
         va_start(args, format);
 
@@ -37,6 +35,7 @@ namespace kernel {
         log::error("System will now halt.");
 
         va_end(args);
+        */
 
         while (true) {
             i686::cpu::hlt();

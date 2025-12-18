@@ -1,4 +1,5 @@
 #include <concepts>
+#include <cstdint>
 #include <kernel/console/console.hpp>
 #include <kernel/console/font8x16.hpp>
 
@@ -101,60 +102,33 @@ namespace kernel::console {
             }
         }
 
-        cursor_y -= fonts::FONT_HEIGHT;
+        cursor_y--;
     }
 
     void newline() {
         cursor_x = 0;
         cursor_y++;
 
-        if (cursor_y + fonts::FONT_HEIGHT > driver->get_screen_height()) {
+        const auto py = (cursor_y + 1) * fonts::FONT_HEIGHT;
+
+        if (py > driver->get_screen_height()) {
             scroll();
         }
     }
 
-    template <>
     int put(char c) {
-        putchar(c);
-
-        return 1;
-    }
-
-    template <>
-    int put(const unsigned char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
-    template <>
-    int put(const char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
-    void putchar(char c) {
         if (driver->putchar != nullptr) {
             driver->putchar(c);
-            return;
+            return 0;
         }
         
         if (driver->put_pixel == nullptr) {
-            return;
+            return 0;
         }
 
         if (c == '\n') {
             newline();
-            return;
+            return 1;
         }
 
         const std::uint8_t* glyph = fonts::get_glyph(c);
@@ -178,15 +152,72 @@ namespace kernel::console {
 
         cursor_x++;
 
-        if (cursor_x >= driver->get_screen_width()) {
+        const auto px = (cursor_x + 1) * fonts::FONT_WIDTH;
+
+        if (px >= driver->get_screen_width()) {
             newline();
         }
+
+        return 1;
     }
 
-    void puts(const char* str, std::size_t length) {
-        for (std::size_t i = 0; i < length; i++) {
-            putchar(str[i]);
+    int put(const char* str) {
+        int written = 0;
+        
+        while (*str) {
+            written += put(*str++);
         }
+
+        return written;
+    }
+
+    int put(const unsigned char* str) {
+        int written = 0;
+        
+        while (*str) {
+            written += put(*str++);
+        }
+
+        return written;
+    }
+
+    int put(std::intmax_t num) {
+        std::uintmax_t unum;
+        int written = 0;
+
+        if (num < 0) {
+            written += put('-');
+            unum = -static_cast<std::uintmax_t>(num);
+        } else {
+            unum = num;
+        }
+
+        return written + put(unum);
+    }
+
+    int put(std::uintmax_t unum) {
+        const auto divisor = number_format_divisor();
+        int written = 0;
+        int i = 0;
+        char buff[16];
+
+        if (unum == 0) {
+            written += put('0');
+        } else {
+            while (unum > 0) {
+                const auto index = unum % divisor;
+                const auto c = number_format_char(index);
+                
+                buff[i++] = c;
+                unum /= divisor;
+            }
+
+            while (i > 0) {
+                written += put(buff[--i]);
+            }
+        }
+
+        return written;        
     }
 
     void set_color(std::uint32_t fg, std::uint32_t bg) {

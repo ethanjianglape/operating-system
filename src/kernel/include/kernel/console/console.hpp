@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <concepts>
+#include <type_traits>
 
 namespace kernel::console {
     using putchar_fn = void (*)(char);
@@ -69,9 +71,6 @@ namespace kernel::console {
     void scroll();
     void newline();
     
-    void putchar(char c);
-    void puts(const char* str, std::size_t length);
-
     void set_color(std::uint32_t fg, std::uint32_t bg);
     void set_color(RgbColor fg, RgbColor bg);
     void reset_color();
@@ -80,72 +79,31 @@ namespace kernel::console {
     void reset_number_format();
     NumberFormat get_number_format();
 
-    int number_format_divisor();
-    char number_format_char(int i);
-    
     std::uint32_t get_current_fg();
     std::uint32_t get_current_bg();
 
     void clear();
 
-    template <typename T>
-    int put(T t);
+    int put(char c);
+    int put(const char* str);
+    int put(std::intmax_t num);
+    int put(std::uintmax_t unum);
 
     int put(std::signed_integral auto num) {
-        const auto divisor = number_format_divisor();
-        unsigned int unum;
-        int written = 0;
-        int i = 0;
-        char buff[16];
-
-        if (num < 0) {
-            written += put('-');
-            unum = -static_cast<unsigned int>(num);
-        } else {
-            unum = num;
-        }
-
-        if (unum == 0) {
-            written += put('0');
-        } else {
-            while (unum > 0) {
-                const auto index = unum % divisor;
-                const auto c = number_format_char(index);
-                
-                buff[i++] = c;
-                unum /= divisor;
-            }
-
-            while (i > 0) {
-                written += put(buff[--i]);
-            }
-        }
-
-        return written;
+        return put(static_cast<std::intmax_t>(num));
     }
-    
+
     int put(std::unsigned_integral auto unum) {
-        const auto divisor = number_format_divisor();
-        int written = 0;
-        int i = 0;
-        char buff[16];
+        return put(static_cast<std::uintmax_t>(unum));
+    }
 
-        if (unum == 0) {
-            written += put('0');
-        } else {
-            while (unum > 0) {
-                const auto index = unum % divisor;
-                const auto c = number_format_char(index);
-                
-                buff[i++] = c;
-                unum /= divisor;
-            }
+    template <typename T>
+    concept IsPointer = std::is_pointer_v<T>;
 
-            while (i > 0) {
-                written += put(buff[--i]);
-            }
-        }
-
+    int put(IsPointer auto ptr) {
+        set_number_format(NumberFormat::HEX);
+        int written = put(reinterpret_cast<std::uintptr_t>(ptr));
+        reset_number_format();
         return written;
     }
 }

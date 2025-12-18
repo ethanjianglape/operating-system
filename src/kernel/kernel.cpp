@@ -45,11 +45,7 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
 
     kernel::log::info("Welcome to MyOS!");
 
-    std::uint32_t i = 456;
-
-    int ret = kernel::kprintf2("this is a string %x, %d, %o, %b\n", 100, i, 167, 398);
-
-    kernel::kprintf("printed %x chars\n", ret);
+    kernel::drivers::framebuffer::log();
 
     kernel::log::info("This is an info log");
     kernel::log::success("this is a success");

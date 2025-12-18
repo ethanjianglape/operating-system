@@ -103,6 +103,6 @@ namespace kernel::drivers::framebuffer {
 
     void log() {
         kernel::log::info("Screen = %dx%dx%d", fb_width, fb_height, fb_bpp);
-        kernel::log::info("VRAM   = %x", reinterpret_cast<std::uintptr_t>(vram));
+        kernel::log::info("VRAM   = %x", vram);
     }
 }

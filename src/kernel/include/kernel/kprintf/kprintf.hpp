@@ -2,13 +2,21 @@
 
 #include <kernel/console/console.hpp>
 
-#include <cstdarg>
+#include <utility>
 
 namespace kernel {
-    int kprintf2(const char* str);
+    inline int kprintf(const char* str) {
+        int written = 0;
+
+        while (*str) {
+            written += kernel::console::put(*str++);
+        }
+
+        return written;
+    }
 
     template <typename T, typename... Ts>
-    int kprintf2(const char* format, T value, Ts... args) {
+    int kprintf(const char* format, T value, Ts... args) {
         if (format == nullptr) {
             return 0;
         }
@@ -49,7 +57,7 @@ namespace kernel {
                     written += console::put(value);
                 }
                 
-                written += kprintf2(format + 2, args...);
+                written += kprintf(format + 2, std::forward<Ts>(args)...);
 
                 return written;
             } 
@@ -59,8 +67,4 @@ namespace kernel {
 
         return written;
     }
-    
-    int kprintf(const char* str, ...);
-
-    int kvprintf(const char* str, std::va_list args);
 }

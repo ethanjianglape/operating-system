@@ -13,9 +13,9 @@ namespace kernel::log {
                         const char* format,
                         Ts... args) {
         console::set_color(fg, bg);
-        kprintf2(prefix);
+        kprintf(prefix);
         console::reset_color();
-        kprintf2(format, std::forward<Ts>(args)...);
+        kprintf(format, std::forward<Ts>(args)...);
     }
     
     template <typename... Ts>
@@ -25,7 +25,7 @@ namespace kernel::log {
                        "[INFO] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2("\n");
+        kprintf("\n");
     }
 
     template <typename... Ts>
@@ -35,7 +35,7 @@ namespace kernel::log {
                        "[INIT] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2(" initializing...\n");
+        kprintf(" initializing...\n");
     }
 
     template <typename... Ts>
@@ -45,7 +45,7 @@ namespace kernel::log {
                        "[INIT] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2(" initialized!\n");
+        kprintf(" initialized!\n");
     }
 
     template <typename... Ts>
@@ -55,7 +55,7 @@ namespace kernel::log {
                        "[WARN] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2("\n");
+        kprintf("\n");
     }
 
     template <typename... Ts>
@@ -65,7 +65,7 @@ namespace kernel::log {
                        "[ERROR] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2("\n");
+        kprintf("\n");
     }
 
     template <typename... Ts>
@@ -75,7 +75,7 @@ namespace kernel::log {
                        "[SUCC] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2("\n");
+        kprintf("\n");
     }
 
     template <typename... Ts>
@@ -85,6 +85,6 @@ namespace kernel::log {
                        "[DEBUG] ",
                        format,
                        std::forward<Ts>(args)...);
-        kprintf2("\n");
+        kprintf("\n");
     }
 }
