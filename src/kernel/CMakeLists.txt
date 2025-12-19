@@ -5,7 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(kernel C CXX ASM)
 
 # Architecture-specific settings
-set(KERNEL_ARCH "i686" CACHE STRING "Target architecture")
+set(KERNEL_ARCH "x86_64" CACHE STRING "Target architecture")
 set(ARCH_DIR "arch/${KERNEL_ARCH}")
 set(ARCH_DRIVERS_DIR "arch/${KERNEL_ARCH}/drivers")
 set(LIB_DIR "lib/")
@@ -23,11 +23,11 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/interrupts/irq.cpp
     ${ARCH_DIR}/interrupts/isr.s
     ${ARCH_DIR}/timers/timer.cpp
-    ${ARCH_DIR}/syscall/syscall.cpp
-    ${ARCH_DIR}/syscall/syscall_entry.s
+    #${ARCH_DIR}/syscall/syscall.cpp
+    #${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/vmm/vmm.cpp
-    ${ARCH_DIR}/process/process.cpp
-    ${ARCH_DIR}/process/process.s
+    #${ARCH_DIR}/process/process.cpp
+    #${ARCH_DIR}/process/process.s
 )
 
 set(ARCH_DRIVER_KERNEL_SOURCES
@@ -49,7 +49,7 @@ set(LIB_KERNEL_SOURCES
 
 # Architecture-specific boot files
 set(BOOT_SOURCES
-    ${ARCH_DIR}/boot/boot.s
+    ${ARCH_DIR}/boot/entry.cpp
 )
 
 # Architecture-specific CRT (C Runtime) files
@@ -59,9 +59,9 @@ set(CRT_SOURCES
 )
 
 # Architecture-specific linker script
-set(LINKER_SCRIPT ${ARCH_DIR}/linker.ld)
+set(LINKER_SCRIPT ${ARCH_DIR}/limine.ld)
 
-# Note: Other files in arch/i686/boot (boot.asm, long_mode_start.asm) are kept for reference
+# Note: Other files in arch/x86_64/boot (boot.asm, long_mode_start.asm) are kept for reference
 # but not included in the build
 
 # Kernel headers - install to sysroot at configure time
@@ -79,13 +79,13 @@ endforeach()
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/i686/..." includes
+    ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/x86_64/..." includes
     ${SYSROOT}/usr/include
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# Set ASM flags for 32-bit assembly
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --32")
+# Set ASM flags for 64-bit assembly
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --64")
 
 # Create boot object library
 add_library(boot_objs OBJECT ${BOOT_SOURCES})

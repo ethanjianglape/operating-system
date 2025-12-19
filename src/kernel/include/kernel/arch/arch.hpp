@@ -1,10 +1,12 @@
 #pragma once
 
-#include <arch/i686/vmm/vmm.hpp>
-#include <arch/i686/cpu/cpu.hpp>
+#include <arch/x86_64/vmm/vmm.hpp>
+#include <arch/x86_64/cpu/cpu.hpp>
+#include <arch/x86_64/drivers/serial/serial.hpp>
 
 // Allows kernel library code to indirectly access the current CPU architecture
 namespace kernel::arch {
-    namespace vmm = ::i686::vmm;
-    namespace cpu = ::i686::cpu;
+    namespace vmm = ::x86_64::vmm;
+    namespace cpu = ::x86_64::cpu;
+    namespace drivers = ::x86_64::drivers;
 }

@@ -1,14 +1,16 @@
+#include "arch/x86_64/vmm/vmm.hpp"
 #include "kernel/console/console.hpp"
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
 #include <kernel/log/log.hpp>
+#include <kernel/arch/arch.hpp>
 
 #include <cstdint>
 
 namespace kernel::drivers::framebuffer {
-    static std::uint32_t fb_width;
-    static std::uint32_t fb_height;
-    static std::uint32_t fb_pitch;
-    static std::uint8_t fb_bpp;
+    static std::uint64_t fb_width;
+    static std::uint64_t fb_height;
+    static std::uint64_t fb_pitch;
+    static std::uint16_t fb_bpp;
 
     static std::uint8_t* vram = nullptr;
 
@@ -38,11 +40,17 @@ namespace kernel::drivers::framebuffer {
     }
 
     void init(const FrameBufferInfo& info) {
+        kernel::log::init_start("Framebuffer");
+        kernel::log::info("Framebuffer: %dx%dx%d (pitch=%d)", info.width, info.height, info.bpp, info.pitch);
+        kernel::log::info("VRAM: %x", info.vram);
+        
         fb_width = info.width;
         fb_height = info.height;
         fb_pitch = info.pitch;
         fb_bpp = info.bpp;
         vram = info.vram;
+
+        kernel::log::init_end("Framebuffer");
     }
 
     void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {

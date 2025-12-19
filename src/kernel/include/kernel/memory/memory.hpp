@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <kernel/arch/arch.hpp>
 
 #include <cstddef>
@@ -33,18 +34,35 @@ namespace kernel {
         inline constexpr std::size_t KERNEL_DATA_START_FRAME = KERNEL_DATA_START_ADDR / FRAME_SIZE;
         inline constexpr std::size_t KERNEL_DATA_END_FRAME   = KERNEL_DATA_END_ADDR / FRAME_SIZE;
         
-        inline constexpr std::uint32_t FRAME_BITMAP_ENTRY_SIZE = sizeof(std::uint32_t) * 8;
-        inline constexpr std::uint32_t FRAME_BITMAP_SIZE = MAX_NUM_FRAMES / FRAME_BITMAP_ENTRY_SIZE;
-        inline constexpr std::uint32_t FRAME_FREE = 0;
-        inline constexpr std::uint32_t FRAME_USED = 1;
-        
+        inline constexpr std::size_t FRAME_BITMAP_ENTRY_SIZE = sizeof(std::size_t) * 8;
+        inline constexpr std::size_t FRAME_BITMAP_SIZE = MAX_NUM_FRAMES / FRAME_BITMAP_ENTRY_SIZE;
+        inline constexpr std::size_t FRAME_FREE = 0;
+        inline constexpr std::size_t FRAME_USED = 1;
+
+        void init();
         void init(std::size_t total_memory_bytes,
                   std::size_t free_mem_addr,
                   std::size_t free_mem_len);
+
+        void add_free_memory(std::size_t addr, std::size_t len);
+        void add_used_memory(std::size_t addr, std::size_t len);
+
+        std::size_t get_total_memory();
 
         void set_addr_free(std::size_t addr, std::size_t length);
         void set_addr_used(std::size_t addr, std::size_t length);
 
         void* alloc_frame();
+        void* alloc_contiguous_frames(std::size_t num_frames);
+
+        template <std::unsigned_integral T>
+        T alloc_contiguous_frames(std::size_t num_frames) {
+            return reinterpret_cast<T>(alloc_contiguous_frames(num_frames));
+        }
+
+        template <typename T>
+        T alloc_frame() {
+            return reinterpret_cast<T>(alloc_frame());
+        }
     }
 }
