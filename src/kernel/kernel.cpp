@@ -24,23 +24,27 @@
 
 #include <cstdint>
 
-extern "C"
 [[noreturn]]
-void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_addr) {
+void kernel_main() {
     // Serial output to COM1 will be used in the very eary boot process
     // for logging and debugging before anything else is ready
     x86_64::drivers::serial::init();
     kernel::console::init(x86_64::drivers::serial::get_console_driver());
 
+    kernel::log::info("MyOS booted with limine!");
+
+    kernel::boot::init();
+
+    while (true) {
+        x86_64::cpu::hlt();
+    }
+
     x86_64::gdt::init();
     x86_64::idt::init();
 
-    kernel::boot::init(multiboot_magic, multiboot_info_addr);
+    //kernel::boot::init(multiboot_magic, multiboot_info_addr);
 
     x86_64::vmm::init();
-
-    kernel::log::info("kernel init done!");
-    kernel::log::info("magic = %x", multiboot_magic);
 
     kernel::drivers::framebuffer::init();
     kernel::console::init(kernel::drivers::framebuffer::get_console_driver());

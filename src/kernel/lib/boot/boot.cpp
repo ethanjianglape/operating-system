@@ -4,11 +4,77 @@
 #include <kernel/memory/memory.hpp>
 #include <kernel/arch/arch.hpp>
 #include <kernel/log/log.hpp>
+#include <kernel/boot/limine.h>
 
 #include <cstdint>
 #include <cstddef>
 
+[[gnu::used]]
+[[gnu::section(".limine_requests")]]
+volatile limine_framebuffer_request framebuffer_request = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+    .revision = 0,
+    .response = nullptr
+};
+
+[[gnu::used]]
+[[gnu::section(".limine_requests")]]
+volatile limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST_ID,
+    .revision = 0,
+    .response = nullptr
+};
+
+[[gnu::used]]
+[[gnu::section(".limine_requests")]]
+volatile limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST_ID,
+    .revision = 0,
+    .response = nullptr
+};
+
 namespace kernel::boot {
+    void init() {
+        kernel::log::info("framebuffer response = %x", framebuffer_request.response);
+        kernel::log::info("memmap response      = %x", memmap_request.response);
+        kernel::log::info("hhdm response        = %x", hhdm_request.response);
+
+        limine_framebuffer* fb = framebuffer_request.response->framebuffers[0];
+
+        auto* vram = static_cast<std::uint32_t*>(fb->address);
+        auto width = fb->width;
+        auto height = fb->height;
+        auto pitch = fb->pitch;
+        auto bpp = fb->bpp;
+
+        kernel::log::info("Framebuffer: %dx%dx%d (pitch=%d)", width, height, bpp, pitch);
+        kernel::log::info("Framebuffer vram: %x", vram);
+
+        auto entry_count = memmap_request.response->entry_count;
+        limine_memmap_entry** entries = memmap_request.response->entries;
+        
+        constexpr std::size_t min_free_mem_len = 0x00200000;
+
+        std::size_t total_mem = 0;
+        std::size_t free_mem_addr = 0;
+        std::size_t free_mem_len = 0;
+
+        for (std::uint64_t i = 0; i < entry_count; i++) {
+            auto base = entries[i]->base;
+            auto length = entries[i]->length;
+            auto type = entries[i]->type;
+
+            if (type == LIMINE_MEMMAP_USABLE && length > min_free_mem_len) {
+                free_mem_addr = base;
+                free_mem_len = length;
+                total_mem += length;
+            }
+        }
+    }
+
+
+
+    
     void init(std::uint32_t mb_magic, std::uint32_t mbi_addr) {
         if (mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
             //kernel::panicf("Multiboot2 incorrect magic value: %x expected %x", mb_magic, MULTIBOOT2_BOOTLOADER_MAGIC);

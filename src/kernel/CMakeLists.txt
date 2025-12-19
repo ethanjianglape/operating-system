@@ -49,7 +49,7 @@ set(LIB_KERNEL_SOURCES
 
 # Architecture-specific boot files
 set(BOOT_SOURCES
-    ${ARCH_DIR}/boot/boot64.s
+    ${ARCH_DIR}/boot/entry.cpp
 )
 
 # Architecture-specific CRT (C Runtime) files
@@ -59,7 +59,7 @@ set(CRT_SOURCES
 )
 
 # Architecture-specific linker script
-set(LINKER_SCRIPT ${ARCH_DIR}/linker.ld)
+set(LINKER_SCRIPT ${ARCH_DIR}/limine.ld)
 
 # Note: Other files in arch/x86_64/boot (boot.asm, long_mode_start.asm) are kept for reference
 # but not included in the build
