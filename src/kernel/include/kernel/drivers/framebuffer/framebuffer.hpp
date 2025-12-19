@@ -15,10 +15,11 @@ namespace kernel::drivers::framebuffer {
         std::uint32_t height;
         std::uint32_t pitch;
         std::uint8_t bpp;
-        std::uint8_t* vram;
+        void* physical_addr;
     };
 
-    void init(const FrameBufferInfo& info);
+    void config(const FrameBufferInfo& info);
+    void init();
 
     kernel::console::ConsoleDriver* get_console_driver();
 

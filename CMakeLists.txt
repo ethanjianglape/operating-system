@@ -14,14 +14,16 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set NASM flags for 64-bit ELF format
-set(CMAKE_ASM_OBJECT_FORMAT elf32)
+# Set assembler flags for 64-bit ELF format
+set(CMAKE_ASM_OBJECT_FORMAT elf64)
 set(CMAKE_ASM_COMPILE_OBJECT "<CMAKE_ASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
 
 # Compiler flags specific to kernel development (C and C++ only, not ASM)
 add_compile_options(
-    $<$<COMPILE_LANGUAGE:C,CXX>:-m32>
-    $<$<COMPILE_LANGUAGE:C,CXX>:-march=i686>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-m64>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-march=x86-64>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-mcmodel=kernel>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-mno-red-zone>
     $<$<COMPILE_LANGUAGE:C,CXX>:-Wall>
     $<$<COMPILE_LANGUAGE:C,CXX>:-Wextra>
     $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
@@ -38,19 +40,6 @@ add_compile_options(
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
-)
-
-# Get crtbegin.o and crtend.o from our compiler
-execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} -m32 -print-file-name=crtbegin.o
-    OUTPUT_VARIABLE CRTBEGIN_OBJ
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} -m32 -print-file-name=crtend.o
-    OUTPUT_VARIABLE CRTEND_OBJ
-    OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
 # Sysroot configuration
@@ -74,18 +63,16 @@ file(MAKE_DIRECTORY ${SYSROOT}/boot)
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
     COMMAND ${CMAKE_CXX_COMPILER}
-        -m32
+        -m64
         -T ${CMAKE_SOURCE_DIR}/src/kernel/arch/x86_64/linker.ld
         -nostdlib
         -static
         -Wl,-Map=kernel.map
         -o kernel.elf
         "$<TARGET_OBJECTS:crti_obj>"
-        ${CRTBEGIN_OBJ}
         "$<TARGET_OBJECTS:boot_objs>"
         "$<TARGET_OBJECTS:kernel_objs>"
         "$<TARGET_FILE:libk>"
-        ${CRTEND_OBJ}
         "$<TARGET_OBJECTS:crtn_obj>"
         -lgcc
     COMMAND ${CMAKE_OBJCOPY} -O binary kernel.elf kernel.bin
@@ -113,5 +100,3 @@ message(STATUS "Building kernel for x86_64 (64-bit) architecture using standard 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "ASM Assembler: ${CMAKE_ASM_COMPILER}")
-message(STATUS "crtbegin.o Location: ${CRTBEGIN_OBJ}")
-message(STATUS "crtend.o Location: ${CRTEND_OBJ}")

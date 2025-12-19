@@ -1,5 +1,6 @@
-/* Linker script for higher-half x86_64 (32-bit) kernel */
+/* Linker script for higher-half x86_64 (64-bit) kernel */
 
+OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(_start)
 
 PHDRS
@@ -12,11 +13,11 @@ PHDRS
 
 SECTIONS
 {
-    /* Kernel loads at 2MB physical address, runs at 3GB + 2MB virtual */
-    KERNEL_VIRT_BASE = 0xC0000000; /* 3 GB */
-    KERNEL_PHYS_BASE = 0x00200000; /* 2 MB */
+    /* Kernel loads at 2MB physical address, runs at virtual (top of address space) */
+    KERNEL_VIRT_BASE = 0xFFFFFFFF80000000; /* canonical higher-half */
+    KERNEL_PHYS_BASE = 0x00200000;         /* 2 MB physical */
 
-    /* Boot section at physical address for GRUB and early boot) */
+    /* Boot section at physical address for GRUB and early boot */
     . = KERNEL_PHYS_BASE;
     kernel_physical_start = .;
 
@@ -26,7 +27,7 @@ SECTIONS
         *(.multiboot)
     } :boot
 
-    /* Early boot code that runs before paging */
+    /* Early boot code that runs before paging (32-bit) */
     .boot.text ALIGN(4K) : AT(ADDR(.boot.text))
     {
         *(.boot.text)
@@ -40,6 +41,8 @@ SECTIONS
 
     /* Switch to higher-half for kernel_main() */
     . += KERNEL_VIRT_BASE;
+    . = ALIGN(4K);
+    kernel_start = .;
 
     /* Read-only sections */
     .text ALIGN(4K) : AT(ADDR(.text) - KERNEL_VIRT_BASE)
@@ -76,6 +79,7 @@ SECTIONS
     } :data
 
     /* Define kernel end */
+    . = ALIGN(4K);
     kernel_end = .;
     kernel_physical_end = . - KERNEL_VIRT_BASE;
 }

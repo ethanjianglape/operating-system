@@ -22,26 +22,26 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/interrupts/idt.cpp
     ${ARCH_DIR}/interrupts/irq.cpp
     ${ARCH_DIR}/interrupts/isr.s
-    ${ARCH_DIR}/timers/timer.cpp
-    ${ARCH_DIR}/syscall/syscall.cpp
-    ${ARCH_DIR}/syscall/syscall_entry.s
+    #${ARCH_DIR}/timers/timer.cpp
+    #${ARCH_DIR}/syscall/syscall.cpp
+    #${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/vmm/vmm.cpp
-    ${ARCH_DIR}/process/process.cpp
-    ${ARCH_DIR}/process/process.s
+    #${ARCH_DIR}/process/process.cpp
+    #${ARCH_DIR}/process/process.s
 )
 
 set(ARCH_DRIVER_KERNEL_SOURCES
-    ${ARCH_DRIVERS_DIR}/pic/pic.cpp
-    ${ARCH_DRIVERS_DIR}/pit/pit.cpp
-    ${ARCH_DRIVERS_DIR}/apic/apic.cpp
+    #${ARCH_DRIVERS_DIR}/pic/pic.cpp
+    #${ARCH_DRIVERS_DIR}/pit/pit.cpp
+    #${ARCH_DRIVERS_DIR}/apic/apic.cpp
     ${ARCH_DRIVERS_DIR}/serial/serial.cpp
 )
 
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/boot/boot.cpp
-    ${LIB_DIR}/panic/panic.cpp
-    ${LIB_DIR}/memory/memory.cpp
+    #${LIB_DIR}/panic/panic.cpp
+    #${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp
     ${LIB_DIR}/console/console.cpp
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
@@ -49,7 +49,7 @@ set(LIB_KERNEL_SOURCES
 
 # Architecture-specific boot files
 set(BOOT_SOURCES
-    ${ARCH_DIR}/boot/boot.s
+    ${ARCH_DIR}/boot/boot64.s
 )
 
 # Architecture-specific CRT (C Runtime) files
@@ -84,8 +84,8 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# Set ASM flags for 32-bit assembly
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --32")
+# Set ASM flags for 64-bit assembly
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --64")
 
 # Create boot object library
 add_library(boot_objs OBJECT ${BOOT_SOURCES})

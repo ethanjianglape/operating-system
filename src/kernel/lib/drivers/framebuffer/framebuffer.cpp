@@ -1,6 +1,8 @@
+#include "arch/x86_64/vmm/vmm.hpp"
 #include "kernel/console/console.hpp"
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
 #include <kernel/log/log.hpp>
+#include <kernel/arch/arch.hpp>
 
 #include <cstdint>
 
@@ -10,6 +12,7 @@ namespace kernel::drivers::framebuffer {
     static std::uint32_t fb_pitch;
     static std::uint8_t fb_bpp;
 
+    static void* physical_addr;
     static std::uint8_t* vram = nullptr;
 
     static std::uint32_t get_screen_width() {
@@ -37,12 +40,16 @@ namespace kernel::drivers::framebuffer {
         return (y * fb_pitch) + (x * (fb_bpp / 8));
     }
 
-    void init(const FrameBufferInfo& info) {
+    void config(const FrameBufferInfo& info) {
         fb_width = info.width;
         fb_height = info.height;
         fb_pitch = info.pitch;
         fb_bpp = info.bpp;
-        vram = info.vram;
+        physical_addr = info.physical_addr;
+    }
+
+    void init() {
+        vram = reinterpret_cast<std::uint8_t*>(kernel::arch::vmm::map_physical_region(physical_addr, fb_pitch * fb_height));
     }
 
     void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {

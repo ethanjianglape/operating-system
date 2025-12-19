@@ -1,10 +1,9 @@
-#include "arch/x86_64/gdt/gdt.hpp"
 #include "kernel/drivers/framebuffer/framebuffer.hpp"
 #include <kernel/boot/boot.hpp>
 #include <kernel/boot/multiboot2.h>
-#include <kernel/panic/panic.hpp>
 #include <kernel/memory/memory.hpp>
 #include <kernel/arch/arch.hpp>
+#include <kernel/log/log.hpp>
 
 #include <cstdint>
 #include <cstddef>
@@ -12,7 +11,7 @@
 namespace kernel::boot {
     void init(std::uint32_t mb_magic, std::uint32_t mbi_addr) {
         if (mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
-            kernel::panicf("Multiboot2 incorrect magic value: %x expected %x", mb_magic, MULTIBOOT2_BOOTLOADER_MAGIC);
+            //kernel::panicf("Multiboot2 incorrect magic value: %x expected %x", mb_magic, MULTIBOOT2_BOOTLOADER_MAGIC);
         }
 
         std::uint32_t* mbi_ptr = reinterpret_cast<std::uint32_t*>(mbi_addr);
@@ -46,12 +45,13 @@ namespace kernel::boot {
                     auto len = entry->len;
                     auto type = entry->type;
 
+                    kernel::log::info("Multiboot MMAP Tag addr=%x, len=%x, type=%d", addr, len, type);
+
                     if (type == MULTIBOOT_MEMORY_AVAILABLE && len > min_free_mem_len) {
                         free_mem_addr = addr;
                         free_mem_len = len;
+                        total_mem += len;
                     }
-
-                    total_mem += len;
                     
                     auto* entry_addr = reinterpret_cast<std::uint8_t*>(entry);
                     entry = reinterpret_cast<multiboot_mmap_entry*>(entry_addr + mmap->entry_size);
@@ -65,24 +65,22 @@ namespace kernel::boot {
                 const auto bpp = fbc->framebuffer_bpp;
                 const auto pitch = fbc->framebuffer_pitch;
                 const auto type = fbc->framebuffer_type;
-                const auto fb_size = pitch * height;
 
                 if (type != MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
                     //kernel::panicf("Invalid framebuffer type %d, expected %d (RGB)", type, MULTIBOOT_FRAMEBUFFER_TYPE_RGB);
                 }
-                
+
                 auto phys_addr = reinterpret_cast<std::uint8_t*>(fbc->framebuffer_addr);
-                auto virt_addr = arch::vmm::map_physical_region(phys_addr, fb_size);
 
                 auto fbInfo = kernel::drivers::framebuffer::FrameBufferInfo {
                     .width = width,
                     .height = height,
                     .pitch = pitch,
                     .bpp = bpp,
-                    .vram = reinterpret_cast<std::uint8_t*>(virt_addr)
+                    .physical_addr = phys_addr
                 };
 
-                kernel::drivers::framebuffer::init(fbInfo);
+                kernel::drivers::framebuffer::config(fbInfo);
             }
 
             // advance to the next tag

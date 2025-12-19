@@ -1,13 +1,21 @@
+/*
 #include "arch/x86_64/drivers/serial/serial.hpp"
-#include "arch/x86_64/gdt/gdt.hpp"
-#include "arch/x86_64/cpu/cpu.hpp"
+
+
 #include "arch/x86_64/interrupts/idt.hpp"
 #include "arch/x86_64/syscall/syscall.hpp"
 #include "arch/x86_64/vmm/vmm.hpp"
 
 #include "arch/x86_64/drivers/pic/pic.hpp"
 #include "arch/x86_64/drivers/apic/apic.hpp"
+ */
+
+#include "arch/x86_64/cpu/cpu.hpp"
+#include "arch/x86_64/drivers/serial/serial.hpp"
+#include "arch/x86_64/vmm/vmm.hpp"
 #include "kernel/kprintf/kprintf.hpp"
+#include <arch/x86_64/gdt/gdt.hpp>
+#include <arch/x86_64/interrupts/idt.hpp>
 
 #include <kernel/boot/boot.hpp>
 #include <kernel/console/console.hpp>
@@ -19,19 +27,37 @@
 extern "C"
 [[noreturn]]
 void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_addr) {
-    while (true) {
-        x86_64::cpu::hlt();
-    }
-    
     // Serial output to COM1 will be used in the very eary boot process
     // for logging and debugging before anything else is ready
     x86_64::drivers::serial::init();
     kernel::console::init(x86_64::drivers::serial::get_console_driver());
 
-    // Init core arch dependencies
     x86_64::gdt::init();
-    x86_64::vmm::init();
     x86_64::idt::init();
+
+    kernel::boot::init(multiboot_magic, multiboot_info_addr);
+
+    x86_64::vmm::init();
+
+    kernel::log::info("kernel init done!");
+    kernel::log::info("magic = %x", multiboot_magic);
+
+    kernel::drivers::framebuffer::init();
+    kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
+
+    kernel::log::info("Welcome to MyOS!");
+    
+    while (true) {
+        x86_64::cpu::hlt();
+    }
+
+    /*
+
+
+    // Init core arch dependencies
+
+    x86_64::vmm::init();
+
     x86_64::syscall::init();
 
     // Init core arch drivers
@@ -39,7 +65,7 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
     x86_64::drivers::apic::init();
 
     // Parse the GRUB multiboot2 header to init the PMM and Framebuffer
-    kernel::boot::init(multiboot_magic, multiboot_info_addr);
+
 
     // Switch to Framebuffer rendering
     kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
@@ -63,4 +89,5 @@ void kernel_main(std::uint32_t multiboot_magic, std::uint32_t multiboot_info_add
     while (true) {
         x86_64::cpu::hlt();
     }
+    */
 }

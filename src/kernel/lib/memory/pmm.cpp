@@ -1,25 +1,35 @@
+#include "arch/x86_64/cpu/cpu.hpp"
 #include <kernel/memory/memory.hpp>
 #include <kernel/log/log.hpp>
-#include <kernel/panic/panic.hpp>
+//#include <kernel/panic/panic.hpp>
 #include <kernel/arch/arch.hpp>
 
 #include <cstdint>
 #include <cstddef>
 
-extern "C" std::uint32_t kernel_physical_start;
-extern "C" std::uint32_t kernel_physical_end;
+extern "C" char KERNEL_VIRT_BASE[];
+extern "C" char KERNEL_PHYS_BASE[];
+
+extern "C" char kernel_start[];
+extern "C" char kernel_end[];
+
+extern "C" std::uintptr_t kernel_physical_start;
+extern "C" std::uintptr_t kernel_physical_end;
 
 namespace kernel::pmm {
     // 1 bit used per frame, 0 = free, 1 = used
-    static std::uint32_t frame_bitmap[FRAME_BITMAP_SIZE];
-    static std::uint32_t frame_bitmap_start;
-    static std::uint32_t frame_bitmap_end;
+    static std::size_t frame_bitmap[FRAME_BITMAP_SIZE];
+    //static std::size_t junk[4096];
+    static std::size_t frame_bitmap_start;
+    static std::size_t frame_bitmap_end;
+
+    static std::size_t total_memory;
 
     bool is_frame_free(std::size_t frame) {
         const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
         const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
-        const std::uint32_t entry = frame_bitmap[index];
-        const std::uint32_t value = entry & (FRAME_USED << offset);
+        const std::size_t entry = frame_bitmap[index];
+        const std::size_t value = entry & (FRAME_USED << offset);
 
         return value == FRAME_FREE;
     }
@@ -50,10 +60,12 @@ namespace kernel::pmm {
         }
 
         if (free_mem_addr + free_mem_len >= total_mem_bytes) {
-            kernel::panicf("Memory address %x (length=%x) is outside of available memory",
-                           free_mem_addr,
-                           free_mem_len);
+            //kernel::panicf("Memory address %x (length=%x) is outside of available memory",
+              //             free_mem_addr,
+                //           free_mem_len);
         }
+
+        total_memory = total_mem_bytes;
 
         log::info("Total system memory: %u bytes", total_mem_bytes);
         log::info("Free memory start: %x", free_mem_addr);
@@ -67,16 +79,24 @@ namespace kernel::pmm {
         // allocate the free memory range
         set_addr_free(free_mem_addr, free_mem_len);
 
-        auto kernel_start_addr = reinterpret_cast<std::size_t>(&kernel_physical_start);
-        auto kernel_end_addr = reinterpret_cast<std::size_t>(&kernel_physical_end);
-        auto kernel_len = kernel_end_addr - kernel_start_addr;
+        const auto virt_base = reinterpret_cast<std::uintptr_t>(KERNEL_VIRT_BASE);
+        const auto phys_base = reinterpret_cast<std::uintptr_t>(KERNEL_PHYS_BASE);
+        const auto virt_end  = reinterpret_cast<std::uintptr_t>(kernel_end);
 
-        log::info("Kernel starts at %x", kernel_start_addr);
+        const auto kernel_start = phys_base;
+        const auto kernel_end   = virt_end - virt_base;
+        const auto kernel_len   = kernel_end - kernel_start;
+
+        log::info("Kernel starts at %x", kernel_start);
         log::info("Kernel length %u bytes", kernel_len);
 
-        set_addr_used(kernel_start_addr, kernel_len);
+        set_addr_used(kernel_start, kernel_len);
         
         log::init_end("Physical Memory Management");
+    }
+
+    std::size_t get_total_memory() {
+        return total_memory;
     }
 
     void set_addr_free(std::size_t addr, std::size_t length) {
@@ -113,6 +133,14 @@ namespace kernel::pmm {
             frame++;
         }
 
-        kernel::panic("PMM: Out of physical memory");
+        kernel::log::info("!!!! OOM !!!!");
+
+        while (true) {
+            kernel::arch::cpu::hlt();
+        }
+
+        //kernel::panic("PMM: Out of physical memory");
+
+        return nullptr;
     }
 }

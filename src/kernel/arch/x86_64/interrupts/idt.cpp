@@ -1,47 +1,51 @@
 #include "idt.hpp"
 
-#include "kernel/log/log.hpp"
+#include <kernel/log/log.hpp>
+#include <cstdint>
 
 using namespace x86_64;
 
 constexpr int IDT_MAX_DESCRIPTORS = 256;
 
-[[gnu::aligned]]
-static idt::idt_entry_t idt_entries[IDT_MAX_DESCRIPTORS];
+alignas(16)
+static idt::IdtEntry idt_entries[IDT_MAX_DESCRIPTORS];
 
-static idt::idtr_t idtr;
-
-static bool vectors[IDT_MAX_DESCRIPTORS];
+alignas(16)
+static idt::Idtr idtr;
 
 extern "C" void* isr_stub_table[];
 
-void set_descriptor(std::uint8_t vector, void* isr, std::uint8_t flags) {
-    idt::idt_entry_t* descriptor = &idt_entries[vector];
+void set_descriptor(std::uint8_t vector, void* isr_ptr, std::uint8_t ist, std::uint8_t flags) {
+    idt::IdtEntry* desc = &idt_entries[vector];
 
-    descriptor->isr_low = reinterpret_cast<std::uint32_t>(isr) & 0xFFFF;
-    descriptor->kernel_cs = 0x08;
-    descriptor->attributes = flags;
-    descriptor->isr_high = reinterpret_cast<std::uint32_t>(isr) >> 16;
-    descriptor->reserved = 0;
+    const auto isr = reinterpret_cast<std::uintptr_t>(isr_ptr);
+
+    desc->offset_low = isr & 0xFFFF;
+    desc->offset_mid = (isr >> 16) & 0xFFFF;
+    desc->offset_high = (isr >> 32) & 0xFFFFFFFF;
+    desc->ist = ist & 0x7; // only bits 0-2 used
+    desc->selector = 0x08;
+    desc->attributes = flags;
+    desc->reserved = 0x0;
 }
 
 void idt::init() {
     kernel::log::init_start("IDT");
     
-    idtr.base = reinterpret_cast<std::uintptr_t>(&idt_entries[0]);
-    idtr.limit = sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1;
+    idtr.base = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
+    idtr.limit = sizeof(IdtEntry) * IDT_MAX_DESCRIPTORS - 1;
 
     for (std::uint32_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
         // By default, DPL=0 (ring0 only)
         std::uint8_t flags = 0x8E;
+        std::uint8_t ist = 0x0;
 
         // int 0x80 needs to be called by userspace DPL=3 (ring3)
         if (vector == 0x80) {
             flags = 0xEE;
         }
         
-        set_descriptor(vector, isr_stub_table[vector], flags);
-        vectors[vector] = true;
+        set_descriptor(vector, isr_stub_table[vector], ist, flags);
     }
 
     asm volatile("lidt %0" : : "m"(idtr));

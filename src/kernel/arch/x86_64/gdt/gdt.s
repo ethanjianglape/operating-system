@@ -1,24 +1,32 @@
-.code32
+.code64
+
+.set KERNEL_CODE_SEG, 0x08
+.set KERNEL_DATA_SEG, 0x10
+.set TSS_SEG, 0x28
+
 .global load_gdt
-.global load_tss
-
+.type load_gdt, @function
 load_gdt:
-    mov 4(%esp), %eax
-    lgdt (%eax)
+    lgdt (%rdi)
 
-    mov $0x10, %ax
+    mov $KERNEL_DATA_SEG, %ax
     mov %ax, %ds
     mov %ax, %es
     mov %ax, %fs
     mov %ax, %gs
     mov %ax, %ss
 
-    ljmp $0x08, $.reload_cs
+    lea .reload_cs(%rip), %rax
+    push $KERNEL_CODE_SEG
+    push %rax
+    retfq
 
 .reload_cs:
     ret
 
+.global load_tss
+.type load_tss, @function
 load_tss:
-    mov $0x28, %ax
+    mov $TSS_SEG, %ax
     ltr %ax
     ret

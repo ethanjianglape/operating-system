@@ -23,9 +23,9 @@ void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
 
     // page faults
     if (vector == 14) {
-        std::uint32_t addr;
+        std::uint64_t addr;
         asm volatile("mov %%cr2, %0" : "=r"(addr));
-        kernel::kprintf("page fault at addr = %d\n", addr);
+        kernel::kprintf("page fault at addr = %x\n", addr);
     }
 
     cpu::cli();
@@ -42,11 +42,14 @@ void handle_irq(const std::uint32_t vector) {
 }
 
 extern "C"
-void interrupt_handler(const std::uint32_t vector, const std::uint32_t error) {
+void interrupt_handler(irq::InterruptFrame* frame) {
+    const auto vector = frame->vector;
+    const auto err = frame->err;
+    
     kernel::kprintf("[IRQ %d]\n", vector);
 
     if (vector < 32) {
-        handle_exception(vector, error);
+        handle_exception(vector, err);
     } else {
         handle_irq(vector);
     }
