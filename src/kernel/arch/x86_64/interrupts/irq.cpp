@@ -46,8 +46,6 @@ void interrupt_handler(irq::InterruptFrame* frame) {
     const auto vector = frame->vector;
     const auto err = frame->err;
     
-    kernel::kprintf("[IRQ %d]\n", vector);
-
     if (vector < 32) {
         handle_exception(vector, err);
     } else {

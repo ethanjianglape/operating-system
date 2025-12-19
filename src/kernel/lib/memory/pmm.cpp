@@ -1,4 +1,5 @@
 #include "arch/x86_64/cpu/cpu.hpp"
+#include "kernel/panic/panic.hpp"
 #include <kernel/memory/memory.hpp>
 #include <kernel/log/log.hpp>
 //#include <kernel/panic/panic.hpp>
@@ -19,11 +20,11 @@ extern "C" std::uintptr_t kernel_physical_end;
 namespace kernel::pmm {
     // 1 bit used per frame, 0 = free, 1 = used
     static std::size_t frame_bitmap[FRAME_BITMAP_SIZE];
-    //static std::size_t junk[4096];
     static std::size_t frame_bitmap_start;
     static std::size_t frame_bitmap_end;
 
     static std::size_t total_memory;
+    static std::size_t total_frames;
 
     bool is_frame_free(std::size_t frame) {
         const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
@@ -47,6 +48,16 @@ namespace kernel::pmm {
         const std::size_t mask = ~(FRAME_USED << offset);
 
         frame_bitmap[index] &= mask;
+    }
+
+    void init() {
+        // all pages set to used by default
+        for (std::size_t i = 0; i < FRAME_BITMAP_SIZE; i++) {
+            frame_bitmap[i] = 0xFFFFFFFFFFFFFFFF;
+        }
+
+        total_memory = 0;
+        total_frames = 0;
     }
 
     void init(std::size_t total_mem_bytes,
@@ -73,7 +84,7 @@ namespace kernel::pmm {
         
         // all pages set to used by default
         for (std::size_t i = 0; i < FRAME_BITMAP_SIZE; i++) {
-            frame_bitmap[i] = 0xFFFFFFFF;
+            frame_bitmap[i] = 0xFFFFFFFFFFFFFFFF;
         }
 
         // allocate the free memory range
@@ -93,6 +104,35 @@ namespace kernel::pmm {
         set_addr_used(kernel_start, kernel_len);
         
         log::init_end("Physical Memory Management");
+    }
+
+    void add_free_memory(std::size_t addr, std::size_t len) {
+        total_memory += len;
+        total_frames += (len / FRAME_SIZE) + 1;
+
+        std::uint64_t end = addr + len;
+
+        if (end >= MAX_MEMORY_BYTES) {
+            if (addr >= MAX_MEMORY_BYTES) {
+                kernel::log::warn("Ignoring memory region at %x (beyond max)", addr);
+                return;
+            }
+
+            kernel::log::warn("Truncating memory region from %x to %x", end, MAX_MEMORY_BYTES);
+            len = MAX_MEMORY_BYTES - addr;
+        }
+
+        set_addr_free(addr, len);
+    }
+
+    void add_used_memory(std::size_t addr, std::size_t len) {
+        total_memory += len;
+
+        if (total_memory > MAX_MEMORY_BYTES) {
+            kernel::panic("PMM cannot be initalized with >%x bytes of memory");
+        }
+
+        set_addr_used(addr, len);
     }
 
     std::size_t get_total_memory() {
@@ -133,14 +173,35 @@ namespace kernel::pmm {
             frame++;
         }
 
-        kernel::log::info("!!!! OOM !!!!");
-
-        while (true) {
-            kernel::arch::cpu::hlt();
-        }
-
-        //kernel::panic("PMM: Out of physical memory");
+        kernel::panic("PMM: Out of physical memory");
 
         return nullptr;
+    }
+
+    void* alloc_contiguous_frames(std::size_t num_frames) {
+        std::size_t consecutive = 0;
+        std::size_t start_frame = 0;
+
+        for (std::size_t frame = 0; frame < total_frames; frame++) {
+            if (is_frame_free(frame)) {
+                if (consecutive == 0) {
+                    start_frame = frame;
+                }
+
+                consecutive++;
+
+                if (consecutive >= num_frames) {
+                    for (std::size_t i = start_frame; i < start_frame + num_frames; i++) {
+                        set_frame_used(i);
+                    }
+
+                    return reinterpret_cast<void*>(start_frame * FRAME_SIZE);
+                }
+            } else {
+                consecutive = 0;
+            }
+        }
+
+        kernel::panic("PMM: Out of physical memory");
     }
 }

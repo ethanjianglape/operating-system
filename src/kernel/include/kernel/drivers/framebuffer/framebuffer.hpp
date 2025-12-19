@@ -11,15 +11,14 @@ namespace kernel::drivers::framebuffer {
     inline constexpr std::uint32_t RGB_BLUE  = 0x000000FF;
     
     struct FrameBufferInfo {
-        std::uint32_t width;
-        std::uint32_t height;
-        std::uint32_t pitch;
-        std::uint8_t bpp;
-        void* physical_addr;
+        std::uint64_t width;
+        std::uint64_t height;
+        std::uint64_t pitch;
+        std::uint16_t bpp;
+        std::uint8_t* vram;
     };
 
-    void config(const FrameBufferInfo& info);
-    void init();
+    void init(const FrameBufferInfo& info);
 
     kernel::console::ConsoleDriver* get_console_driver();
 

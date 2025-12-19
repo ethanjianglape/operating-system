@@ -1,7 +1,7 @@
-#include <concepts>
-#include <cstdint>
 #include <kernel/console/console.hpp>
 #include <kernel/console/font8x16.hpp>
+
+#include <cstdint>
 
 namespace kernel::console {
     // simulates writing to /dev/null, calls to kprintf() and kernel::log() will do nothing

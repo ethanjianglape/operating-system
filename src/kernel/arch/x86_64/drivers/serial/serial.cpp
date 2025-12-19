@@ -26,10 +26,6 @@ namespace x86_64::drivers::serial {
         cpu::outb(COM1 + LINE_CTRL, 0x03);     // 8 bits, no parity, one stop bit (8N1)
         cpu::outb(COM1 + FIFO_CTRL, 0xC7);     // Enable FIFO, clear, 14-byte threshold
         cpu::outb(COM1 + MODEM_CTRL, 0x0B);    // IRQs enabled, RTS/DSR set
-
-        puts("[INFO] MyOS booted into kernel_main()\n");
-        puts("[INFO] Serial logging initialized\n");
-        puts("[INFO] Starting kernel init process...\n");
     }
 
     void putchar(char c) {

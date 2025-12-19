@@ -3,21 +3,25 @@
 #include "arch/x86_64/cpu/cpu.hpp"
 #include "arch/x86_64/interrupts/irq.hpp"
 #include "arch/x86_64/timers/timer.hpp"
+#include "arch/x86_64/vmm/vmm.hpp"
 #include "kernel/log/log.hpp"
 
 #include "arch/x86_64/drivers/pit/pit.hpp"
 #include "kernel/panic/panic.hpp"
+#include <cstdint>
 
 using namespace x86_64::drivers;
 
+static std::uintptr_t lapic_virt_base;
+
 // Read from Local APIC register
 static inline std::uint32_t lapic_read(std::uint32_t reg) {
-    return *((volatile uint32_t*)(apic::LAPIC_BASE_ADDR + reg));
+    return *((volatile uint32_t*)(lapic_virt_base + reg));
 }
 
 // Write to Local APIC register
 static inline void lapic_write(std::uint32_t reg, std::uint32_t value) {
-    *((volatile uint32_t*)(apic::LAPIC_BASE_ADDR + reg)) = value;
+    *((volatile uint32_t*)(lapic_virt_base + reg)) = value;
 }
 
 // Check if APIC is supported
@@ -50,6 +54,12 @@ void apic::init() {
     if (!check_support()) {
         kernel::panic("APIC not supported - required for this kernel");
     }
+
+    vmm::map_page(vmm::get_hhdm_offset() + LAPIC_BASE_ADDR,
+                  LAPIC_BASE_ADDR,
+                  vmm::PAGE_PRESENT | vmm::PAGE_WRITE | vmm::PAGE_CACHE_DISABLE);
+
+    lapic_virt_base = x86_64::vmm::phys_to_virt<std::uintptr_t>(LAPIC_BASE_ADDR);
     
     // Enable Local APIC via MSR
     apic::enable();

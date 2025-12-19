@@ -7,12 +7,11 @@
 #include <cstdint>
 
 namespace kernel::drivers::framebuffer {
-    static std::uint32_t fb_width;
-    static std::uint32_t fb_height;
-    static std::uint32_t fb_pitch;
-    static std::uint8_t fb_bpp;
+    static std::uint64_t fb_width;
+    static std::uint64_t fb_height;
+    static std::uint64_t fb_pitch;
+    static std::uint16_t fb_bpp;
 
-    static void* physical_addr;
     static std::uint8_t* vram = nullptr;
 
     static std::uint32_t get_screen_width() {
@@ -40,16 +39,18 @@ namespace kernel::drivers::framebuffer {
         return (y * fb_pitch) + (x * (fb_bpp / 8));
     }
 
-    void config(const FrameBufferInfo& info) {
+    void init(const FrameBufferInfo& info) {
+        kernel::log::init_start("Framebuffer");
+        kernel::log::info("Framebuffer: %dx%dx%d (pitch=%d)", info.width, info.height, info.bpp, info.pitch);
+        kernel::log::info("VRAM: %x", info.vram);
+        
         fb_width = info.width;
         fb_height = info.height;
         fb_pitch = info.pitch;
         fb_bpp = info.bpp;
-        physical_addr = info.physical_addr;
-    }
+        vram = info.vram;
 
-    void init() {
-        vram = reinterpret_cast<std::uint8_t*>(kernel::arch::vmm::map_physical_region(physical_addr, fb_pitch * fb_height));
+        kernel::log::init_end("Framebuffer");
     }
 
     void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
 
 namespace x86_64::vmm {
@@ -33,17 +34,6 @@ namespace x86_64::vmm {
 
     inline constexpr std::uint32_t APIC_PDE_START = 1019;
 
-    template <typename T>
-    inline constexpr std::uintptr_t virt_to_phys(T addr) {
-        return reinterpret_cast<std::uintptr_t>(addr) - reinterpret_cast<std::uintptr_t>(KERNEL_VIRT_BASE);
-    }
-
-    template <typename T>
-    inline constexpr void* phys_to_virt(T phys) {
-        const auto phys_ptr = reinterpret_cast<std::uintptr_t>(phys);
-        return reinterpret_cast<void*>(phys_ptr + reinterpret_cast<std::uintptr_t>(KERNEL_VIRT_BASE));
-    }
-
     struct page_directory_entry {
         std::uint32_t p    : 1;  // bit 0: present
         std::uint32_t rw   : 1;  // bit 1: read/write
@@ -76,14 +66,24 @@ namespace x86_64::vmm {
     };
 
     static_assert(sizeof(PageTableEntry) == 8, "PTE must be 32 bits");
+
+    std::uintptr_t get_hhdm_offset();
     
+    void init(std::uintptr_t hhdm_offset);
     void init();
 
-    void* map_physical_region(void* physical_addr, std::size_t byte);
-    
     void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
-    void* alloc_kernel_memory(std::size_t bytes);
+    void* alloc_contiguous_memory(std::size_t bytes);
+    void* alloc_contiguous_pages(std::size_t num_pages);
 
-    void* alloc_kernel_pages(std::size_t num_pages);
+    template <typename T>
+    inline std::uintptr_t virt_to_phys(T addr) {
+        return reinterpret_cast<std::uintptr_t>(addr) - get_hhdm_offset();
+    }
+
+    template <typename T>
+    inline constexpr T phys_to_virt(std::unsigned_integral auto phys) {
+        return reinterpret_cast<T>(phys + get_hhdm_offset());
+    }
 }

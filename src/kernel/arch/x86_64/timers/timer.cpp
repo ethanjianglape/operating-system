@@ -1,5 +1,6 @@
 #include "timer.hpp"
 
+#include <kernel/log/log.hpp>
 #include "arch/x86_64/drivers/apic/apic.hpp"
 
 using namespace x86_64;
