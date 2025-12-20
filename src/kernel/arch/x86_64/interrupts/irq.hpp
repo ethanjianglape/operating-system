@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace x86_64::irq {
-    using irq_handler_t = void (*)(std::uint32_t vector);
+    using irq_handler_fn = void (*)(std::uint32_t vector);
 
     struct [[gnu::packed]] InterruptFrame {
         // Pushed by isr_common (reverse order)
@@ -16,6 +16,6 @@ namespace x86_64::irq {
         std::uint64_t rip, cs, rflags, rsp, ss;
     };
 
-    void register_irq_handler(const std::uint32_t vector, irq_handler_t handler);
+    void register_irq_handler(const std::uint32_t vector, irq_handler_fn handler);
 }
 

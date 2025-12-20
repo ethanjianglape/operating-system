@@ -39,7 +39,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
-    ${LIB_DIR}/boot/boot.cpp
+    ${LIB_DIR}/boot/limine-boot.cpp
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp
@@ -60,9 +60,6 @@ set(CRT_SOURCES
 
 # Architecture-specific linker script
 set(LINKER_SCRIPT ${ARCH_DIR}/limine.ld)
-
-# Note: Other files in arch/x86_64/boot (boot.asm, long_mode_start.asm) are kept for reference
-# but not included in the build
 
 # Kernel headers - install to sysroot at configure time
 file(MAKE_DIRECTORY ${SYSROOT}/usr/include/kernel)
@@ -128,7 +125,4 @@ set_target_properties(kernel_objs PROPERTIES
 message(STATUS "Kernel architecture: ${KERNEL_ARCH}")
 message(STATUS "Linker script: ${LINKER_SCRIPT}")
 message(STATUS "Boot sources: ${BOOT_SOURCES}")
-message(STATUS "CRT sources: ${CRT_SOURCES}")
-message(STATUS "Kernel sources: ${KERNEL_SOURCES}")
-message(STATUS "Arch-specific kernel sources: ${ARCH_KERNEL_SOURCES}")
 message(STATUS "Kernel headers installed to: ${SYSROOT}/usr/include/kernel")

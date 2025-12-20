@@ -6,9 +6,9 @@
 
 using namespace x86_64;
 
-static irq::irq_handler_t irq_handlers[256] = {nullptr};
+static irq::irq_handler_fn irq_handlers[256] = {nullptr};
 
-void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_t handler) {
+void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_fn handler) {
     if (vector >= 32 && vector <= 255) {
         irq_handlers[vector] = handler;
     }

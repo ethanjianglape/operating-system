@@ -47,45 +47,42 @@ echo ""
 # Create bootable ISO using sysroot
 echo -e "${YELLOW}Creating bootable ISO from sysroot...${NC}"
 
-# Check for grub-mkrescue
-if command -v grub-mkrescue &> /dev/null; then
-    # Clean up any previous ISO build artifacts
-    rm -rf isodir
-    rm -f ../myos.iso
+rm -rf isodir
+rm -f ../myos.iso
 
-    # Create ISO directory structure using sysroot as base
-    mkdir -p isodir
+mkdir -p isodir
 
-    # Copy entire sysroot to isodir
-    echo "Copying sysroot to ISO directory..."
-    cp -R ../sysroot/* isodir/ 2>/dev/null || true
+echo "Copying sysroot to ISO directory..."
+cp -R ../sysroot/* ./isodir/ 2>/dev/null || true
 
-    # Create GRUB directory and copy configuration
-    mkdir -p isodir/boot/grub
-    cp ../src/grub/grub.cfg isodir/boot/grub/grub.cfg
+mkdir -p isodir/boot/limine
+mkdir -p isodir/EFI/BOOT
+cp /usr/share/limine/limine-bios.sys isodir/boot/limine
+cp /usr/share/limine/limine-bios-cd.bin isodir/boot/limine
+cp /usr/share/limine/limine-uefi-cd.bin isodir/boot/limine
+cp /usr/share/limine/BOOTX64.EFI isodir/EFI/BOOT
+cp ../src/bootloader/limine/limine.conf isodir/limine.conf
 
-    # Create ISO in project root
-    grub-mkrescue -o ../myos.iso isodir 2>&1 | grep -v "warning: 'xorriso'" || true
+xorriso -as mkisofs \
+        -b boot/limine/limine-bios-cd.bin \
+        -no-emul-boot -boot-load-size 4 -boot-info-table \
+        --efi-boot boot/limine/limine-uefi-cd.bin \
+        -efi-boot-part --efi-boot-image --protective-msdos-label \
+        -o ../myos.iso isodir/
 
-    if [ -f "../myos.iso" ]; then
-        echo -e "${GREEN}ISO created: myos.iso${NC}"
-        echo ""
-        echo "To run with QEMU:"
-        echo "  qemu-system-x86_64 -cdrom myos.iso"
-    else
-        echo -e "${YELLOW}Warning: Failed to create ISO${NC}"
-        echo "You can still run the kernel directly:"
-        echo "  qemu-system-x86_64 -kernel ../sysroot/boot/kernel.elf"
-    fi
+limine bios-install ../myos.iso
 
-    # Clean up ISO directory
-    rm -rf isodir
-else
-    echo -e "${YELLOW}Warning: grub-mkrescue not found. Skipping ISO creation.${NC}"
-    echo "Install it with:"
-    echo "  Ubuntu/Debian: sudo apt install grub-pc-bin xorriso"
-    echo "  Arch Linux: sudo pacman -S grub xorriso"
+if [ -f "../myos.iso" ]; then
+    echo -e "${GREEN}ISO created: myos.iso${NC}"
     echo ""
-    echo "To run kernel directly:"
+    echo "To run with QEMU:"
+    echo "  qemu-system-x86_64 -cdrom myos.iso"
+else
+    echo -e "${YELLOW}Warning: Failed to create ISO${NC}"
+    echo "You can still run the kernel directly:"
     echo "  qemu-system-x86_64 -kernel ../sysroot/boot/kernel.elf"
 fi
+
+# Clean up ISO directory
+rm -rf isodir
+

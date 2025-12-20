@@ -1,12 +1,13 @@
-/* Linker script for limine higher-half x86_64 (64-bit) kernel */
+/* Linker script for limine higher-half x86_64 kernel */
 
 OUTPUT_FORMAT(elf64-x86-64)
+
 ENTRY(_start)
 
 PHDRS
 {
     text   PT_LOAD FLAGS(5); /* rx */
-    ordata PT_LOAD FLAGS(4); /* r  */
+    rodata PT_LOAD FLAGS(4); /* r  */
     data   PT_LOAD FLAGS(6); /* rw */
 }
 
@@ -41,6 +42,11 @@ SECTIONS
         *(.bss .bss.*)
     } :data
 
-    . = ALIGN(4K)
-    kernel_end = .
+    . = ALIGN(4K);
+    kernel_end = .;
+
+    /DISCARD/ : {
+        *(.eh_frame)
+        *(.note .note.*)
+    }
 }

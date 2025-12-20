@@ -6,7 +6,7 @@
 #include <cstddef>
 
 namespace kernel {
-    void* kmalloc(std::size_t size) {
+    inline void* kmalloc(std::size_t size) {
         if (size == 0) {
             log::warn("kmalloc(0) returns NULL");
             
@@ -16,7 +16,7 @@ namespace kernel {
         return arch::vmm::alloc_contiguous_memory(size);
     }
 
-    void kfree(void* ptr) {
+    inline void kfree(void* ptr) {
         if (ptr == nullptr) {
             log::warn("kfree(NULL) is undefined behavior");
         }
