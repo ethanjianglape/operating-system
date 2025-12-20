@@ -50,7 +50,6 @@ namespace kernel {
         std::size_t get_total_memory();
 
         void set_addr_free(std::size_t addr, std::size_t length);
-        void set_addr_used(std::size_t addr, std::size_t length);
 
         void* alloc_frame();
         void* alloc_contiguous_frames(std::size_t num_frames);

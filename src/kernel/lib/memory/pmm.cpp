@@ -2,7 +2,6 @@
 #include "kernel/panic/panic.hpp"
 #include <kernel/memory/memory.hpp>
 #include <kernel/log/log.hpp>
-//#include <kernel/panic/panic.hpp>
 #include <kernel/arch/arch.hpp>
 
 #include <cstdint>
@@ -60,52 +59,6 @@ namespace kernel::pmm {
         total_frames = 0;
     }
 
-    void init(std::size_t total_mem_bytes,
-              std::size_t free_mem_addr,
-              std::size_t free_mem_len) {
-        log::init_start("Physical Memory Management");
-        
-        if (total_mem_bytes > MAX_MEMORY_BYTES) {
-            log::warn("System booted with %u bytes of RAM, defaulting to 2GiB", total_mem_bytes);
-            total_mem_bytes = MAX_MEMORY_BYTES;
-        }
-
-        if (free_mem_addr + free_mem_len >= total_mem_bytes) {
-            //kernel::panicf("Memory address %x (length=%x) is outside of available memory",
-              //             free_mem_addr,
-                //           free_mem_len);
-        }
-
-        total_memory = total_mem_bytes;
-
-        log::info("Total system memory: %u bytes", total_mem_bytes);
-        log::info("Free memory start: %x", free_mem_addr);
-        log::info("Free memory length: %u bytes", free_mem_len);
-        
-        // all pages set to used by default
-        for (std::size_t i = 0; i < FRAME_BITMAP_SIZE; i++) {
-            frame_bitmap[i] = 0xFFFFFFFFFFFFFFFF;
-        }
-
-        // allocate the free memory range
-        set_addr_free(free_mem_addr, free_mem_len);
-
-        const auto virt_base = reinterpret_cast<std::uintptr_t>(KERNEL_VIRT_BASE);
-        const auto phys_base = reinterpret_cast<std::uintptr_t>(KERNEL_PHYS_BASE);
-        const auto virt_end  = reinterpret_cast<std::uintptr_t>(kernel_end);
-
-        const auto kernel_start = phys_base;
-        const auto kernel_end   = virt_end - virt_base;
-        const auto kernel_len   = kernel_end - kernel_start;
-
-        log::info("Kernel starts at %x", kernel_start);
-        log::info("Kernel length %u bytes", kernel_len);
-
-        set_addr_used(kernel_start, kernel_len);
-        
-        log::init_end("Physical Memory Management");
-    }
-
     void add_free_memory(std::size_t addr, std::size_t len) {
         total_memory += len;
         total_frames += (len / FRAME_SIZE) + 1;
@@ -123,16 +76,6 @@ namespace kernel::pmm {
         }
 
         set_addr_free(addr, len);
-    }
-
-    void add_used_memory(std::size_t addr, std::size_t len) {
-        total_memory += len;
-
-        if (total_memory > MAX_MEMORY_BYTES) {
-            kernel::panic("PMM cannot be initalized with >%x bytes of memory");
-        }
-
-        set_addr_used(addr, len);
     }
 
     std::size_t get_total_memory() {
