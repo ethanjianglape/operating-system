@@ -64,7 +64,7 @@ add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
     COMMAND ${CMAKE_CXX_COMPILER}
         -m64
-        -T ${CMAKE_SOURCE_DIR}/src/kernel/arch/x86_64/linker.ld
+        -T ${CMAKE_SOURCE_DIR}/src/kernel/arch/x86_64/limine.ld
         -nostdlib
         -static
         -Wl,-Map=kernel.map

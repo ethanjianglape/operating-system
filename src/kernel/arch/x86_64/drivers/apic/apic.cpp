@@ -94,7 +94,7 @@ void apic::timer_init() {
     lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
     lapic_write(LAPIC_TIMER_INIT_COUNT, ticks);
 
-    irq::register_irq_handler(32, timer::timer_tick);
+    irq::register_irq_handler(32, timers::timer_tick);
 
     kernel::log::info("APIC timer initialized on ISR32 (IRQ0) at %dms resoluation.", ms);
 }

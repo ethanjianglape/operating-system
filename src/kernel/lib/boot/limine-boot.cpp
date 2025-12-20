@@ -1,12 +1,10 @@
-#include "arch/x86_64/drivers/serial/serial.hpp"
-#include "arch/x86_64/vmm/vmm.hpp"
-#include "kernel/console/console.hpp"
-#include "kernel/drivers/framebuffer/framebuffer.hpp"
 #include <kernel/boot/boot.hpp>
-#include <kernel/memory/memory.hpp>
-#include <kernel/arch/arch.hpp>
-#include <kernel/log/log.hpp>
 #include <kernel/boot/limine.h>
+#include <kernel/arch/arch.hpp>
+#include <kernel/console/console.hpp>
+#include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <kernel/log/log.hpp>
+#include <kernel/memory/pmm.hpp>
 
 #include <cstdint>
 
@@ -47,15 +45,7 @@ static volatile limine_hhdm_request hhdm_request = {
 static volatile std::uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_END_MARKER;
 
 namespace kernel::boot {
-    void init_serial() {
-        kernel::arch::drivers::serial::init();
-        kernel::console::init(kernel::arch::drivers::serial::get_console_driver());
-
-        kernel::log::info("MyOS Booted into kernel_main() using Limine.");
-        kernel::log::info("Serial ouput on COM1 initialized");
-    }
-    
-    void init_limine() {
+    void init() {
         kernel::log::init_start("Limine Response");
 
         limine_framebuffer* fb = framebuffer_request.response->framebuffers[0];
@@ -99,10 +89,5 @@ namespace kernel::boot {
 
         kernel::arch::vmm::init(hhdm_offset);
         kernel::log::init_end("Limine Response");
-    }
-
-    void init() {
-        init_serial();
-        init_limine();
     }
 }

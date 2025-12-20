@@ -1,5 +1,5 @@
 #include "pit.hpp"
-#include "arch/x86_64/cpu/cpu.hpp"
+#include <arch/x86_64/cpu/cpu.hpp>
 
 namespace x86_64::drivers::pit {
     void sleep_ms(std::uint32_t ms) {

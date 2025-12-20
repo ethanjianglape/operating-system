@@ -1,12 +1,12 @@
 #include "timer.hpp"
 
 #include <kernel/log/log.hpp>
-#include "arch/x86_64/drivers/apic/apic.hpp"
+#include <arch/x86_64/drivers/apic/apic.hpp>
 
-using namespace x86_64;
+namespace x86_64::timers {
+    void timer_tick(std::uint32_t vector) {
+        // Nothing for now
 
-void timer::timer_tick(std::uint32_t vector) {
-    // Nothing for now
-
-    drivers::apic::send_eoi();
+        drivers::apic::send_eoi();
+    }
 }

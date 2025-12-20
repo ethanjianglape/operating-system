@@ -2,126 +2,122 @@
 
 #include <kernel/log/log.hpp>
 #include <kernel/memory/memory.hpp>
+#include <kernel/memory/pmm.hpp>
 
 #include <cstddef>
 #include <cstdint>
 
-using namespace x86_64;
+namespace x86_64::vmm {
+    static PageTableEntry* pml4;
 
-// Raw physical and virtual addresses of the kernel from linker.ld
-// These are dynamic as the size of the kernel changes between compiles
-extern "C" char kernel_start[];
-extern "C" char kernel_end[];
-
-static vmm::PageTableEntry* pml4;
-
-static std::uint8_t* kernel_heap;
-
-static std::uintptr_t hhdm_offset;
-
-std::uintptr_t vmm::get_hhdm_offset() {
-    return hhdm_offset;
-}
-
-void make_pte(vmm::PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags) {
-    pte->p = (flags & vmm::PAGE_PRESENT) ? 1 : 0;
-    pte->rw = (flags & vmm::PAGE_WRITE) ? 1 : 0;
-    pte->us = (flags & vmm::PAGE_USER) ? 1 : 0;
-    pte->pcd = (flags & vmm::PAGE_CACHE_DISABLE) ? 1 : 0;
-    pte->addr = phys >> 12;
-}
-
-void zero_page(std::uintptr_t* virt) {
-    for (std::size_t i = 0; i < vmm::NUM_PT_ENTRIES; i++) {
-        virt[i] = 0x0;
-    }
-}
-
-void vmm::map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
-    const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
-    const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
-    const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
-    const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
-
-    if (!pml4[pml4_idx].p) {
-        // Allocate a new 4KiB physical frame for this entry
-        auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
-
-        // Create the missing pte entry at this index
-        make_pte(&pml4[pml4_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
-
-        // Zero out the page in the next layer of the page table
-        zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
-    }
-
-    auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
-
-    if (!pdpt[pdpt_idx].p) {
-        // Allocate a new 4KiB physical frame for this entry
-        auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
-
-        // Create the missing pte entry at this index
-        make_pte(&pdpt[pdpt_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
-                                                                                                                                                    
-        // Zero out the page in the next layer of the page table
-        zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
-    }
-
-    auto* pd = phys_to_virt<PageTableEntry*>(pdpt[pdpt_idx].addr << 12);
-
-    if (!pd[pd_idx].p) {
-        // Allocate a new 4KiB physical frame for this entry
-        auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
-
-        // Create the missing pte entry at this index
-        make_pte(&pd[pd_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
-
-        // Zero out the page in the next layer of the page table
-        zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
-    }
-
-    auto* pt = phys_to_virt<PageTableEntry*>(pd[pd_idx].addr << 12);
-
-    make_pte(&pt[pt_idx], phys, flags | PAGE_PRESENT | PAGE_WRITE);
-
-    asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
-}
-
-void* vmm::alloc_contiguous_memory(std::size_t bytes) {
-    std::size_t pages = (bytes / PAGE_SIZE) + 1;
-
-    return alloc_contiguous_pages(pages);
-}
-
-void* vmm::alloc_contiguous_pages(std::size_t pages) {
-    auto phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(pages);
-
-    return phys_to_virt<void*>(phys);
-}
-
-// Set our local pml4 to point to the pml4 created by Limine which
-// is stored in cr3 as a physical address
-void init_pml4() {
-    std::uint64_t cr3;
-    asm volatile("mov %%cr3, %0" : "=r"(cr3));
-
-    // The bottom 12 bits of the pml4 physical address should be ignored
-    constexpr std::uint64_t bottom_12_mask = ~0xFFF;
-    pml4 = vmm::phys_to_virt<vmm::PageTableEntry*>(cr3 & bottom_12_mask);
-
-    kernel::log::info("VMM pml4 addr = %x", pml4);
-}
-
-void vmm::init(std::uintptr_t offset) {
-    kernel::log::init_start("VMM");
+    static std::uint8_t* kernel_heap;
     
-    hhdm_offset = offset;
-    kernel_heap = reinterpret_cast<std::uint8_t*>(hhdm_offset);
+    static std::uintptr_t hhdm_offset;
 
-    kernel::log::info("VMM HHDM addr = %x", hhdm_offset);
-    kernel::log::info("Kernel heap   = %x", kernel_heap);
+    std::uintptr_t get_hhdm_offset() { return hhdm_offset; }
 
-    init_pml4();
+    void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags) {
+        pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
+        pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
+        pte->us = (flags & PAGE_USER) ? 1 : 0;
+        pte->pcd = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
+        pte->addr = phys >> 12;
+    }
 
-    kernel::log::init_end("VMM");
+    void zero_page(std::uintptr_t* virt) {
+        for (std::size_t i = 0; i < NUM_PT_ENTRIES; i++) {
+            virt[i] = 0x0;
+        }
+    }
+
+    void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
+        const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
+        const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
+        const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
+        const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
+
+        if (!pml4[pml4_idx].p) {
+            // Allocate a new 4KiB physical frame for this entry
+            auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
+
+            // Create the missing pte entry at this index
+            make_pte(&pml4[pml4_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
+
+            // Zero out the page in the next layer of the page table
+            zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
+        }
+
+        auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
+
+        if (!pdpt[pdpt_idx].p) {
+            // Allocate a new 4KiB physical frame for this entry
+            auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
+
+            // Create the missing pte entry at this index
+            make_pte(&pdpt[pdpt_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
+
+            // Zero out the page in the next layer of the page table
+            zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
+        }
+
+        auto* pd = phys_to_virt<PageTableEntry*>(pdpt[pdpt_idx].addr << 12);
+
+        if (!pd[pd_idx].p) {
+            // Allocate a new 4KiB physical frame for this entry
+            auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
+
+            // Create the missing pte entry at this index
+            make_pte(&pd[pd_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
+
+            // Zero out the page in the next layer of the page table
+            zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
+        }
+
+        auto* pt = phys_to_virt<PageTableEntry*>(pd[pd_idx].addr << 12);
+
+        make_pte(&pt[pt_idx], phys, flags | PAGE_PRESENT | PAGE_WRITE);
+
+        asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+    }
+
+    void* alloc_contiguous_memory(std::size_t bytes) {
+        std::size_t pages = (bytes / PAGE_SIZE) + 1;
+
+        return alloc_contiguous_pages(pages);
+    }
+
+    void* alloc_contiguous_pages(std::size_t pages) {
+        auto phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(pages);
+
+        return phys_to_virt<void*>(phys);
+    }
+
+    // Set our local pml4 to point to the pml4 created by Limine which
+    // is stored in cr3 as a physical address
+    void init_pml4() {
+        std::uint64_t cr3;
+        asm volatile("mov %%cr3, %0" : "=r"(cr3));
+
+        // The bottom 12 bits of the pml4 physical address should be ignored
+        constexpr std::uint64_t bottom_12_mask = ~0xFFF;
+        pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
+
+        kernel::log::info("VMM pml4 addr = %x", pml4);
+    }
+
+    void init(std::uintptr_t offset) {
+        kernel::log::init_start("VMM");
+
+        hhdm_offset = offset;
+        kernel_heap = reinterpret_cast<std::uint8_t*>(hhdm_offset);
+
+        kernel::log::info("VMM HHDM addr = %x", hhdm_offset);
+        kernel::log::info("Kernel heap   = %x", kernel_heap);
+
+        init_pml4();
+
+        kernel::log::init_end("VMM");
+    }
 }
+
+

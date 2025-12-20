@@ -1,5 +1,4 @@
-#include "arch/x86_64/vmm/vmm.hpp"
-#include "kernel/console/console.hpp"
+#include <kernel/console/console.hpp>
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
@@ -73,28 +72,6 @@ namespace kernel::drivers::framebuffer {
         pixel |= vram[offset + 2] << 16;
 
         return pixel;
-    }
-
-    void draw_bitmap(std::uint32_t px,
-                     std::uint32_t py,
-                     std::uint32_t width,
-                     std::uint32_t height,
-                     std::uint8_t* bitmap,
-                     std::uint32_t fg,
-                     std::uint32_t bg) {
-        for (std::uint32_t row = 0; row < height; row++) {
-            std::uint8_t byte = bitmap[row];
-
-            for (std::uint8_t col = 0; col < width; col++) {
-                std::uint8_t pixel = (byte >> (width - col - 1)) & 1;
-
-                if (pixel) {
-                    put_pixel(px + col, py + row, fg);
-                } else {
-                    put_pixel(px + col, py + row, bg);
-                }
-            }
-        }
     }
 
     void clear_black() {

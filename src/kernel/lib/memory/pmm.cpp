@@ -1,20 +1,10 @@
-#include "arch/x86_64/cpu/cpu.hpp"
-#include "kernel/panic/panic.hpp"
-#include <kernel/memory/memory.hpp>
+#include <kernel/memory/pmm.hpp>
+#include <kernel/panic/panic.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 
 #include <cstdint>
 #include <cstddef>
-
-extern "C" char KERNEL_VIRT_BASE[];
-extern "C" char KERNEL_PHYS_BASE[];
-
-extern "C" char kernel_start[];
-extern "C" char kernel_end[];
-
-extern "C" std::uintptr_t kernel_physical_start;
-extern "C" std::uintptr_t kernel_physical_end;
 
 namespace kernel::pmm {
     // 1 bit used per frame, 0 = free, 1 = used
