@@ -3,12 +3,12 @@
 #include <cstdint>
 
 namespace x86_64::process {
-    struct [[gnu::packed]] iret_frame {
-        std::uint32_t eip;
-        std::uint32_t cs;
-        std::uint32_t eflags;
-        std::uint32_t esp;
-        std::uint32_t ss;
+    struct [[gnu::packed]] UserspaceFrame {
+        std::uint64_t rip;
+        std::uint64_t cs;
+        std::uint64_t eflags;
+        std::uint64_t rsp;
+        std::uint64_t ss;
     };
     
     void init();

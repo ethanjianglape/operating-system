@@ -1,38 +1,36 @@
 #include "process.hpp"
+#include "kernel/log/log.hpp"
 
 using namespace x86_64;
 
-[[gnu::aligned(16)]]
-static std::uint8_t user_stack[4096];
+static process::UserspaceFrame frame;
 
-static process::iret_frame frame;
-
-constexpr std::uint32_t USER_CODE_ADDR = 0x00100000;  // 4MB (low address, us=1)
-constexpr std::uint32_t USER_STACK_ADDR = 0x00200000; // 5MB (low address, us=1)
+constexpr std::uint32_t USER_CODE_ADDR  = 0x00400000;  // 4MB (low address, us=1)
+constexpr std::uint32_t USER_STACK_ADDR = 0x00800000 + 0x00008000; // 5MB (low address, us=1)
 
 [[gnu::naked]]
 [[gnu::noreturn]]
 void user_test_func(void) {
-     asm volatile(
-      "mov $42, %%eax;"    // Syscall number 42
-      "int $0x80;"         // Syscall!
-      "1: jmp 1b"          // Loop forever
-      : : : "eax"
-  );
+    asm volatile("mov $1, %%rax\n" // syscall number: write
+                 "syscall\n"
+                 "hang: jmp hang\n"
+                 :
+                 :
+                 : "rax", "rdi", "rsi", "rdx", "rcx", "r11");
 }
 
 void user_test_func_end(void) {}
 
 void enter_userspace(void(*user_code)(), void* user_stack_top) {
-    frame.eip = reinterpret_cast<std::uint32_t>(user_code);
-    frame.cs = 0x1B;
+    frame.rip = reinterpret_cast<std::uint64_t>(user_code);
+    frame.rsp = reinterpret_cast<std::uint64_t>(user_stack_top);
+    frame.ss = 0x1B; // User data (0x18 | RPL=3)
+    frame.cs = 0x23; // User code (0x20 | RPL=3)
     frame.eflags = 0x202;
-    frame.esp = reinterpret_cast<std::uint32_t>(user_stack_top);
-    frame.ss = 0x23;
 
     asm volatile(
-        "mov %0, %%esp;"
-        "iret;"
+        "mov %0, %%rsp;"
+        "iretq;"
         : : "r"(&frame)
      );
 }
@@ -56,5 +54,10 @@ void process::init() {
 
     // Jump to LOW address copy (not high address original!)
     void (*user_entry)() = (void (*)())USER_CODE_ADDR;
+
+    kernel::log::debug("Entering userspace at %x", user_entry);
+    kernel::log::debug("Userspace stack top   %x", user_stack_top);
+    kernel::log::debug("code size = %d", code_size);
+    
     enter_userspace(user_entry, user_stack_top);
 }
