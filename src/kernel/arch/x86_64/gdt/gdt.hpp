@@ -89,8 +89,8 @@ namespace x86_64::gdt {
         GdtEntry zero;        // GDT[0]   offset = 0x00
         GdtEntry kernel_code; // GDT[1]   offset = 0x08
         GdtEntry kernel_data; // GDT[2]   offset = 0x10
-        GdtEntry user_code;   // GDT[3]   offset = 0x18
-        GdtEntry user_data;   // GDT[4]   offset = 0x20
+        GdtEntry user_data;   // GDT[3]   offset = 0x18
+        GdtEntry user_code;   // GDT[4]   offset = 0x20
         TssDescriptor tss;    // GDT[5,6] offset = 0x28-0x30
     };
 

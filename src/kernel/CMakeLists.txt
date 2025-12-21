@@ -23,10 +23,11 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/interrupts/irq.cpp
     ${ARCH_DIR}/interrupts/isr.s
     ${ARCH_DIR}/timers/timer.cpp
-    #${ARCH_DIR}/syscall/syscall.cpp
-    #${ARCH_DIR}/syscall/syscall_entry.s
+    ${ARCH_DIR}/syscall/syscall.cpp
+    ${ARCH_DIR}/syscall/syscall_entry.s
+    ${ARCH_DIR}/syscall/int80_entry.s
     ${ARCH_DIR}/vmm/vmm.cpp
-    #${ARCH_DIR}/process/process.cpp
+    ${ARCH_DIR}/process/process.cpp
     #${ARCH_DIR}/process/process.s
 )
 

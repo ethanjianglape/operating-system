@@ -65,8 +65,8 @@ namespace kernel::boot {
         };
 
         kernel::drivers::framebuffer::init(fb_info);
-        kernel::log::info("Switching to framebuffer logging");
-        kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
+        //kernel::log::info("Switching to framebuffer logging");
+        //kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
 
         auto entry_count = memmap_request.response->entry_count;
         limine_memmap_entry** entries = memmap_request.response->entries;

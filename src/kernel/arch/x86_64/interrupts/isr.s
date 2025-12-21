@@ -2,7 +2,7 @@
 .global isr_stub_table
 
 .extern interrupt_handler
-#.extern syscall_entry
+.extern int80_entry
 
 .macro isr_err_stub num
 isr_stub_\num:
@@ -194,7 +194,6 @@ isr_no_err_stub 0x7d
 isr_no_err_stub 0x7e
 isr_no_err_stub 0x7f
 # 0x80: syscall, no stub
-isr_no_err_stub 0x80
 isr_no_err_stub 0x81
 isr_no_err_stub 0x82
 isr_no_err_stub 0x83
@@ -452,8 +451,7 @@ isr_stub_table:
     .quad isr_stub_0x7d
     .quad isr_stub_0x7e
     .quad isr_stub_0x7f
-    #.quad syscall_entry
-    .quad isr_stub_0x80
+    .quad int80_entry
     .quad isr_stub_0x81
     .quad isr_stub_0x82
     .quad isr_stub_0x83

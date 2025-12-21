@@ -36,6 +36,8 @@ namespace x86_64::vmm {
         const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
         const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
 
+        kernel::log::debug("map_page mapping virt %x to phys %x (%d, %d, %d, %d)", virt, phys, pml4_idx, pdpt_idx, pd_idx, pt_idx);
+
         if (!pml4[pml4_idx].p) {
             // Allocate a new 4KiB physical frame for this entry
             auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
@@ -46,6 +48,8 @@ namespace x86_64::vmm {
             // Zero out the page in the next layer of the page table
             zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
         }
+
+        kernel::log::debug("pml4[%d].us = %d", pml4_idx, pml4[pml4_idx].us);
 
         auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
 
@@ -60,6 +64,8 @@ namespace x86_64::vmm {
             zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
         }
 
+        kernel::log::debug("pdpt[%d].us = %d", pdpt_idx, pdpt[pdpt_idx].us);
+
         auto* pd = phys_to_virt<PageTableEntry*>(pdpt[pdpt_idx].addr << 12);
 
         if (!pd[pd_idx].p) {
@@ -73,9 +79,13 @@ namespace x86_64::vmm {
             zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
         }
 
+        kernel::log::debug("pd[%d].us = %d", pd_idx, pd[pd_idx].us);
+
         auto* pt = phys_to_virt<PageTableEntry*>(pd[pd_idx].addr << 12);
 
         make_pte(&pt[pt_idx], phys, flags | PAGE_PRESENT | PAGE_WRITE);
+
+        kernel::log::debug("pt[%d].us = %d", pt_idx, pt[pt_idx].us);
 
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
     }
@@ -105,6 +115,17 @@ namespace x86_64::vmm {
         kernel::log::info("VMM pml4 addr = %x", pml4);
     }
 
+    void init_userspace() {
+        auto code_phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(8);
+        auto data_phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(8);
+
+        map_page(0x00400000, code_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+        map_page(0x00800000, data_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+
+        kernel::log::info("Mapped user code at virt %x to phys %x", 0x00400000, code_phys);
+        kernel::log::info("Mapped user data at virt %x to phys %x", 0x00800000, data_phys);
+    }
+
     void init(std::uintptr_t offset) {
         kernel::log::init_start("VMM");
 
@@ -115,6 +136,7 @@ namespace x86_64::vmm {
         kernel::log::info("Kernel heap   = %x", kernel_heap);
 
         init_pml4();
+        init_userspace();
 
         kernel::log::init_end("VMM");
     }

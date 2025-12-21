@@ -1,6 +1,7 @@
 #include "gdt.hpp"
 
-#include "kernel/log/log.hpp"
+#include <arch/x86_64/cpu/cpu.hpp>
+#include <kernel/log/log.hpp>
 
 extern "C" void load_gdt(x86_64::gdt::Gdtr* ptr);
 
@@ -63,11 +64,11 @@ namespace x86_64::gdt {
         // Entry 2: kernel data
         gdt_table.kernel_data = make_gdt_entry(0, 0xFFFFF, KERNEL_DATA, FLAGS_64BIT_4KB);
 
-        // Entry 3: user code
-        gdt_table.user_code = make_gdt_entry(0, 0xFFFFF, USER_CODE, FLAGS_64BIT_4KB);
-
-        // Entry 4: user data
+        // Entry 3: user data
         gdt_table.user_data = make_gdt_entry(0, 0xFFFFF, USER_DATA, FLAGS_64BIT_4KB);
+
+        // Entry 4: user code
+        gdt_table.user_code = make_gdt_entry(0, 0xFFFFF, USER_CODE, FLAGS_64BIT_4KB);
 
         // Entry 5-6: TSS
         gdt_table.tss = make_tss_descriptor();
@@ -105,8 +106,8 @@ namespace x86_64::gdt {
         log_gdt_entry(gdt_table.zero, 0, "NULL");
         log_gdt_entry(gdt_table.kernel_code, 1, "Kernel Code");
         log_gdt_entry(gdt_table.kernel_data, 2, "Kernel Data");
-        log_gdt_entry(gdt_table.user_code, 3, "User Code");
-        log_gdt_entry(gdt_table.user_data, 4, "User Data");
+        log_gdt_entry(gdt_table.user_code, 3, "User Data");
+        log_gdt_entry(gdt_table.user_data, 4, "User Code");
 
         kernel::log::init_end("GDT");
     }

@@ -1,3 +1,5 @@
+#include "arch/x86_64/process/process.hpp"
+#include <arch/x86_64/syscall/syscall.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/drivers/apic/apic.hpp>
 #include <arch/x86_64/gdt/gdt.hpp>
@@ -22,13 +24,19 @@ void kernel_main() {
     
     x86_64::gdt::init();
     x86_64::idt::init();
+    x86_64::syscall::init();
 
     x86_64::drivers::pic::init();
     x86_64::drivers::apic::init();
 
-    kernel::log::success("All core kernel features initialized!");
-
     x86_64::cpu::sti();
+
+    kernel::log::success("All core kernel features initialized!");
+    kernel::log::info("Entering userspace");
+
+    x86_64::process::init();
+
+    kernel::log::info("back from userspace");
 
     while (true) {
         x86_64::cpu::hlt();
