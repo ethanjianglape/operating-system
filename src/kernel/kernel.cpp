@@ -1,3 +1,4 @@
+#include "arch/x86_64/drivers/keyboard/keyboard.hpp"
 #include "arch/x86_64/process/process.hpp"
 #include <arch/x86_64/syscall/syscall.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
@@ -28,15 +29,16 @@ void kernel_main() {
 
     x86_64::drivers::pic::init();
     x86_64::drivers::apic::init();
+    x86_64::drivers::keyboard::init();
 
     x86_64::cpu::sti();
 
     kernel::log::success("All core kernel features initialized!");
     kernel::log::info("Entering userspace");
 
-    x86_64::process::init();
+    //x86_64::process::init();
 
-    kernel::log::info("back from userspace");
+    //kernel::log::info("back from userspace");
 
     while (true) {
         x86_64::cpu::hlt();

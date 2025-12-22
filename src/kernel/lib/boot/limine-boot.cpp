@@ -1,3 +1,4 @@
+#include "kernel/drivers/acpi/acpi.hpp"
 #include <kernel/boot/boot.hpp>
 #include <kernel/boot/limine.h>
 #include <kernel/arch/arch.hpp>
@@ -41,6 +42,14 @@ static volatile limine_hhdm_request hhdm_request = {
 };
 
 [[gnu::used]]
+[[gnu::section(".limine_requests")]]
+static volatile limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST_ID,
+    .revision = 0,
+    .response = nullptr
+};
+
+[[gnu::used]]
 [[gnu::section(".limine_requests_end")]]
 static volatile std::uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_END_MARKER;
 
@@ -65,8 +74,8 @@ namespace kernel::boot {
         };
 
         kernel::drivers::framebuffer::init(fb_info);
-        //kernel::log::info("Switching to framebuffer logging");
-        //kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
+        kernel::log::info("Switching to framebuffer logging");
+        kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
 
         auto entry_count = memmap_request.response->entry_count;
         limine_memmap_entry** entries = memmap_request.response->entries;
@@ -86,8 +95,11 @@ namespace kernel::boot {
         }
 
         std::uint64_t hhdm_offset = hhdm_request.response->offset;
-
         kernel::arch::vmm::init(hhdm_offset);
+
+        void* rsdp_address = rsdp_request.response->address;
+        kernel::drivers::acpi::init(rsdp_address);
+        
         kernel::log::init_end("Limine Response");
     }
 }

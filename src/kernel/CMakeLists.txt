@@ -36,6 +36,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
     ${ARCH_DRIVERS_DIR}/pit/pit.cpp
     ${ARCH_DRIVERS_DIR}/apic/apic.cpp
     ${ARCH_DRIVERS_DIR}/serial/serial.cpp
+    ${ARCH_DRIVERS_DIR}/keyboard/keyboard.cpp
 )
 
 # General purpose kernel library sources (not arch specific)
@@ -46,6 +47,7 @@ set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/memory/pmm.cpp
     ${LIB_DIR}/console/console.cpp
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
+    ${LIB_DIR}/drivers/acpi/acpi.cpp
 )
 
 # Architecture-specific boot files

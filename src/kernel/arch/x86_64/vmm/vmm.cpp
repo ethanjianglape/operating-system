@@ -36,8 +36,6 @@ namespace x86_64::vmm {
         const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
         const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
 
-        kernel::log::debug("map_page mapping virt %x to phys %x (%d, %d, %d, %d)", virt, phys, pml4_idx, pdpt_idx, pd_idx, pt_idx);
-
         if (!pml4[pml4_idx].p) {
             // Allocate a new 4KiB physical frame for this entry
             auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
@@ -48,8 +46,6 @@ namespace x86_64::vmm {
             // Zero out the page in the next layer of the page table
             zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
         }
-
-        kernel::log::debug("pml4[%d].us = %d", pml4_idx, pml4[pml4_idx].us);
 
         auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
 
@@ -64,8 +60,6 @@ namespace x86_64::vmm {
             zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
         }
 
-        kernel::log::debug("pdpt[%d].us = %d", pdpt_idx, pdpt[pdpt_idx].us);
-
         auto* pd = phys_to_virt<PageTableEntry*>(pdpt[pdpt_idx].addr << 12);
 
         if (!pd[pd_idx].p) {
@@ -79,13 +73,9 @@ namespace x86_64::vmm {
             zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
         }
 
-        kernel::log::debug("pd[%d].us = %d", pd_idx, pd[pd_idx].us);
-
         auto* pt = phys_to_virt<PageTableEntry*>(pd[pd_idx].addr << 12);
 
         make_pte(&pt[pt_idx], phys, flags | PAGE_PRESENT | PAGE_WRITE);
-
-        kernel::log::debug("pt[%d].us = %d", pt_idx, pt[pt_idx].us);
 
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
     }
