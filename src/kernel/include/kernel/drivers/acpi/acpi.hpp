@@ -14,7 +14,7 @@ namespace kernel::drivers::acpi {
         std::uint8_t reserved[3];
     };
 
-    struct [[gnu::packed]] ACPISDTHeader {
+    struct [[gnu::packed]] ACPIHeader {
         char signature[4];
         std::uint32_t length;
         std::uint8_t revision;
@@ -37,14 +37,14 @@ namespace kernel::drivers::acpi {
     constexpr std::uint8_t MADT_X2APIC              = 9;
 
     struct [[gnu::packed]] MADTHeader {
-        ACPISDTHeader std_header;
+        ACPIHeader std_header;
         std::uint32_t lapic_addr;
         std::uint32_t flags;
     };
 
     struct [[gnu::packed]] XSDT {
-        ACPISDTHeader header;
-        std::uint64_t other_sdt[];
+        ACPIHeader header;
+        std::uint64_t other_headers[];
     };
 
     void init(void* rsdp_addr);

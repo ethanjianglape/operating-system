@@ -1,18 +1,15 @@
 #pragma once
 
-#include <kernel/console/console.hpp>
+#include <kernel/arch/arch.hpp>
+#include <string/string.hpp>
 
 #include <utility>
 
 namespace kernel {
+    namespace serial = kernel::arch::drivers::serial;
+    
     inline int kprintf(const char* str) {
-        int written = 0;
-
-        while (*str) {
-            written += kernel::console::put(*str++);
-        }
-
-        return written;
+        return serial::puts(str);
     }
 
     template <typename T, typename... Ts>
@@ -27,34 +24,27 @@ namespace kernel {
             if (*format == '%' && (*format + 1)) {
                 switch (*(format + 1)) {
                 case '%':
-                    written += console::put('%');
+                    written += serial::putchar('%');
                     break;
                 case 'b':
-                    console::set_number_format(console::NumberFormat::BIN);
-                    written += console::put("0b");
-                    written += console::put(value);
-                    console::reset_number_format();
+                    written += serial::puts("0b");
+                    written += serial::puts(string::to_string(value, string::NumberFormat::BIN));
                     break;
                 case 'o':
-                    console::set_number_format(console::NumberFormat::OCT);
-                    written += console::put('0');
-                    written += console::put(value);
-                    console::reset_number_format();
+                    written += serial::puts("0");
+                    written += serial::puts(string::to_string(value, string::NumberFormat::OCT));
                     break;
                 case 'i':
                 case 'd':
-                    console::set_number_format(console::NumberFormat::DEC);
-                    written += console::put(value);
-                    console::reset_number_format();
+                    written += serial::puts(string::to_string(value));
                     break;
                 case 'x':
-                    console::set_number_format(console::NumberFormat::HEX);
-                    written += console::put("0x");
-                    written += console::put(value);
-                    console::reset_number_format();
+                    written += serial::puts("0x");
+                    written += serial::puts(string::to_string(value, string::NumberFormat::HEX));
                     break;
                 default:
-                    written += console::put(value);
+                    written += serial::puts(string::to_string(value));
+                    break;
                 }
                 
                 written += kprintf(format + 2, std::forward<Ts>(args)...);
@@ -62,7 +52,7 @@ namespace kernel {
                 return written;
             } 
 
-            written += console::put(*format);
+            written += serial::putchar(*format);
         }
 
         return written;

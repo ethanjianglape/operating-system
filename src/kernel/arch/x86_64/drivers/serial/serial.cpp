@@ -1,13 +1,13 @@
 #include "serial.hpp"
+#include "string/string.hpp"
 
 #include <arch/x86_64/cpu/cpu.hpp>
 
+#include <concepts>
 #include <kernel/console/console.hpp>
 
 namespace x86_64::drivers::serial {
     static kernel::console::ConsoleDriver console_driver = {
-        .putchar = putchar,
-        .mode = kernel::console::ConsoleMode::SERIAL
     };
 
     kernel::console::ConsoleDriver* get_console_driver() {
@@ -28,7 +28,7 @@ namespace x86_64::drivers::serial {
         cpu::outb(COM1 + MODEM_CTRL, 0x0B);    // IRQs enabled, RTS/DSR set
     }
 
-    void putchar(char c) {
+    int putchar(char c) {
         while (!is_transmit_ready());
 
         if (c == '\n') {
@@ -36,11 +36,27 @@ namespace x86_64::drivers::serial {
         }
 
         cpu::outb(COM1 + DATA, c);
+
+        return 1;
     }
 
-    void puts(const char* str) {
+    int puts(const char* str) {
+        int written = 0;
+        
         while (*str) {
-            putchar(*str++);
+            written += putchar(*str++);
         }
+
+        return written;
+    }
+
+    int puts(const unsigned char* str) {
+        int written = 0;
+        
+        while (*str) {
+            written += putchar(*str++);
+        }
+
+        return written;
     }
 }

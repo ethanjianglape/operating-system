@@ -35,6 +35,12 @@ namespace x86_64::drivers::apic {
     // CPUID feature flags
     inline constexpr std::uint32_t CPUID_FEAT_EDX_APIC     = (1 << 9);  // APIC available
 
+    constexpr std::uintptr_t IOAPIC_IOREGSEL = 0x00;
+    constexpr std::uintptr_t IOAPIC_IOWIN    = 0x10;
+
+    void set_lapic_addr(std::uintptr_t lapic_phys_addr);
+    void set_ioapic_addr(std::uintptr_t ioapic_phys_addr);
+
     bool check_support();
     void enable();
     void init();

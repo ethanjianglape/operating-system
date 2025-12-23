@@ -84,8 +84,11 @@ namespace kernel::console {
 
     void clear();
 
+    void backspace();
+
     int put(char c);
     int put(const char* str);
+    int put(char* str);
     int put(std::intmax_t num);
     int put(std::uintmax_t unum);
 

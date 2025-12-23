@@ -1,5 +1,5 @@
 #include "arch/x86_64/drivers/keyboard/keyboard.hpp"
-#include "arch/x86_64/process/process.hpp"
+#include "kernel/tty/tty.hpp"
 #include <arch/x86_64/syscall/syscall.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/drivers/apic/apic.hpp>
@@ -16,7 +16,6 @@
 [[noreturn]]
 void kernel_main() {
     x86_64::drivers::serial::init();
-    kernel::console::init(x86_64::drivers::serial::get_console_driver());
 
     kernel::log::info("MyOS Booted into kernel_main() using Limine.");
     kernel::log::info("Serial ouput on COM1 initialized");
@@ -34,7 +33,8 @@ void kernel_main() {
     x86_64::cpu::sti();
 
     kernel::log::success("All core kernel features initialized!");
-    kernel::log::info("Entering userspace");
+
+    //kernel::tty::init();
 
     //x86_64::process::init();
 

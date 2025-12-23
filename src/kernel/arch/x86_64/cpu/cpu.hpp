@@ -45,10 +45,15 @@ namespace x86_64::cpu {
         asm volatile("hlt");
     }
 
-     [[gnu::always_inline]]
-     inline void sti() {
-         asm volatile("sti" : : : "memory");
-     }
+    [[gnu::always_inline]]
+    inline void pause() {
+        asm volatile("pause");
+    }
+
+    [[gnu::always_inline]]
+    inline void sti() {
+        asm volatile("sti" : : : "memory");
+    }
 
     [[gnu::always_inline]]
     inline void cli() {

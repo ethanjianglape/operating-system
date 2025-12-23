@@ -1,8 +1,10 @@
-#include "arch/x86_64/vmm/vmm.hpp"
-#include "kernel/log/log.hpp"
-#include <cstdint>
+#include "arch/x86_64/drivers/apic/apic.hpp"
+#include <arch/x86_64/vmm/vmm.hpp>
+#include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 #include <kernel/drivers/acpi/acpi.hpp>
+
+#include <cstdint>
 
 namespace kernel::drivers::acpi {
     int strnlen(const char* str, int n) {
@@ -29,7 +31,7 @@ namespace kernel::drivers::acpi {
         return true;
     }
 
-    void parse_madt(ACPISDTHeader* header) {
+    void parse_madt(ACPIHeader* header) {
         auto* madt = reinterpret_cast<MADTHeader*>(header);
         auto madt_length = madt->std_header.length;
 
@@ -41,6 +43,8 @@ namespace kernel::drivers::acpi {
         std::uint8_t* madt_start = reinterpret_cast<std::uint8_t*>(madt);
         std::uint8_t* madt_end = madt_start + madt_length;
         std::uint8_t* record_addr = madt_start + MADT_RECORD_OFFSET;
+
+        arch::drivers::apic::set_lapic_addr(madt->lapic_addr);
 
         auto get_uint8_entry = [&record_addr] (std::uint8_t offset) {
             return *(record_addr + offset);
@@ -59,26 +63,29 @@ namespace kernel::drivers::acpi {
         };
 
         while (record_addr < madt_end) {
-            auto entry_type = *(record_addr + 0);
-            auto record_len = *(record_addr + 1);
+            auto entry_type = get_uint8_entry(0);
+            auto record_len = get_uint8_entry(1);
 
             switch (entry_type) {
             case MADT_LAPIC: {
-                std::uint8_t acpi_id = *(record_addr + 2);
-                std::uint8_t apic_id = *(record_addr + 3);
-                std::uint8_t flags = *(record_addr + 4);
+                auto acpi_id = get_uint8_entry(2);
+                auto apic_id = get_uint8_entry(3);
+                auto flags   = get_uint8_entry(4);
 
                 kernel::log::info("Processor Local APIC:");
                 kernel::log::info("acpi_id = %d, apic_id = %d, flags = %b", acpi_id, apic_id, flags);
                 break;
             }
             case MADT_IOAPIC: {
-                std::uint8_t ioapic_id = get_uint8_entry(2);
-                std::uint32_t ioapic_addr = get_uint32_entry(4);
-                std::uint32_t gsi_base = get_uint32_entry(8);
+                auto ioapic_id   = get_uint8_entry(2);
+                auto ioapic_addr = get_uint32_entry(4);
+                auto gsi_base    = get_uint32_entry(8);
 
                 kernel::log::info("IOAPIC:");
                 kernel::log::info("ioapic id = %d, ioapic addr = %x, gsi base = %x", ioapic_id, ioapic_addr, gsi_base);
+
+                arch::drivers::apic::set_ioapic_addr(ioapic_addr);
+                
                 break;
             }
             case MADT_IOAPIC_ISO: {
@@ -116,6 +123,8 @@ namespace kernel::drivers::acpi {
 
                 kernel::log::info("LAPIC Address Override:");
                 kernel::log::info("LAPIC Address = %x", lapic_addr);
+
+                arch::drivers::apic::set_lapic_addr(lapic_addr);
                 
                 break;
             }
@@ -139,12 +148,11 @@ namespace kernel::drivers::acpi {
         kernel::log::init_start("ACPI");
 
         auto* xsdp = reinterpret_cast<XSDP*>(rsdp_addr);
-        std::uintptr_t xsdt_phys = reinterpret_cast<std::uintptr_t>(xsdp->xsdt_addr);
-        std::uintptr_t xsdt_virt = kernel::arch::vmm::get_hhdm_offset() + xsdt_phys;
 
-        kernel::arch::vmm::map_page(xsdt_virt,
-                                    xsdt_phys,
-                                    kernel::arch::vmm::PAGE_PRESENT| kernel::arch::vmm::PAGE_CACHE_DISABLE);
+        // xsdp->xsdt_addr is a physical address, it must be mapped to our HHDM
+        // address space before it can be used.
+        std::uintptr_t xsdt_phys = reinterpret_cast<std::uintptr_t>(xsdp->xsdt_addr);
+        std::uintptr_t xsdt_virt = arch::vmm::map_hddm_page(xsdt_phys, arch::vmm::PAGE_CACHE_DISABLE);
 
         auto* xsdt = reinterpret_cast<XSDT*>(xsdt_virt);
 
@@ -168,19 +176,17 @@ namespace kernel::drivers::acpi {
         kernel::log::info("XSDT:");
         kernel::log::info("revision = %d", xsdt->header.revision);
         kernel::log::info("length = %d", xsdt->header.length);
-        kernel::log::info("other addr = %x", xsdt->other_sdt);
         kernel::log::info("signature = %s", sig);
         kernel::log::info("entries = %d", entries);
 
         for (int i = 0; i < entries; i++) {
-            std::uintptr_t other_sdt_phys = reinterpret_cast<std::uintptr_t>(xsdt->other_sdt[i]);
-            std::uintptr_t other_sdt_virt = kernel::arch::vmm::get_hhdm_offset() + other_sdt_phys;
+            // Each xsdt->other_headers[i] is a physical pointer to the next entry in the table,
+            // it must be mapped to our HHDM address space to access it.
+            std::uintptr_t headers_phys = reinterpret_cast<std::uintptr_t>(xsdt->other_headers[i]);
+            std::uintptr_t headers_virt = arch::vmm::map_hddm_page(headers_phys, arch::vmm::PAGE_CACHE_DISABLE);
 
-            kernel::arch::vmm::map_page(other_sdt_virt,
-                                        other_sdt_phys,
-                                        kernel::arch::vmm::PAGE_PRESENT| kernel::arch::vmm::PAGE_CACHE_DISABLE);
-
-            auto* header = reinterpret_cast<ACPISDTHeader*>(other_sdt_virt);
+            auto* header = reinterpret_cast<ACPIHeader*>(headers_virt);
+            
             char sig[5];
             sig[0] = header->signature[0];
             sig[1] = header->signature[1];

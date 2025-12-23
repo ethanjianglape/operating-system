@@ -51,6 +51,7 @@ namespace x86_64::vmm {
     
     void init(std::uintptr_t hhdm_offset);
 
+    std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags);
     void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
     void* alloc_contiguous_memory(std::size_t bytes);

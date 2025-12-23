@@ -31,11 +31,8 @@ namespace kernel::console {
     static NumberFormat number_format = NumberFormat::DEC;
 
     constexpr char DEC_CHARS[] = "0123456789";
-
     constexpr char HEX_CHARS[] = "0123456789ABCDEF";
-
     constexpr char OCT_CHARS[] = "01234567";
-
     constexpr char BIN_CHARS[] = "01";
 
     void init(ConsoleDriver* d) {
@@ -116,6 +113,16 @@ namespace kernel::console {
         }
     }
 
+    void backspace() {
+        if (cursor_x == 0) {
+            return;
+        }
+
+        cursor_x--;
+        put(' ');
+        cursor_x--;
+    }
+
     int put(char c) {
         if (driver->putchar != nullptr) {
             driver->putchar(c);
@@ -162,6 +169,16 @@ namespace kernel::console {
     }
 
     int put(const char* str) {
+        int written = 0;
+        
+        while (*str) {
+            written += put(*str++);
+        }
+
+        return written;
+    }
+
+    int put(char* str) {
         int written = 0;
         
         while (*str) {

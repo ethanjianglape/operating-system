@@ -42,6 +42,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/boot/limine-boot.cpp
+    ${LIB_DIR}/tty/tty.cpp
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp

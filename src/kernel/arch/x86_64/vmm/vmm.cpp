@@ -30,6 +30,14 @@ namespace x86_64::vmm {
         }
     }
 
+    std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags) {
+        std::uintptr_t virt = get_hhdm_offset() + phys;
+
+        map_page(virt, phys, flags);
+
+        return virt;
+    }
+
     void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
         const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
         const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
