@@ -20,9 +20,12 @@ namespace kernel::drivers::framebuffer {
 
     void init(const FrameBufferInfo& info);
 
-    kernel::console::ConsoleDriver* get_console_driver();
+    std::uint32_t get_screen_width();
+    std::uint32_t get_screen_height();
 
-    void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
+    void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
+    void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h);
+    void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h, std::uint32_t color);
     std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y);
 
     void clear_black();

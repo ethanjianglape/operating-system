@@ -12,6 +12,7 @@ extern "C" {
     void* memmove(void*, const void*, size_t);
     void* memset(void*, int, size_t);
     size_t strlen(const char*);
+    int strcmp(const char* str1, const char* str2);
 
 #ifdef __cplusplus
 }

@@ -1,19 +1,13 @@
+#include "kernel/log/log.hpp"
 #include <kernel/console/console.hpp>
 #include <kernel/console/font8x16.hpp>
+#include <kernel/timer/timer.hpp>
+#include <kernel/drivers/framebuffer/framebuffer.hpp>
 
 #include <cstdint>
 
 namespace kernel::console {
-    // simulates writing to /dev/null, calls to kprintf() and kernel::log() will do nothing
-    static ConsoleDriver null_driver = {
-        .putchar = nullptr,
-        .clear = nullptr,
-        .put_pixel = nullptr,
-        .get_pixel = nullptr,
-        .get_screen_width = nullptr,
-        .get_screen_height = nullptr,
-        .mode = ConsoleMode::TEXT
-    };
+    namespace fb = kernel::drivers::framebuffer;
 
     static std::uint32_t cursor_x = 0;
     static std::uint32_t cursor_y = 0;
@@ -24,93 +18,125 @@ namespace kernel::console {
     static std::uint32_t prev_fg = current_fg;
     static std::uint32_t prev_bg = current_bg;
 
-    static ConsoleDriver* driver = &null_driver;
+    static bool cursor_enabled = true;
+    static bool cursor_visible = false;
 
-    static NumberFormat prev_number_format = NumberFormat::DEC;
+    std::uint32_t get_pixel_x(int offset = 0) {
+        return (cursor_x + offset) * fonts::FONT_WIDTH;
+    }
 
-    static NumberFormat number_format = NumberFormat::DEC;
+    std::uint32_t get_pixel_y(int offset = 0) {
+        return (cursor_y + offset) * fonts::FONT_HEIGHT;
+    }
 
-    constexpr char DEC_CHARS[] = "0123456789";
-    constexpr char HEX_CHARS[] = "0123456789ABCDEF";
-    constexpr char OCT_CHARS[] = "01234567";
-    constexpr char BIN_CHARS[] = "01";
+    void blink_handler(std::uintmax_t ticks) {
+        
+    }
 
-    void init(ConsoleDriver* d) {
-        driver = d;
+    void init() {
         cursor_x = 0;
         cursor_y = 0;
+        enable_cursor();
+        draw_cursor();
+        kernel::timer::register_handler(blink_handler);
     }
 
-    void set_number_format(NumberFormat f) {
-        prev_number_format = number_format;
-        number_format = f;
+    void enable_cursor() {
+        if (!cursor_enabled) {
+            cursor_enabled = true;
+            draw_cursor();
+        }
     }
-
-    void reset_number_format() {
-        number_format = prev_number_format;
-    }
-
-    NumberFormat get_number_format() {
-        return number_format;
-    }
-
-    int number_format_divisor() {
-        switch (number_format) {
-        case NumberFormat::DEC:
-            return 10;
-        case NumberFormat::HEX:
-            return 16;
-        case NumberFormat::OCT:
-            return 8;
-        case NumberFormat::BIN:
-            return 2;
-        default:
-            return 10;
+    
+    void disable_cursor() {
+        if (cursor_enabled) {
+            cursor_enabled = false;
+            draw_cursor();
         }
     }
 
-    char number_format_char(int i) {
-        switch (number_format) {
-        case NumberFormat::DEC:
-            return DEC_CHARS[i];
-        case NumberFormat::HEX:
-            return HEX_CHARS[i];
-        case NumberFormat::OCT:
-            return OCT_CHARS[i];
-        case NumberFormat::BIN:
-            return BIN_CHARS[i];
-        default:
-            return ' ';
+    void show_cursor() { cursor_visible = true; }
+    void hide_cursor() { cursor_visible = false; }
+    void toggle_cursor() { cursor_visible = !cursor_visible; }
+
+    void draw_cursor() {
+        const std::uint32_t px = get_pixel_x();
+        const std::uint32_t py = get_pixel_y();
+
+        fb::invert_rec(px, py, fonts::FONT_WIDTH, fonts::FONT_HEIGHT);
+    }
+
+    void clear_cursor() {
+        const std::uint32_t px = get_pixel_x();
+        const std::uint32_t py = get_pixel_y();
+
+        fb::invert_rec(px, py, fonts::FONT_WIDTH, fonts::FONT_HEIGHT);
+    }
+
+    void clear_to_eol() {
+        const std::uint32_t px = get_pixel_x();
+        const std::uint32_t py = get_pixel_y();
+        const std::uint32_t width = fb::get_screen_width() - px;
+
+        fb::draw_rec(px, py, width, fonts::FONT_HEIGHT, current_bg);
+    }
+
+    void set_cursor_x(std::uint32_t x) {
+        set_cursor(x, cursor_y);
+    }
+
+    void set_cursor_y(std::uint32_t y) {
+        set_cursor(cursor_x, y);
+    }
+
+    void set_cursor(std::uint32_t x, std::uint32_t y) {
+        if (cursor_x == x && cursor_y == y) {
+            return;
         }
+
+        if (cursor_enabled) {
+            draw_cursor();            
+        }
+        
+        cursor_x = x;
+        cursor_y = y;
+
+        if (cursor_enabled) {
+            draw_cursor();            
+        }
+
+        const auto px = get_pixel_x(1);
+        const auto py = get_pixel_y(1);
+
+        if (py > fb::get_screen_height()) {
+            scroll();
+        }
+
+        if (px >= fb::get_screen_width()) {
+            newline();
+        }
+    }
+
+    void move_cursor(std::int32_t dx, std::int32_t dy) {
+        set_cursor(cursor_x + dx, cursor_y + dy);
+    }
+
+    void newline() {
+        set_cursor(0, cursor_y + 1);
     }
 
     void scroll() {
-        if (driver->mode == ConsoleMode::SERIAL) {
-            return;
-        }
-        
-        const auto width = driver->get_screen_width();
-        const auto height = driver->get_screen_height();
+        const auto width = fb::get_screen_width();
+        const auto height = fb::get_screen_height();
         
         for (std::uint32_t pixel_y = 0; pixel_y < height - fonts::FONT_HEIGHT; pixel_y++) {
             for (std::uint32_t pixel_x = 0; pixel_x < width; pixel_x++) {
-                const auto pixel = driver->get_pixel(pixel_x, pixel_y + fonts::FONT_HEIGHT);
-                driver->put_pixel(pixel_x, pixel_y, pixel);
+                const auto pixel = fb::get_pixel(pixel_x, pixel_y + fonts::FONT_HEIGHT);
+                fb::draw_pixel(pixel_x, pixel_y, pixel);
             }
         }
 
         cursor_y--;
-    }
-
-    void newline() {
-        cursor_x = 0;
-        cursor_y++;
-
-        const auto py = (cursor_y + 1) * fonts::FONT_HEIGHT;
-
-        if (py > driver->get_screen_height()) {
-            scroll();
-        }
     }
 
     void backspace() {
@@ -118,21 +144,10 @@ namespace kernel::console {
             return;
         }
 
-        cursor_x--;
-        put(' ');
-        cursor_x--;
+        move_cursor(-1, 0);
     }
 
     int put(char c) {
-        if (driver->putchar != nullptr) {
-            driver->putchar(c);
-            return 0;
-        }
-        
-        if (driver->put_pixel == nullptr) {
-            return 0;
-        }
-
         if (c == '\n') {
             newline();
             return 1;
@@ -143,6 +158,8 @@ namespace kernel::console {
         const std::uint32_t pixel_x = cursor_x * fonts::FONT_WIDTH;
         const std::uint32_t pixel_y = cursor_y * fonts::FONT_HEIGHT;
 
+        move_cursor(1, 0);
+        
         for (std::uint8_t y = 0; y < fonts::FONT_HEIGHT; y++) {
             const std::uint8_t byte = glyph[y];
 
@@ -150,35 +167,17 @@ namespace kernel::console {
                 const std::uint8_t pixel = (byte >> (fonts::FONT_WIDTH - x - 1)) & 1;
 
                 if (pixel == 1) {
-                    driver->put_pixel(pixel_x + x, pixel_y + y, current_fg);
+                    fb::draw_pixel(pixel_x + x, pixel_y + y, current_fg);
                 } else {
-                    driver->put_pixel(pixel_x + x, pixel_y + y, current_bg);
+                    fb::draw_pixel(pixel_x + x, pixel_y + y, current_bg);
                 }
             }
-        }
-
-        cursor_x++;
-
-        const auto px = (cursor_x + 1) * fonts::FONT_WIDTH;
-
-        if (px >= driver->get_screen_width()) {
-            newline();
         }
 
         return 1;
     }
 
     int put(const char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
-    int put(char* str) {
         int written = 0;
         
         while (*str) {
@@ -196,45 +195,6 @@ namespace kernel::console {
         }
 
         return written;
-    }
-
-    int put(std::intmax_t num) {
-        std::uintmax_t unum;
-        int written = 0;
-
-        if (num < 0) {
-            written += put('-');
-            unum = -static_cast<std::uintmax_t>(num);
-        } else {
-            unum = num;
-        }
-
-        return written + put(unum);
-    }
-
-    int put(std::uintmax_t unum) {
-        const auto divisor = number_format_divisor();
-        int written = 0;
-        int i = 0;
-        char buff[16];
-
-        if (unum == 0) {
-            written += put('0');
-        } else {
-            while (unum > 0) {
-                const auto index = unum % divisor;
-                const auto c = number_format_char(index);
-                
-                buff[i++] = c;
-                unum /= divisor;
-            }
-
-            while (i > 0) {
-                written += put(buff[--i]);
-            }
-        }
-
-        return written;        
     }
 
     void set_color(std::uint32_t fg, std::uint32_t bg) {
@@ -263,10 +223,7 @@ namespace kernel::console {
     }
 
     void clear() {
-        if (driver->clear != nullptr) {
-            driver->clear();
-            cursor_x = 0;
-            cursor_y = 0;
-        }
+        fb::clear_black();
+        set_cursor(0, 0);
     }
 }

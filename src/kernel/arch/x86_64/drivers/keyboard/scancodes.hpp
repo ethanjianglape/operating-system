@@ -7,6 +7,8 @@ namespace x86_64::drivers::keyboard {
     // Key release = make code | 0x80
     // Extended keys are prefixed with 0xE0
     enum class ScanCode : std::uint8_t {
+        Nil         = 0x00,
+        
         // Row 1: Escape and Function keys
         Escape      = 0x01,
         F1          = 0x3B,
@@ -112,6 +114,8 @@ namespace x86_64::drivers::keyboard {
     // Extended scancodes (preceded by 0xE0)
     // Use values 0x80+ to distinguish from regular scancodes
     enum class ExtendedScanCode : std::uint8_t {
+        Nil             = 0x00,
+        
         // The raw byte after 0xE0 prefix
         RightAlt        = 0x38,
         RightCtrl       = 0x1D,

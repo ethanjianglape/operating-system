@@ -24,6 +24,4 @@ namespace x86_64::drivers::serial {
 
     int putchar(char c);
     int puts(const char* str);
-
-    kernel::console::ConsoleDriver* get_console_driver();
 }

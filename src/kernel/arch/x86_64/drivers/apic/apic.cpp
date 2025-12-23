@@ -1,8 +1,8 @@
 #include "apic.hpp"
+#include "kernel/timer/timer.hpp"
 
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/interrupts/irq.hpp>
-#include <arch/x86_64/timers/timer.hpp>
 #include <arch/x86_64/vmm/vmm.hpp>
 #include <kernel/log/log.hpp>
 
@@ -103,6 +103,11 @@ namespace x86_64::drivers::apic {
         kernel::log::init_end("APIC");
     }
 
+    void apic_timer_handler(std::uint32_t vector) {
+        kernel::timer::tick();
+        send_eoi();
+    }
+
     void timer_init() {
         constexpr std::uint32_t initial_count = 0xFFFFFFFF;
         constexpr std::uint32_t ms = 10;
@@ -120,7 +125,7 @@ namespace x86_64::drivers::apic {
         lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
         lapic_write(LAPIC_TIMER_INIT_COUNT, ticks);
 
-        irq::register_irq_handler(32, timers::timer_tick);
+        irq::register_irq_handler(32, apic_timer_handler);
 
         kernel::log::info("APIC timer initialized on ISR32 (IRQ0) at %dms resoluation.", ms);
     }

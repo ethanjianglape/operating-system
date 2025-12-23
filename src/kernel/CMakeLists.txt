@@ -22,7 +22,6 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/interrupts/idt.cpp
     ${ARCH_DIR}/interrupts/irq.cpp
     ${ARCH_DIR}/interrupts/isr.s
-    ${ARCH_DIR}/timers/timer.cpp
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/syscall/int80_entry.s
@@ -43,6 +42,8 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/boot/limine-boot.cpp
     ${LIB_DIR}/tty/tty.cpp
+    ${LIB_DIR}/shell/shell.cpp
+    ${LIB_DIR}/timer/timer.cpp
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp

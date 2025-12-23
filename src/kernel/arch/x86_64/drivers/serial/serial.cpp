@@ -1,19 +1,9 @@
 #include "serial.hpp"
-#include "string/string.hpp"
 
 #include <arch/x86_64/cpu/cpu.hpp>
-
-#include <concepts>
 #include <kernel/console/console.hpp>
 
 namespace x86_64::drivers::serial {
-    static kernel::console::ConsoleDriver console_driver = {
-    };
-
-    kernel::console::ConsoleDriver* get_console_driver() {
-        return &console_driver;
-    }
-
     static bool is_transmit_ready() {
         return (cpu::inb(COM1 + LINE_STATUS) & LSR_TRANSMIT_EMPTY) != 0;
     }

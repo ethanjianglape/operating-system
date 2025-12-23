@@ -16,6 +16,7 @@ namespace x86_64::drivers::keyboard {
     static bool shift_held = false;
     static bool control_held = false;
     static bool alt_held = false;
+    static bool caps_lock = false;
 
     static KeyEvent event_buffer[BUFFER_LEN];
 
@@ -33,11 +34,13 @@ namespace x86_64::drivers::keyboard {
         
         KeyEvent* event = &event_buffer[buffer_write];
 
+        event->scancode = ScanCode::Nil;
         event->extended_scancode = scancode;
         event->released = released;
         event->shift_held = shift_held;
         event->control_held = control_held;
         event->alt_held = alt_held;
+        event->caps_lock_on = caps_lock;
         
         if ((buffer_write + 1) % BUFFER_LEN == buffer_read) {
             buffer_read = (buffer_read + 1) % BUFFER_LEN;
@@ -55,15 +58,19 @@ namespace x86_64::drivers::keyboard {
             control_held = !released;
         } else if (scancode == ScanCode::LeftAlt) {
             alt_held = !released;
+        } else if (scancode == ScanCode::CapsLock && !released) {
+            caps_lock = !caps_lock;
         }
 
         KeyEvent* event = &event_buffer[buffer_write];
 
         event->scancode = scancode;
+        event->extended_scancode = ExtendedScanCode::Nil;
         event->released = released;
         event->shift_held = shift_held;
         event->control_held = control_held;
         event->alt_held = alt_held;
+        event->caps_lock_on = caps_lock;
 
         if ((buffer_write + 1) % BUFFER_LEN == buffer_read) {
             buffer_read = (buffer_read + 1) % BUFFER_LEN;

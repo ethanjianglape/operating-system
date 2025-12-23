@@ -1,4 +1,5 @@
 #include "arch/x86_64/drivers/keyboard/keyboard.hpp"
+#include "kernel/shell/shell.hpp"
 #include "kernel/tty/tty.hpp"
 #include <arch/x86_64/syscall/syscall.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
@@ -34,7 +35,7 @@ void kernel_main() {
 
     kernel::log::success("All core kernel features initialized!");
 
-    //kernel::tty::init();
+    kernel::shell::init();
 
     //x86_64::process::init();
 

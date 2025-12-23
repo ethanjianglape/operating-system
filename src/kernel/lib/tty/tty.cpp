@@ -1,15 +1,22 @@
 #include "arch/x86_64/drivers/keyboard/keyboard.hpp"
 #include "arch/x86_64/drivers/keyboard/scancodes.hpp"
 #include "kernel/console/console.hpp"
-#include "kernel/drivers/framebuffer/framebuffer.hpp"
+#include <cstddef>
+#include <cstdint>
 #include <kernel/tty/tty.hpp>
 #include <kernel/arch/arch.hpp>
+#include <kernel/log/log.hpp>
 
 namespace kernel::tty {
     namespace keyboard = arch::drivers::keyboard;
     using ScanCode = keyboard::ScanCode;
+    using ExtendedScanCode = keyboard::ExtendedScanCode;
 
-    static char input[512];
+    constexpr std::size_t BUFFER_LEN = 512;
+    static char buffer[BUFFER_LEN] = {'\0'};
+
+    static std::size_t buffer_index = 0;
+    static std::size_t buffer_end = buffer_index;
 
     // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
     // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -48,30 +55,136 @@ namespace kernel::tty {
         return ascii;
     }
 
-    void loop() {
-        while (keyboard::KeyEvent* event = keyboard::read()) {
-            keyboard::ScanCode scancode = event->scancode;
-            keyboard::ExtendedScanCode extended = event->extended_scancode;
+    void insert_char(char c) {
+        for (std::size_t i = BUFFER_LEN - 1; i > buffer_index; i--) {
+            buffer[i] = buffer[i - 1];
+        }
+        
+        buffer[buffer_index++] = c;
+        buffer_end++;
+    }
 
-            if (event->released) {
-                continue;
-            }
+    void delete_back() {
+        if (buffer_index == 0) {
+            return;
+        }
+        
+        for (std::size_t i = buffer_index; i < BUFFER_LEN; i++) {
+            buffer[i - 1] = buffer[i];
+        }
 
-            char ascii = scancode_to_ascii(scancode, event->shift_held);
+        buffer_index--;
+        buffer_end--;
+        buffer[buffer_end] = '\0';
+    }
 
-            if (ascii > 0) {
-                kernel::console::put(ascii);
-            } else if (scancode == ScanCode::Backspace) {
-                kernel::console::backspace();
-            } else if (scancode == ScanCode::Enter) {
-                kernel::console::newline();
+    void delete_forward() {
+        if (buffer_index == buffer_end) {
+            return;
+        }
+
+        for (std::size_t i = buffer_index; i < BUFFER_LEN - 1; i++) {
+            buffer[i] = buffer[i + 1];
+        }
+
+        buffer_end--;
+        buffer[buffer_end] = '\0';
+    }
+
+    void move_left() {
+        if (buffer_index > 0) {
+            buffer_index--;
+        }
+    }
+
+    void move_right() {
+        if (buffer_index < BUFFER_LEN && buffer[buffer_index]) {
+            buffer_index++;
+        }
+    }
+
+    void move_to_start() {
+        buffer_index = 0;
+    }
+
+    void move_to_end() {
+        buffer_index = buffer_end;
+    }
+
+    void delete_to_end() {
+        buffer[buffer_index] = '\0';
+        buffer_end = buffer_index;
+    }
+
+    void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode extended) {
+        if (c == ScanCode::A) {
+            move_to_start();
+        } else if (c == ScanCode::E) {
+            move_to_end();
+        } else if (c == ScanCode::K) {
+            delete_to_end();
+        } else if (c == ScanCode::B) {
+            move_left();
+        } else if (c == ScanCode::F) {
+            move_right();
+        } else if (c == ScanCode::D) {
+            delete_forward();
+        }
+    }
+
+    char* read_line(std::size_t prompt_start) {
+
+        
+        while (true) {
+            while (keyboard::KeyEvent* event = keyboard::read()) {
+                keyboard::ScanCode scancode = event->scancode;
+                keyboard::ExtendedScanCode extended = event->extended_scancode;
+
+                if (event->released) {
+                    continue;
+                }
+
+                bool caps = event->shift_held || event->caps_lock_on;
+                bool ctrl = event->control_held;
+
+                char ascii = scancode_to_ascii(scancode, caps);
+
+                if (ctrl) {
+                    process_ctrl(scancode, extended);
+                } else if (ascii != '\0') {
+                    insert_char(ascii);
+                } else if (scancode == ScanCode::Backspace) {
+                    delete_back();
+                } else if (scancode == ScanCode::Enter) {
+                    return buffer;
+                } else if (extended == ExtendedScanCode::LeftArrow) {
+                    move_left();
+                } else if (extended == ExtendedScanCode::RightArrow) {
+                    move_right();
+                } else if (extended == ExtendedScanCode::Delete) {
+                    delete_forward();
+                }
+
+                kernel::console::disable_cursor();
+                kernel::console::set_cursor_x(prompt_start);
+                kernel::console::put(buffer);
+                kernel::console::set_cursor_x(prompt_start + buffer_end);
+                kernel::console::clear_to_eol();
+                kernel::console::enable_cursor();
+                kernel::console::set_cursor_x(prompt_start + buffer_index);
             }
         }
     }
 
-    void init() {
-        kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
+    void reset() {
+        buffer_index = 0;
+        buffer_end = 0;
+        buffer[buffer_index] = '\0';
+    }
 
-        loop();
+    void init() {
+        kernel::console::init();
+
+        reset();
     }
 }
