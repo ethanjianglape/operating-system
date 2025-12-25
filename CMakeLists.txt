@@ -46,7 +46,7 @@ add_compile_options(
 set(SYSROOT "${CMAKE_SOURCE_DIR}/sysroot" CACHE PATH "Sysroot directory")
 
 # Add libc subdirectory FIRST (this installs headers to sysroot)
-add_subdirectory(src/libc)
+#add_subdirectory(src/libc)
 
 # Add kernel subdirectory (this installs kernel headers to sysroot)
 add_subdirectory(src/kernel)
@@ -72,7 +72,6 @@ add_custom_command(
         "$<TARGET_OBJECTS:crti_obj>"
         "$<TARGET_OBJECTS:boot_objs>"
         "$<TARGET_OBJECTS:kernel_objs>"
-        "$<TARGET_FILE:libk>"
         "$<TARGET_OBJECTS:crtn_obj>"
         -lgcc
     COMMAND ${CMAKE_OBJCOPY} -O binary kernel.elf kernel.bin
@@ -81,12 +80,11 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy kernel.elf ${SYSROOT}/boot/kernel.elf
     COMMAND ${CMAKE_COMMAND} -E copy kernel.bin ${SYSROOT}/boot/kernel.bin
     COMMAND ${CMAKE_COMMAND} -E touch .kernel_stamp
-    DEPENDS boot_objs kernel_objs crti_obj crtn_obj libk
+    DEPENDS boot_objs kernel_objs crti_obj crtn_obj
         $<TARGET_OBJECTS:boot_objs>
         $<TARGET_OBJECTS:kernel_objs>
         $<TARGET_OBJECTS:crti_obj>
         $<TARGET_OBJECTS:crtn_obj>
-        $<TARGET_FILE:libk>
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Linking kernel, creating binary, and copying to sysroot"
     COMMAND_EXPAND_LISTS

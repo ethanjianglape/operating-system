@@ -1,5 +1,6 @@
 #pragma once
 
+#include <containers/kstring.hpp>
 #include <kernel/console/console.hpp>
 
 #include <cstdint>
@@ -19,8 +20,9 @@ namespace x86_64::drivers::serial {
     constexpr std::uint8_t LSR_TRANSMIT_EMPTY = 0x20;
 
     void init();
-    void putchar(char c);
-    void puts(const char* str);
 
-    kernel::console::ConsoleDriver* get_console_driver();
+    int putchar(char c);
+    int puts(const kernel::kstring& str);
+    int puts(const char* str);
+    int puts(const unsigned char* str);
 }

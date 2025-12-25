@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <kernel/arch/arch.hpp>
 
 #include <cstddef>
@@ -18,10 +19,12 @@ namespace kernel::pmm {
     void init();
 
     void add_free_memory(std::size_t addr, std::size_t len);
-
+    void set_addr_free(std::size_t addr, std::size_t length);
+    
     std::size_t get_total_memory();
 
-    void set_addr_free(std::size_t addr, std::size_t length);
+    void free_frame(std::uintptr_t phys);
+    void free_contiguous_frames(std::uintptr_t phys, std::size_t count);
 
     void* alloc_frame();
     void* alloc_contiguous_frames(std::size_t num_frames);

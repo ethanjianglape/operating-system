@@ -1,5 +1,6 @@
 #include "syscall.hpp"
 
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 
@@ -8,7 +9,7 @@
 static int sys_write(int fd, const char* buff, std::size_t count) {
     const char* msg = "hello from syscall!";
 
-    kernel::log::info("sys_write: %s", msg);
+    kernel::log::info("sys_write: ", msg);
 
     return count;
 }
@@ -19,9 +20,6 @@ std::uint64_t int80_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     std::uint32_t arg1        = frame->rbx & 0xFFFFFFFF;
     std::uint32_t arg2        = frame->rcx & 0xFFFFFFFF;
     std::uint32_t arg3        = frame->rdx & 0xFFFFFFFF;
-    std::uint32_t arg4        = frame->rsi & 0xFFFFFFFF;
-    std::uint32_t arg5        = frame->rdi & 0xFFFFFFFF;
-    std::uint32_t arg6        = frame->rbp & 0xFFFFFFFF;
 
     switch (syscall_num) {
     case x86_64::syscall::SYSCALL_SYS_WRITE:
@@ -44,15 +42,15 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     std::uint64_t arg5 = frame->r8;
     std::uint64_t arg6 = frame->r9;
 
-    kernel::log::debug("SYSCALL %d", syscall_num);
-    kernel::log::debug("arg1 = %d (%x)", arg1, arg1);
-    kernel::log::debug("arg2 = %d (%x)", arg2, arg2);
-    kernel::log::debug("arg3 = %d (%x)", arg3, arg3);
-    kernel::log::debug("arg4 = %d (%x)", arg4, arg4);
-    kernel::log::debug("arg5 = %d (%x)", arg5, arg5);
-    kernel::log::debug("arg6 = %d (%x)", arg6, arg6);
-    kernel::log::debug("RCX  = %x", frame->rcx);
-    kernel::log::debug("R11  = %x", frame->r11);
+    kernel::log::debug("SYSCALL ", syscall_num);
+    kernel::log::debug("arg1 = ", arg1, " (", fmt::hex{arg1}, ")");
+    kernel::log::debug("arg2 = ", arg2, " (", fmt::hex{arg2}, ")");
+    kernel::log::debug("arg3 = ", arg3, " (", fmt::hex{arg3}, ")");
+    kernel::log::debug("arg4 = ", arg4, " (", fmt::hex{arg4}, ")");
+    kernel::log::debug("arg5 = ", arg5, " (", fmt::hex{arg5}, ")");
+    kernel::log::debug("arg6 = ", arg6, " (", fmt::hex{arg6}, ")");
+    kernel::log::debug("RCX  = ", fmt::hex{frame->rcx});
+    kernel::log::debug("R11  = ", fmt::hex{frame->r11});
 
     return sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
 }
@@ -82,11 +80,11 @@ namespace x86_64::syscall {
         cpu::wrmsr(MSR_GS_BASE, 0);
         cpu::wrmsr(MSR_KERNEL_GS_BASE, reinterpret_cast<std::uint64_t>(&per_cpu_data));
 
-        kernel::log::info("STAR   = %x", star);
-        kernel::log::info("LSTAR  = %x", lstar);
-        kernel::log::info("SFMASK = %x", sfmask);
-        kernel::log::info("EFER   = %x", efer);
-        kernel::log::info("Per CPU: kernel stack = %x, user stack = %x", per_cpu_data.kernel_rsp, per_cpu_data.user_rsp);
+        kernel::log::info("STAR   = ", fmt::hex{star});
+        kernel::log::info("LSTAR  = ", fmt::hex{lstar});
+        kernel::log::info("SFMASK = ", fmt::hex{sfmask});
+        kernel::log::info("EFER   = ", fmt::hex{efer});
+        kernel::log::info("Per CPU: kernel stack = ", fmt::hex{per_cpu_data.kernel_rsp}, ", user stack = ", fmt::hex{per_cpu_data.user_rsp});
     }
 
     void init() {
@@ -97,9 +95,3 @@ namespace x86_64::syscall {
         kernel::log::init_end("Syscall");
     }
 }
-
-
-
-
-
-

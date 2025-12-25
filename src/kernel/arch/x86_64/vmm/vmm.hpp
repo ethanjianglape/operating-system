@@ -51,10 +51,13 @@ namespace x86_64::vmm {
     
     void init(std::uintptr_t hhdm_offset);
 
+    std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags);
     void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
     void* alloc_contiguous_memory(std::size_t bytes);
     void* alloc_contiguous_pages(std::size_t num_pages);
+
+    void free_contiguous_memory(void* virt);
 
     template <typename T>
     inline std::uintptr_t virt_to_phys(T addr) {

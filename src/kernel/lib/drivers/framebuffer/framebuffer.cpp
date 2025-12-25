@@ -1,5 +1,6 @@
 #include <kernel/console/console.hpp>
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 
@@ -13,25 +14,12 @@ namespace kernel::drivers::framebuffer {
 
     static std::uint8_t* vram = nullptr;
 
-    static std::uint32_t get_screen_width() {
+    std::uint32_t get_screen_width() {
         return fb_width;
     }
 
-    static std::uint32_t get_screen_height() {
+    std::uint32_t get_screen_height() {
         return fb_height;
-    }
-
-    static kernel::console::ConsoleDriver console_driver = {
-        .clear = clear_black,
-        .put_pixel = put_pixel,
-        .get_pixel = get_pixel,
-        .get_screen_width = get_screen_width,
-        .get_screen_height = get_screen_height,
-        .mode = console::ConsoleMode::PIXEL_BUFFER
-    };
-
-    kernel::console::ConsoleDriver* get_console_driver() {
-        return &console_driver;
     }
 
     inline constexpr std::size_t get_pixel_offset(std::uint32_t x, std::uint32_t y) {
@@ -40,8 +28,8 @@ namespace kernel::drivers::framebuffer {
 
     void init(const FrameBufferInfo& info) {
         kernel::log::init_start("Framebuffer");
-        kernel::log::info("Framebuffer: %dx%dx%d (pitch=%d)", info.width, info.height, info.bpp, info.pitch);
-        kernel::log::info("VRAM: %x", info.vram);
+        kernel::log::info("Framebuffer: ", info.width, "x", info.height, "x", info.bpp, " (pitch=", info.pitch, ")");
+        kernel::log::info("VRAM: ", fmt::hex{info.vram});
         
         fb_width = info.width;
         fb_height = info.height;
@@ -52,7 +40,7 @@ namespace kernel::drivers::framebuffer {
         kernel::log::init_end("Framebuffer");
     }
 
-    void put_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {
+    void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {
         const auto offset = get_pixel_offset(x, y);
         const auto blue = color & 0xFF;
         const auto green = (color >> 8) & 0xFF;
@@ -61,6 +49,23 @@ namespace kernel::drivers::framebuffer {
         vram[offset + 0] = blue;
         vram[offset + 1] = green;
         vram[offset + 2] = red;
+    }
+
+    void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h) {
+        for (std::uint32_t px = x; px < x + w; px++) {
+            for (std::uint32_t py = y; py < y + h; py++) {
+                const auto color = get_pixel(px, py);
+                draw_pixel(px, py, ~color);
+            }
+        }
+    }
+
+    void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h, std::uint32_t color) {
+        for (std::uint32_t px = x; px < x + w; px++) {
+            for (std::uint32_t py = y; py < y + h; py++) {
+                draw_pixel(px, py, color);
+            }
+        }
     }
 
     std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y) {
@@ -81,13 +86,13 @@ namespace kernel::drivers::framebuffer {
     void clear(std::uint32_t color) {
         for (std::uint32_t y = 0; y < fb_height; y++) {
             for (std::uint32_t x = 0; x < fb_width; x++) {
-                put_pixel(x, y, color);
+                draw_pixel(x, y, color);
             }
         }
     }
 
     void log() {
-        kernel::log::info("Screen = %dx%dx%d", fb_width, fb_height, fb_bpp);
-        kernel::log::info("VRAM   = %x", vram);
+        kernel::log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
+        kernel::log::info("VRAM   = ", fmt::hex{vram});
     }
 }

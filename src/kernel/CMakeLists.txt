@@ -22,7 +22,6 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/interrupts/idt.cpp
     ${ARCH_DIR}/interrupts/irq.cpp
     ${ARCH_DIR}/interrupts/isr.s
-    ${ARCH_DIR}/timers/timer.cpp
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/syscall/int80_entry.s
@@ -36,16 +35,22 @@ set(ARCH_DRIVER_KERNEL_SOURCES
     ${ARCH_DRIVERS_DIR}/pit/pit.cpp
     ${ARCH_DRIVERS_DIR}/apic/apic.cpp
     ${ARCH_DRIVERS_DIR}/serial/serial.cpp
+    ${ARCH_DRIVERS_DIR}/keyboard/keyboard.cpp
 )
 
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/boot/limine-boot.cpp
+    ${LIB_DIR}/tty/tty.cpp
+    ${LIB_DIR}/shell/shell.cpp
+    ${LIB_DIR}/timer/timer.cpp
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp
     ${LIB_DIR}/console/console.cpp
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
+    ${LIB_DIR}/drivers/acpi/acpi.cpp
+    ${LIB_DIR}/crt/crt.c
 )
 
 # Architecture-specific boot files

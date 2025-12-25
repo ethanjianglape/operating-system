@@ -1,70 +1,63 @@
 #pragma once
 
-#include <kernel/console/console.hpp>
+#include <containers/kstring.hpp>
+#include <kernel/arch/arch.hpp>
+#include <fmt/fmt.hpp>
 
-#include <utility>
+#include <concepts>
 
 namespace kernel {
-    inline int kprintf(const char* str) {
-        int written = 0;
+    namespace serial = kernel::arch::drivers::serial;
 
-        while (*str) {
-            written += kernel::console::put(*str++);
+    namespace detail {
+        inline void kprint_one(const kstring& str) {
+            serial::puts(str.c_str());
         }
 
-        return written;
+        inline void kprint_one(const char* str) {
+            serial::puts(str);
+        }
+
+        inline void kprint_one(unsigned char* str) {
+            serial::puts(str);
+        }
+
+        inline void kprint_one(std::integral auto num) {
+            serial::puts(fmt::to_string(num));
+        }
+
+        template <std::integral T>
+        inline void kprint_one(fmt::hex<T> h) {
+            serial::puts(fmt::to_string(h));
+        }
+
+        template <fmt::ptr_type T>
+        inline void kprint_one(fmt::hex<T> h) {
+            serial::puts(fmt::to_string(h));
+        }
+
+        template <std::integral T>
+        inline void kprint_one(fmt::bin<T> b) {
+            serial::puts(fmt::to_string(b));
+        }
+
+        template <std::integral T>
+        inline void kprint_one(fmt::oct<T> o) {
+            serial::puts(fmt::to_string(o));
+        }
+
+        inline void kprint_one(fmt::ptr_type auto ptr) {
+            serial::puts(fmt::to_string(ptr));
+        }
     }
 
-    template <typename T, typename... Ts>
-    int kprintf(const char* format, T value, Ts... args) {
-        if (format == nullptr) {
-            return 0;
-        }
+    template <typename... Args>
+    void kprint(Args... args) {
+        (detail::kprint_one(args), ...);
+    }
 
-        int written = 0;
-
-        for (; *format; format++) {
-            if (*format == '%' && (*format + 1)) {
-                switch (*(format + 1)) {
-                case '%':
-                    written += console::put('%');
-                    break;
-                case 'b':
-                    console::set_number_format(console::NumberFormat::BIN);
-                    written += console::put("0b");
-                    written += console::put(value);
-                    console::reset_number_format();
-                    break;
-                case 'o':
-                    console::set_number_format(console::NumberFormat::OCT);
-                    written += console::put('0');
-                    written += console::put(value);
-                    console::reset_number_format();
-                    break;
-                case 'i':
-                case 'd':
-                    console::set_number_format(console::NumberFormat::DEC);
-                    written += console::put(value);
-                    console::reset_number_format();
-                    break;
-                case 'x':
-                    console::set_number_format(console::NumberFormat::HEX);
-                    written += console::put("0x");
-                    written += console::put(value);
-                    console::reset_number_format();
-                    break;
-                default:
-                    written += console::put(value);
-                }
-                
-                written += kprintf(format + 2, std::forward<Ts>(args)...);
-
-                return written;
-            } 
-
-            written += console::put(*format);
-        }
-
-        return written;
+    template <typename... Args>
+    void kprintln(Args... args) {
+        (detail::kprint_one(args), ..., detail::kprint_one("\n"));
     }
 }
