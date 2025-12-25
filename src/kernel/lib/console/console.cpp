@@ -1,3 +1,4 @@
+#include "containers/kstring.hpp"
 #include "kernel/log/log.hpp"
 #include <kernel/console/console.hpp>
 #include <kernel/console/font8x16.hpp>
@@ -192,6 +193,16 @@ namespace kernel::console {
         
         while (*str) {
             written += put(*str++);
+        }
+
+        return written;
+    }
+
+    int put(const kernel::kstring& str) {
+        int written = 0;
+
+        for (char c : str) {
+            written += put(c);
         }
 
         return written;

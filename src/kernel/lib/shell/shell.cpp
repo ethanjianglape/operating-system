@@ -1,8 +1,9 @@
+#include <containers/kstring.hpp>
+#include "algo/string.hpp"
 #include "kernel/tty/tty.hpp"
 #include <cstddef>
 #include <kernel/shell/shell.hpp>
 #include <kernel/console/console.hpp>
-#include <string.h>
 
 namespace kernel::shell {
     using RgbColor = kernel::console::RgbColor;
@@ -10,17 +11,26 @@ namespace kernel::shell {
     constexpr char ps1[] = "$ >";
     constexpr std::size_t prompt_start = sizeof(ps1) - 1;
 
-    void dispatch_command(char* line) {
+    void dispatch_command(const kstring& line) {
         if (line == nullptr) {
             return;
         }
 
-        if (strlen(line) == 0) {
+        if (line.empty()) {
             kernel::console::newline();
             return;
         }
 
-        if (strcmp(line, "clear") == 0) {
+        auto split = algo::split(line);
+
+        if (split.empty()) {
+            kernel::console::newline();
+            return;
+        }
+
+        auto command = split[0];
+
+        if (command == "clear") {
             kernel::console::clear();
             return;
         }
@@ -28,7 +38,7 @@ namespace kernel::shell {
         kernel::console::set_color(RgbColor::RED, RgbColor::BLACK);
         kernel::console::newline();
         kernel::console::put("Invalid Command: ");
-        kernel::console::put(line);
+        kernel::console::put(command);
         kernel::console::reset_color();
         kernel::console::newline();
     }
@@ -44,7 +54,7 @@ namespace kernel::shell {
             kernel::console::put(ps1);
             kernel::console::enable_cursor();
             kernel::console::set_cursor_x(prompt_start);
-            char* line = kernel::tty::read_line(prompt_start);
+            const kstring& line = kernel::tty::read_line(prompt_start);
             kernel::console::disable_cursor();
             dispatch_command(line);
             kernel::tty::reset();

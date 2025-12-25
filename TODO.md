@@ -3,11 +3,12 @@
 ## Index
 
 - [x] [Logging and Console Separation](#logging-and-console-separation)
-- [ ] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
+- [x] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
 - [ ] [VFS and Initramfs](#vfs-and-initramfs)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
+- [ ] [Namespace Cleanup](#namespace-cleanup)
 
 ---
 
@@ -40,7 +41,7 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 ## Dynamic Collections
 
-**Status:** Next up
+**Status:** Complete
 
 **Prerequisite:** kfree implementation (VMM header-based size tracking, PMM free_frames)
 
@@ -184,3 +185,40 @@ namespace kernel::fs {
 **Complexity:** Significant undertaking. XHCI alone is complex (command rings, event rings, transfer rings, device contexts). Consider as a future milestone after core OS functionality is stable.
 
 **Alternative:** For near-term real hardware testing, enable "USB Legacy Support" in BIOS to get PS/2 emulation for USB keyboards.
+
+---
+
+## Namespace Cleanup
+
+**Status:** Low priority (future refactor)
+
+**Current state:** Mixed approach with `kernel::` namespace for subsystems, `k` prefix for utility types (`kstring`, `kvector`), and short namespaces for utilities (`fmt::`, `algo::`).
+
+**Pain point:** `kernel::kvector<kernel::kvector<kernel::kstring>>` is verbose and painful to type/read.
+
+**Options considered:**
+
+1. **Global namespace with k-prefix (current for containers):**
+   - `kstring`, `kvector`, `kalloc`, `kfree`
+   - Pro: Short, no namespace noise
+   - Con: Inconsistent with subsystem namespacing
+
+2. **Unified `k::` namespace:**
+   - `k::string`, `k::vector`, `k::alloc`, `k::free`
+   - `k::pmm`, `k::vmm`, `k::log`, `k::drivers::`
+   - Pro: Consistent, short, clean
+   - Con: Requires mass rename
+
+3. **Keep `kernel::` for subsystems only:**
+   - Subsystems: `kernel::pmm`, `kernel::log`, `kernel::panic`
+   - Utilities: global with k-prefix or short namespaces
+   - Pro: Distinguishes subsystems from utilities
+   - Con: Still some verbosity for nested subsystem calls
+
+**Recommendation:** Consider unifying under `k::` when core functionality is stable. A simple find/replace refactor. Keeps arch-specific code under `x86_64::` for clear separation.
+
+**Example after refactor:**
+```cpp
+k::vector<k::string> args = algo::split(input, ' ');
+k::log::info("Processing: ", args[0]);
+```

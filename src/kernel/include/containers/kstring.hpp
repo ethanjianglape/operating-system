@@ -225,6 +225,50 @@ namespace kernel {
             }
         }
 
+        // Inserts the char c at pos
+        void insert(std::size_t pos, char c) {
+            if (pos > _length) {
+                return;
+            }
+            
+            ensure_capacity(_length + 1);
+            
+            if (pos == _length) {
+                push_back(c);
+            } else {
+                for (std::size_t i = _length - 1; i > pos; i--) {
+                    _data[i] = _data[i - 1];
+                }
+
+                _data[pos] = c;
+                _length++;
+            }
+        }
+
+        // Removes the char as pos
+        void erase(std::size_t pos) {
+            if (pos >= _length) {
+                return;
+            }
+
+            for (std::size_t i = pos; i < _length - 1; i++) {
+                _data[i] = _data[i + 1];
+            }
+
+            _length--;
+        }
+
+        // Truncates the string from [0, pos]
+        // "abcdefg".truncate(3) -> "abcd"
+        void truncate(std::size_t pos) {
+            if (pos >= _length) {
+                return;
+            }
+
+            _data[pos + 1] = '\0';
+            _length = pos;
+        }
+
         // Concatenation
         kstring& operator+=(const kstring& other) {
             if (other.empty()) {

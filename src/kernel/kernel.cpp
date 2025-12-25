@@ -1,3 +1,4 @@
+#include "algo/string.hpp"
 #include "arch/x86_64/drivers/keyboard/keyboard.hpp"
 #include "kernel/shell/shell.hpp"
 #include <arch/x86_64/syscall/syscall.hpp>
@@ -36,10 +37,6 @@ void kernel_main() {
     x86_64::cpu::sti();
 
     kernel::log::success("All core kernel features initialized!");
-
-    int a = 0;
-
-    kernel::log::info("test num: ", 123);
 
     kernel::shell::init();
 

@@ -1,6 +1,7 @@
-#include "arch/x86_64/drivers/keyboard/keyboard.hpp"
-#include "arch/x86_64/drivers/keyboard/scancodes.hpp"
-#include "kernel/console/console.hpp"
+#include <arch/x86_64/drivers/keyboard/keyboard.hpp>
+#include <arch/x86_64/drivers/keyboard/scancodes.hpp>
+#include <containers/kstring.hpp>
+#include <kernel/console/console.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <kernel/tty/tty.hpp>
@@ -12,11 +13,12 @@ namespace kernel::tty {
     using ScanCode = keyboard::ScanCode;
     using ExtendedScanCode = keyboard::ExtendedScanCode;
 
-    constexpr std::size_t BUFFER_LEN = 512;
-    static char buffer[BUFFER_LEN] = {'\0'};
+    //constexpr std::size_t BUFFER_LEN = 512;
+    //static char buffer[BUFFER_LEN] = {'\0'};
+
+    static kernel::kstring buffer{};
 
     static std::size_t buffer_index = 0;
-    static std::size_t buffer_end = buffer_index;
 
     // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
     // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -56,39 +58,25 @@ namespace kernel::tty {
     }
 
     void insert_char(char c) {
-        for (std::size_t i = BUFFER_LEN - 1; i > buffer_index; i--) {
-            buffer[i] = buffer[i - 1];
-        }
-        
-        buffer[buffer_index++] = c;
-        buffer_end++;
+        buffer.insert(buffer_index, c);
+        buffer_index++;
     }
 
     void delete_back() {
         if (buffer_index == 0) {
             return;
         }
-        
-        for (std::size_t i = buffer_index; i < BUFFER_LEN; i++) {
-            buffer[i - 1] = buffer[i];
-        }
 
+        buffer.erase(buffer_index - 1);
         buffer_index--;
-        buffer_end--;
-        buffer[buffer_end] = '\0';
     }
 
     void delete_forward() {
-        if (buffer_index == buffer_end) {
+        if (buffer_index == buffer.size()) {
             return;
         }
 
-        for (std::size_t i = buffer_index; i < BUFFER_LEN - 1; i++) {
-            buffer[i] = buffer[i + 1];
-        }
-
-        buffer_end--;
-        buffer[buffer_end] = '\0';
+        buffer.erase(buffer_index);
     }
 
     void move_left() {
@@ -98,7 +86,7 @@ namespace kernel::tty {
     }
 
     void move_right() {
-        if (buffer_index < BUFFER_LEN && buffer[buffer_index]) {
+        if (buffer_index < buffer.size()) {
             buffer_index++;
         }
     }
@@ -108,12 +96,11 @@ namespace kernel::tty {
     }
 
     void move_to_end() {
-        buffer_index = buffer_end;
+        buffer_index = buffer.size();
     }
 
     void delete_to_end() {
-        buffer[buffer_index] = '\0';
-        buffer_end = buffer_index;
+        buffer.truncate(buffer_index);
     }
 
     void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode extended) {
@@ -132,9 +119,7 @@ namespace kernel::tty {
         }
     }
 
-    char* read_line(std::size_t prompt_start) {
-
-        
+    const kernel::kstring& read_line(std::size_t prompt_start) {
         while (true) {
             while (keyboard::KeyEvent* event = keyboard::read()) {
                 keyboard::ScanCode scancode = event->scancode;
@@ -168,7 +153,7 @@ namespace kernel::tty {
                 kernel::console::disable_cursor();
                 kernel::console::set_cursor_x(prompt_start);
                 kernel::console::put(buffer);
-                kernel::console::set_cursor_x(prompt_start + buffer_end);
+                kernel::console::set_cursor_x(prompt_start + buffer.size());
                 kernel::console::clear_to_eol();
                 kernel::console::enable_cursor();
                 kernel::console::set_cursor_x(prompt_start + buffer_index);
@@ -177,9 +162,8 @@ namespace kernel::tty {
     }
 
     void reset() {
+        buffer = "";
         buffer_index = 0;
-        buffer_end = 0;
-        buffer[buffer_index] = '\0';
     }
 
     void init() {

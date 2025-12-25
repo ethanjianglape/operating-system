@@ -1,5 +1,6 @@
 #pragma once
 
+#include "containers/kstring.hpp"
 #include <cstdint>
 
 namespace kernel::console {
@@ -50,4 +51,5 @@ namespace kernel::console {
     int put(char c);
     int put(const char* str);
     int put(const unsigned char* str);
+    int put(const kernel::kstring& str);
 }
