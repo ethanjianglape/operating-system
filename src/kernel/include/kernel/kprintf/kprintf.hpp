@@ -1,60 +1,63 @@
 #pragma once
 
+#include <containers/kstring.hpp>
 #include <kernel/arch/arch.hpp>
-#include <string/string.hpp>
+#include <fmt/fmt.hpp>
 
-#include <utility>
+#include <concepts>
 
 namespace kernel {
     namespace serial = kernel::arch::drivers::serial;
-    
-    inline int kprintf(const char* str) {
-        return serial::puts(str);
+
+    namespace detail {
+        inline void kprint_one(const kstring& str) {
+            serial::puts(str.c_str());
+        }
+
+        inline void kprint_one(const char* str) {
+            serial::puts(str);
+        }
+
+        inline void kprint_one(unsigned char* str) {
+            serial::puts(str);
+        }
+
+        inline void kprint_one(std::integral auto num) {
+            serial::puts(fmt::to_string(num));
+        }
+
+        template <std::integral T>
+        inline void kprint_one(fmt::hex<T> h) {
+            serial::puts(fmt::to_string(h));
+        }
+
+        template <fmt::ptr_type T>
+        inline void kprint_one(fmt::hex<T> h) {
+            serial::puts(fmt::to_string(h));
+        }
+
+        template <std::integral T>
+        inline void kprint_one(fmt::bin<T> b) {
+            serial::puts(fmt::to_string(b));
+        }
+
+        template <std::integral T>
+        inline void kprint_one(fmt::oct<T> o) {
+            serial::puts(fmt::to_string(o));
+        }
+
+        inline void kprint_one(fmt::ptr_type auto ptr) {
+            serial::puts(fmt::to_string(ptr));
+        }
     }
 
-    template <typename T, typename... Ts>
-    int kprintf(const char* format, T value, Ts... args) {
-        if (format == nullptr) {
-            return 0;
-        }
+    template <typename... Args>
+    void kprint(Args... args) {
+        (detail::kprint_one(args), ...);
+    }
 
-        int written = 0;
-
-        for (; *format; format++) {
-            if (*format == '%' && (*format + 1)) {
-                switch (*(format + 1)) {
-                case '%':
-                    written += serial::putchar('%');
-                    break;
-                case 'b':
-                    written += serial::puts("0b");
-                    written += serial::puts(string::to_string(value, string::NumberFormat::BIN));
-                    break;
-                case 'o':
-                    written += serial::puts("0");
-                    written += serial::puts(string::to_string(value, string::NumberFormat::OCT));
-                    break;
-                case 'i':
-                case 'd':
-                    written += serial::puts(string::to_string(value));
-                    break;
-                case 'x':
-                    written += serial::puts("0x");
-                    written += serial::puts(string::to_string(value, string::NumberFormat::HEX));
-                    break;
-                default:
-                    written += serial::puts(string::to_string(value));
-                    break;
-                }
-                
-                written += kprintf(format + 2, std::forward<Ts>(args)...);
-
-                return written;
-            } 
-
-            written += serial::putchar(*format);
-        }
-
-        return written;
+    template <typename... Args>
+    void kprintln(Args... args) {
+        (detail::kprint_one(args), ..., detail::kprint_one("\n"));
     }
 }

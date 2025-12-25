@@ -1,5 +1,6 @@
 #include "serial.hpp"
 
+#include <containers/kstring.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <kernel/console/console.hpp>
 
@@ -28,6 +29,14 @@ namespace x86_64::drivers::serial {
         cpu::outb(COM1 + DATA, c);
 
         return 1;
+    }
+
+    int puts(const kernel::kstring& str) {
+        for (char c : str) {
+            putchar(c);
+        }
+
+        return str.size();
     }
 
     int puts(const char* str) {

@@ -1,5 +1,6 @@
 #include <kernel/console/console.hpp>
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 
@@ -27,8 +28,8 @@ namespace kernel::drivers::framebuffer {
 
     void init(const FrameBufferInfo& info) {
         kernel::log::init_start("Framebuffer");
-        kernel::log::info("Framebuffer: %dx%dx%d (pitch=%d)", info.width, info.height, info.bpp, info.pitch);
-        kernel::log::info("VRAM: %x", info.vram);
+        kernel::log::info("Framebuffer: ", info.width, "x", info.height, "x", info.bpp, " (pitch=", info.pitch, ")");
+        kernel::log::info("VRAM: ", fmt::hex{info.vram});
         
         fb_width = info.width;
         fb_height = info.height;
@@ -91,7 +92,7 @@ namespace kernel::drivers::framebuffer {
     }
 
     void log() {
-        kernel::log::info("Screen = %dx%dx%d", fb_width, fb_height, fb_bpp);
-        kernel::log::info("VRAM   = %x", vram);
+        kernel::log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
+        kernel::log::info("VRAM   = ", fmt::hex{vram});
     }
 }

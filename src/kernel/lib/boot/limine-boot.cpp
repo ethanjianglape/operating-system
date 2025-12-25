@@ -1,9 +1,10 @@
-#include "kernel/drivers/acpi/acpi.hpp"
+#include <kernel/drivers/acpi/acpi.hpp>
 #include <kernel/boot/boot.hpp>
 #include <kernel/boot/limine.h>
 #include <kernel/arch/arch.hpp>
 #include <kernel/console/console.hpp>
 #include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/memory/pmm.hpp>
 
@@ -75,7 +76,8 @@ namespace kernel::boot {
 
         kernel::drivers::framebuffer::init(fb_info);
         kernel::log::info("Switching to framebuffer logging");
-        //kernel::console::init(kernel::drivers::framebuffer::get_console_driver());
+
+        kernel::log::info("TESTING", 1,2,3,4,5);
 
         auto entry_count = memmap_request.response->entry_count;
         limine_memmap_entry** entries = memmap_request.response->entries;
@@ -87,7 +89,7 @@ namespace kernel::boot {
             auto length = entries[i]->length;
             auto type = entries[i]->type;
 
-            kernel::log::info("Limine memmap entry #%d: base (%x) length (%x) type (%d)", i, base, length, type);
+            kernel::log::info("Limine memmap entry #", i, ": base (", fmt::hex{base}, ") length (", fmt::hex{length}, ") type (", type, ")");
 
             if (type == LIMINE_MEMMAP_USABLE) {
                 kernel::pmm::add_free_memory(base, length);

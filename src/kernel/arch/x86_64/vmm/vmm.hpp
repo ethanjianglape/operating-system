@@ -57,6 +57,8 @@ namespace x86_64::vmm {
     void* alloc_contiguous_memory(std::size_t bytes);
     void* alloc_contiguous_pages(std::size_t num_pages);
 
+    void free_contiguous_memory(void* virt);
+
     template <typename T>
     inline std::uintptr_t virt_to_phys(T addr) {
         return reinterpret_cast<std::uintptr_t>(addr) - get_hhdm_offset();

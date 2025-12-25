@@ -1,4 +1,3 @@
-#include "arch/x86_64/vmm/vmm.hpp"
 #include <kernel/memory/memory.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
@@ -6,7 +5,7 @@
 #include <cstddef>
 
 namespace kernel {
-    inline void* kmalloc(std::size_t size) {
+    void* kmalloc(std::size_t size) {
         if (size == 0) {
             log::warn("kmalloc(0) returns NULL");
             
@@ -16,11 +15,11 @@ namespace kernel {
         return arch::vmm::alloc_contiguous_memory(size);
     }
 
-    inline void kfree(void* ptr) {
+    void kfree(void* ptr) {
         if (ptr == nullptr) {
-            log::warn("kfree(NULL) is undefined behavior");
+            return;
         }
 
-        log::warn("kfree() not yet implemented");
+        arch::vmm::free_contiguous_memory(ptr);
     }
 }

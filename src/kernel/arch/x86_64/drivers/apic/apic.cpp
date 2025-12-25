@@ -127,7 +127,7 @@ namespace x86_64::drivers::apic {
 
         irq::register_irq_handler(32, apic_timer_handler);
 
-        kernel::log::info("APIC timer initialized on ISR32 (IRQ0) at %dms resoluation.", ms);
+        kernel::log::info("APIC timer initialized on ISR32 (IRQ0) at ", ms, "ms resoluation.");
     }
 }
 

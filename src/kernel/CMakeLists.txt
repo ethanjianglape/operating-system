@@ -50,6 +50,7 @@ set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/console/console.cpp
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
     ${LIB_DIR}/drivers/acpi/acpi.cpp
+    ${LIB_DIR}/crt/crt.c
 )
 
 # Architecture-specific boot files

@@ -1,5 +1,6 @@
 #include "vmm.hpp"
 
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/memory/memory.hpp>
 #include <kernel/memory/pmm.hpp>
@@ -89,15 +90,31 @@ namespace x86_64::vmm {
     }
 
     void* alloc_contiguous_memory(std::size_t bytes) {
-        std::size_t pages = (bytes / PAGE_SIZE) + 1;
+        std::size_t total = bytes + sizeof(std::size_t);
+        std::size_t pages = (total / PAGE_SIZE) + 1;
 
-        return alloc_contiguous_pages(pages);
+        void* block = alloc_contiguous_pages(pages);
+
+        *static_cast<std::size_t*>(block) = pages;
+
+        return static_cast<std::uint8_t*>(block) + sizeof(std::size_t);
     }
 
     void* alloc_contiguous_pages(std::size_t pages) {
         auto phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(pages);
 
         return phys_to_virt<void*>(phys);
+    }
+
+    void free_contiguous_memory(void* virt) {
+        if (virt == nullptr) {
+            return;
+        }
+
+        void* block = static_cast<std::uint8_t*>(virt) - sizeof(std::size_t);
+        auto pages = *static_cast<std::size_t*>(block);
+
+        kernel::pmm::free_contiguous_frames(virt_to_phys(block), pages);
     }
 
     // Set our local pml4 to point to the pml4 created by Limine which
@@ -110,7 +127,7 @@ namespace x86_64::vmm {
         constexpr std::uint64_t bottom_12_mask = ~0xFFF;
         pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
-        kernel::log::info("VMM pml4 addr = %x", pml4);
+        kernel::log::info("VMM pml4 addr = ", fmt::hex{pml4});
     }
 
     void init_userspace() {
@@ -120,8 +137,8 @@ namespace x86_64::vmm {
         map_page(0x00400000, code_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         map_page(0x00800000, data_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
 
-        kernel::log::info("Mapped user code at virt %x to phys %x", 0x00400000, code_phys);
-        kernel::log::info("Mapped user data at virt %x to phys %x", 0x00800000, data_phys);
+        kernel::log::info("Mapped user code at virt ", fmt::hex{0x00400000}, " to phys ", fmt::hex{code_phys});
+        kernel::log::info("Mapped user data at virt ", fmt::hex{0x00800000}, " to phys ", fmt::hex{data_phys});
     }
 
     void init(std::uintptr_t offset) {
@@ -130,8 +147,8 @@ namespace x86_64::vmm {
         hhdm_offset = offset;
         kernel_heap = reinterpret_cast<std::uint8_t*>(hhdm_offset);
 
-        kernel::log::info("VMM HHDM addr = %x", hhdm_offset);
-        kernel::log::info("Kernel heap   = %x", kernel_heap);
+        kernel::log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
+        kernel::log::info("Kernel heap   = ", fmt::hex{kernel_heap});
 
         init_pml4();
         init_userspace();

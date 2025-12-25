@@ -1,5 +1,6 @@
 #include "arch/x86_64/drivers/apic/apic.hpp"
 #include <arch/x86_64/vmm/vmm.hpp>
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 #include <kernel/drivers/acpi/acpi.hpp>
@@ -36,9 +37,9 @@ namespace kernel::drivers::acpi {
         auto madt_length = madt->std_header.length;
 
         kernel::log::info("MADT:");
-        kernel::log::info("length = %x", madt_length);
-        kernel::log::info("local apic addr = %x", madt->lapic_addr);
-        kernel::log::info("flags = %b", madt->flags);
+        kernel::log::info("length = ", fmt::hex{madt_length});
+        kernel::log::info("local apic addr = ", fmt::hex{madt->lapic_addr});
+        kernel::log::info("flags = ", fmt::bin{madt->flags});
 
         std::uint8_t* madt_start = reinterpret_cast<std::uint8_t*>(madt);
         std::uint8_t* madt_end = madt_start + madt_length;
@@ -73,7 +74,7 @@ namespace kernel::drivers::acpi {
                 auto flags   = get_uint8_entry(4);
 
                 kernel::log::info("Processor Local APIC:");
-                kernel::log::info("acpi_id = %d, apic_id = %d, flags = %b", acpi_id, apic_id, flags);
+                kernel::log::info("acpi_id = ", acpi_id, ", apic_id = ", apic_id, ", flags = ", fmt::bin{flags});
                 break;
             }
             case MADT_IOAPIC: {
@@ -82,7 +83,7 @@ namespace kernel::drivers::acpi {
                 auto gsi_base    = get_uint32_entry(8);
 
                 kernel::log::info("IOAPIC:");
-                kernel::log::info("ioapic id = %d, ioapic addr = %x, gsi base = %x", ioapic_id, ioapic_addr, gsi_base);
+                kernel::log::info("ioapic id = ", ioapic_id, ", ioapic addr = ", fmt::hex{ioapic_addr}, ", gsi base = ", fmt::hex{gsi_base});
 
                 arch::drivers::apic::set_ioapic_addr(ioapic_addr);
                 
@@ -95,7 +96,7 @@ namespace kernel::drivers::acpi {
                 auto flags   = get_uint16_entry(8);
 
                 kernel::log::info("IOAPIC interrupt Source Override:");
-                kernel::log::info("bus = %d, irq = %d, gsi = %d, flags = %b", bus_src, irq_src, gsi, flags);
+                kernel::log::info("bus = ", bus_src, ", irq = ", irq_src, ", gsi = ", gsi, ", flags = ", fmt::bin{flags});
                 break;
             }
             case MADT_IOAPIC_NIS: {
@@ -104,7 +105,7 @@ namespace kernel::drivers::acpi {
                 auto gsi = get_uint32_entry(6);
 
                 kernel::log::info("IOAPIC Non-maskable Interrupt Source:");
-                kernel::log::info("NMI Source = %d, Flags = %b, GSI = %d", nmi_source, flags, gsi);
+                kernel::log::info("NMI Source = ", nmi_source, ", Flags = ", fmt::bin{flags}, ", GSI = ", gsi);
                 
                 break;
             }
@@ -114,7 +115,7 @@ namespace kernel::drivers::acpi {
                 auto lint = get_uint8_entry(5);
 
                 kernel::log::info("LAPIC Non-maskable interrupts:");
-                kernel::log::info("ACPI Processor ID = %d, LINT# = %d, Flags = %b", acpi_processor_id, lint, flags);
+                kernel::log::info("ACPI Processor ID = ", acpi_processor_id, ", LINT# = ", lint, ", Flags = ", fmt::bin{flags});
                 
                 break;
             }
@@ -122,7 +123,7 @@ namespace kernel::drivers::acpi {
                 auto lapic_addr = get_uint64_entry(4);
 
                 kernel::log::info("LAPIC Address Override:");
-                kernel::log::info("LAPIC Address = %x", lapic_addr);
+                kernel::log::info("LAPIC Address = ", fmt::hex{lapic_addr});
 
                 arch::drivers::apic::set_lapic_addr(lapic_addr);
                 
@@ -134,7 +135,7 @@ namespace kernel::drivers::acpi {
                 auto acpi_id = get_uint32_entry(12);
 
                 kernel::log::info("Processor Local x2APIC:");
-                kernel::log::info("Processor local x2APIC ID = %d, ACPI ID = %d, Flags = %b", x2_apic_id, acpi_id, flags);
+                kernel::log::info("Processor local x2APIC ID = ", x2_apic_id, ", ACPI ID = ", acpi_id, ", Flags = ", fmt::bin{flags});
                 
                 break;
             }
@@ -157,11 +158,11 @@ namespace kernel::drivers::acpi {
         auto* xsdt = reinterpret_cast<XSDT*>(xsdt_virt);
 
         kernel::log::info("XSDP:");
-        kernel::log::info("checksum = %d", xsdp->checksum);
-        kernel::log::info("revision = %d", xsdp->revision);
-        kernel::log::info("length   = %d", xsdp->length);
-        kernel::log::info("xsdt p   = %x", xsdt_phys);
-        kernel::log::info("xsdt v   = %x", xsdt_virt);
+        kernel::log::info("checksum = ", xsdp->checksum);
+        kernel::log::info("revision = ", xsdp->revision);
+        kernel::log::info("length   = ", xsdp->length);
+        kernel::log::info("xsdt p   = ", fmt::hex{xsdt_phys});
+        kernel::log::info("xsdt v   = ", fmt::hex{xsdt_virt});
 
         int entries = (xsdt->header.length - sizeof(xsdt->header)) / 8;
 
@@ -174,10 +175,10 @@ namespace kernel::drivers::acpi {
         sig[4] = '\0';
 
         kernel::log::info("XSDT:");
-        kernel::log::info("revision = %d", xsdt->header.revision);
-        kernel::log::info("length = %d", xsdt->header.length);
-        kernel::log::info("signature = %s", sig);
-        kernel::log::info("entries = %d", entries);
+        kernel::log::info("revision = ", xsdt->header.revision);
+        kernel::log::info("length = ", xsdt->header.length);
+        kernel::log::info("signature = ", sig);
+        kernel::log::info("entries = ", entries);
 
         for (int i = 0; i < entries; i++) {
             // Each xsdt->other_headers[i] is a physical pointer to the next entry in the table,
@@ -194,7 +195,7 @@ namespace kernel::drivers::acpi {
             sig[3] = header->signature[3];
             sig[4] = '\0';
             
-            kernel::log::info("Entry #%d: type='%s' len=%d", i, (const char*)sig, header->length);
+            kernel::log::info("Entry #", i, ": type='", (const char*)sig, "' len=", header->length);
 
             if (strncmp(header->signature, "APIC", 4)) {
                 parse_madt(header);

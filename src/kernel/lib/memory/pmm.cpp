@@ -1,5 +1,6 @@
 #include <kernel/memory/pmm.hpp>
 #include <kernel/panic/panic.hpp>
+#include <fmt/fmt.hpp>
 #include <kernel/log/log.hpp>
 #include <kernel/arch/arch.hpp>
 
@@ -57,11 +58,11 @@ namespace kernel::pmm {
 
         if (end >= MAX_MEMORY_BYTES) {
             if (addr >= MAX_MEMORY_BYTES) {
-                kernel::log::warn("Ignoring memory region at %x (beyond max)", addr);
+                kernel::log::warn("Ignoring memory region at ", fmt::hex{addr}, " (beyond max)");
                 return;
             }
 
-            kernel::log::warn("Truncating memory region from %x to %x", end, MAX_MEMORY_BYTES);
+            kernel::log::warn("Truncating memory region from ", fmt::hex{end}, " to ", fmt::hex{MAX_MEMORY_BYTES});
             len = MAX_MEMORY_BYTES - addr;
         }
 
@@ -90,6 +91,20 @@ namespace kernel::pmm {
 
         while (frame_start <= frame_end) {
             set_frame_used(frame_start++);
+        }
+    }
+
+    void free_frame(std::uintptr_t phys) {
+        std::size_t frame = phys / FRAME_SIZE;
+
+        set_frame_free(frame);
+    }
+
+    void free_contiguous_frames(std::uintptr_t phys, std::size_t count) {
+        std::size_t frame = phys / FRAME_SIZE;
+
+        for (std::size_t i = 0; i < count; i++) {
+            set_frame_free(frame + i);
         }
     }
 

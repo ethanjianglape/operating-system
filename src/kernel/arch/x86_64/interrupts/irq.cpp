@@ -16,16 +16,16 @@ void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_fn h
 
 [[noreturn]]
 void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
-    kernel::kprintf("~~ FATAL EXCEPTION ~~\n");
-    kernel::kprintf("vector = %d\n", vector);
-    kernel::kprintf("error = %d\n", error);
-    kernel::kprintf("Kernel Panic!\n");
+    kernel::kprintln("~~ FATAL EXCEPTION ~~");
+    kernel::kprintln("vector = ", vector);
+    kernel::kprintln("error = ", error);
+    kernel::kprintln("Kernel Panic!");
 
     // page faults
     if (vector == 14) {
         std::uint64_t addr;
         asm volatile("mov %%cr2, %0" : "=r"(addr));
-        kernel::kprintf("page fault at addr = %x\n", addr);
+        kernel::kprintln("page fault at addr = ", fmt::hex{addr});
     }
 
     cpu::cli();
