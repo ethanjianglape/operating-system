@@ -1,9 +1,9 @@
 #include <containers/kstring.hpp>
-#include "algo/string.hpp"
-#include "kernel/tty/tty.hpp"
+#include <algo/string.hpp>
+#include <tty/tty.hpp>
 #include <cstddef>
-#include <kernel/shell/shell.hpp>
-#include <kernel/console/console.hpp>
+#include <shell/shell.hpp>
+#include <console/console.hpp>
 
 namespace shell {
     using RgbColor = console::RgbColor;

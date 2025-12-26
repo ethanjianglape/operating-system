@@ -1,10 +1,10 @@
 #include "keyboard.hpp"
 #include "scancodes.hpp"
 
-#include "arch/x86_64/drivers/apic/apic.hpp"
+#include <arch/x86_64/drivers/apic/apic.hpp>
 #include <arch/x86_64/interrupts/irq.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 
 #include <cstdint>
 #include <cstddef>

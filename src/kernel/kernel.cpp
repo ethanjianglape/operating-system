@@ -1,6 +1,6 @@
-#include "algo/string.hpp"
-#include "arch/x86_64/drivers/keyboard/keyboard.hpp"
-#include "kernel/shell/shell.hpp"
+#include <algo/string.hpp>
+#include <arch/x86_64/drivers/keyboard/keyboard.hpp>
+#include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/drivers/apic/apic.hpp>
@@ -9,10 +9,10 @@
 #include <arch/x86_64/drivers/pic/pic.hpp>
 #include <arch/x86_64/drivers/serial/serial.hpp>
 
-#include <kernel/boot/boot.hpp>
-#include <kernel/console/console.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <boot/boot.hpp>
+#include <console/console.hpp>
+#include <log/log.hpp>
+#include <drivers/framebuffer/framebuffer.hpp>
 
 #include <containers/kstring.hpp>
 

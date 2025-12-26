@@ -1,9 +1,9 @@
-#include "arch/x86_64/drivers/apic/apic.hpp"
+#include <arch/x86_64/drivers/apic/apic.hpp>
 #include <arch/x86_64/vmm/vmm.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/arch/arch.hpp>
-#include <kernel/drivers/acpi/acpi.hpp>
+#include <log/log.hpp>
+#include <arch/arch.hpp>
+#include <drivers/acpi/acpi.hpp>
 
 #include <cstdint>
 

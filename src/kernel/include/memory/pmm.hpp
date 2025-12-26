@@ -1,5 +1,5 @@
 #include <cstdint>
-#include <kernel/arch/arch.hpp>
+#include <arch/arch.hpp>
 
 #include <cstddef>
 #include <concepts>

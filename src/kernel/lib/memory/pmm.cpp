@@ -1,8 +1,8 @@
-#include <kernel/memory/pmm.hpp>
-#include <kernel/panic/panic.hpp>
+#include <memory/pmm.hpp>
+#include <panic/panic.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/arch/arch.hpp>
+#include <log/log.hpp>
+#include <arch/arch.hpp>
 
 #include <cstdint>
 #include <cstddef>

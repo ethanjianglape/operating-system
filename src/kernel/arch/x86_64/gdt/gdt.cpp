@@ -2,7 +2,7 @@
 
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 
 extern "C" void load_gdt(x86_64::gdt::Gdtr* ptr);
 

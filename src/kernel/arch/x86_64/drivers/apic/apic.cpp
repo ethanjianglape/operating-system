@@ -1,13 +1,13 @@
 #include "apic.hpp"
-#include "kernel/timer/timer.hpp"
+#include <timer/timer.hpp>
 
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/interrupts/irq.hpp>
 #include <arch/x86_64/vmm/vmm.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 
 #include <arch/x86_64/drivers/pit/pit.hpp>
-#include <kernel/panic/panic.hpp>
+#include <panic/panic.hpp>
 #include <cstdint>
 
 namespace x86_64::drivers::apic {

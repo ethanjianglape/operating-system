@@ -1,5 +1,5 @@
 #include <cstdint>
-#include <kernel/timer/timer.hpp>
+#include <timer/timer.hpp>
 
 namespace timer {
     static TickHandler handler = nullptr;

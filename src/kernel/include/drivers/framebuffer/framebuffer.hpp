@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 
 #include <cstdint>
 

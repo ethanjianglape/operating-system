@@ -1,7 +1,7 @@
 #pragma once
 
 #include <containers/kstring.hpp>
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 
 #include <cstdint>
 

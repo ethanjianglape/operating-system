@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kernel/memory/memory.hpp>
+#include <memory/memory.hpp>
 #include <crt/crt.h>
 
 #include <cstddef>

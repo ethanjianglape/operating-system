@@ -1,8 +1,8 @@
-#include <kernel/console/console.hpp>
-#include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <console/console.hpp>
+#include <drivers/framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/arch/arch.hpp>
+#include <log/log.hpp>
+#include <arch/arch.hpp>
 
 #include <cstdint>
 

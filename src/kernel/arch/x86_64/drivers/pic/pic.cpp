@@ -1,8 +1,8 @@
 #include "pic.hpp"
 
-#include "arch/x86_64/cpu/cpu.hpp"
-#include "kernel/log/log.hpp"
-#include "kernel/panic/panic.hpp"
+#include <arch/x86_64/cpu/cpu.hpp>
+#include <log/log.hpp>
+#include <panic/panic.hpp>
 
 namespace x86_64::drivers::pic {
     bool init() {

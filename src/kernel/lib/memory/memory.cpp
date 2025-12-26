@@ -1,6 +1,6 @@
-#include <kernel/memory/memory.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/arch/arch.hpp>
+#include <memory/memory.hpp>
+#include <log/log.hpp>
+#include <arch/arch.hpp>
 
 #include <cstddef>
 

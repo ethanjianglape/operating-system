@@ -1,7 +1,7 @@
 #include "process.hpp"
 
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 
 using namespace x86_64;
 

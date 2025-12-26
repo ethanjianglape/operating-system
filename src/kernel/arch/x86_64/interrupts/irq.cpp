@@ -1,6 +1,6 @@
 #include "irq.hpp"
-#include "kernel/kprintf/kprintf.hpp"
-#include "arch/x86_64/cpu/cpu.hpp"
+#include <kprintf/kprintf.hpp>
+#include <arch/x86_64/cpu/cpu.hpp>
 
 #include <cstdint>
 

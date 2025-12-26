@@ -1,7 +1,7 @@
 #pragma once
 
 #include <containers/kstring.hpp>
-#include <kernel/arch/arch.hpp>
+#include <arch/arch.hpp>
 #include <fmt/fmt.hpp>
 
 #include <concepts>

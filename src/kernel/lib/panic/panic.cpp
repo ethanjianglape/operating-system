@@ -1,7 +1,7 @@
-#include "kernel/panic/panic.hpp"
+#include <panic/panic.hpp>
 
-#include "kernel/log/log.hpp"
-#include "arch/x86_64/cpu/cpu.hpp"
+#include <log/log.hpp>
+#include <arch/x86_64/cpu/cpu.hpp>
 
 // TODO: kernel library code should not have arch specific dependencies
 // like x86_64::cpu::cli(), this should be abstracted away using something like

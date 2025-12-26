@@ -2,7 +2,7 @@
 
 #include <containers/kstring.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 
 namespace x86_64::drivers::serial {
     static bool is_transmit_ready() {

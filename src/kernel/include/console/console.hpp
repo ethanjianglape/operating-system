@@ -1,6 +1,6 @@
 #pragma once
 
-#include "containers/kstring.hpp"
+#include <containers/kstring.hpp>
 #include <cstdint>
 
 namespace console {

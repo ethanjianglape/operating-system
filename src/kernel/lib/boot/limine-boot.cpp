@@ -1,12 +1,12 @@
-#include <kernel/drivers/acpi/acpi.hpp>
-#include <kernel/boot/boot.hpp>
-#include <kernel/boot/limine.h>
-#include <kernel/arch/arch.hpp>
-#include <kernel/console/console.hpp>
-#include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <drivers/acpi/acpi.hpp>
+#include <boot/boot.hpp>
+#include <boot/limine.h>
+#include <arch/arch.hpp>
+#include <console/console.hpp>
+#include <drivers/framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/memory/pmm.hpp>
+#include <log/log.hpp>
+#include <memory/pmm.hpp>
 
 #include <cstdint>
 

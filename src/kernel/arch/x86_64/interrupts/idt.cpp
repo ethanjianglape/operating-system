@@ -1,6 +1,6 @@
 #include "idt.hpp"
 
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 #include <cstdint>
 
 extern "C" void* isr_stub_table[];

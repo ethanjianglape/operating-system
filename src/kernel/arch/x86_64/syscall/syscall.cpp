@@ -1,7 +1,7 @@
 #include "syscall.hpp"
 
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 
 #include <cstdint>

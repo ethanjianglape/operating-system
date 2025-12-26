@@ -1,9 +1,9 @@
-#include "containers/kstring.hpp"
-#include "kernel/log/log.hpp"
-#include <kernel/console/console.hpp>
-#include <kernel/console/font8x16.hpp>
-#include <kernel/timer/timer.hpp>
-#include <kernel/drivers/framebuffer/framebuffer.hpp>
+#include <containers/kstring.hpp>
+#include <log/log.hpp>
+#include <console/console.hpp>
+#include <console/font8x16.hpp>
+#include <timer/timer.hpp>
+#include <drivers/framebuffer/framebuffer.hpp>
 
 #include <cstdint>
 

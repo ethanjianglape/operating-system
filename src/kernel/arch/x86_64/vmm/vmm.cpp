@@ -1,9 +1,9 @@
 #include "vmm.hpp"
 
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/memory/memory.hpp>
-#include <kernel/memory/pmm.hpp>
+#include <log/log.hpp>
+#include <memory/memory.hpp>
+#include <memory/pmm.hpp>
 
 #include <cstddef>
 #include <cstdint>

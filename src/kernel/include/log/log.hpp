@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kernel/kprintf/kprintf.hpp>
+#include <kprintf/kprintf.hpp>
 
 namespace log {
     template <typename... Ts>

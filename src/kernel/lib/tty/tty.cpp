@@ -1,12 +1,12 @@
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <arch/x86_64/drivers/keyboard/scancodes.hpp>
 #include <containers/kstring.hpp>
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <kernel/tty/tty.hpp>
-#include <kernel/arch/arch.hpp>
-#include <kernel/log/log.hpp>
+#include <tty/tty.hpp>
+#include <arch/arch.hpp>
+#include <log/log.hpp>
 
 namespace tty {
     namespace keyboard = arch::drivers::keyboard;
