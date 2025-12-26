@@ -1,7 +1,7 @@
 #pragma once
 
 #include <containers/kstring.hpp>
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 
 #include <cstdint>
 
@@ -22,7 +22,7 @@ namespace x86_64::drivers::serial {
     void init();
 
     int putchar(char c);
-    int puts(const kernel::kstring& str);
+    int puts(const kstring& str);
     int puts(const char* str);
     int puts(const unsigned char* str);
 }

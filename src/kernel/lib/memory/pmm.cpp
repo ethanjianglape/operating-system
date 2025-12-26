@@ -1,13 +1,13 @@
-#include <kernel/memory/pmm.hpp>
-#include <kernel/panic/panic.hpp>
+#include <memory/pmm.hpp>
+#include <panic/panic.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
-#include <kernel/arch/arch.hpp>
+#include <log/log.hpp>
+#include <arch.hpp>
 
 #include <cstdint>
 #include <cstddef>
 
-namespace kernel::pmm {
+namespace pmm {
     // 1 bit used per frame, 0 = free, 1 = used
     static std::size_t frame_bitmap[FRAME_BITMAP_SIZE];
     static std::size_t frame_bitmap_start;
@@ -58,11 +58,11 @@ namespace kernel::pmm {
 
         if (end >= MAX_MEMORY_BYTES) {
             if (addr >= MAX_MEMORY_BYTES) {
-                kernel::log::warn("Ignoring memory region at ", fmt::hex{addr}, " (beyond max)");
+                log::warn("Ignoring memory region at ", fmt::hex{addr}, " (beyond max)");
                 return;
             }
 
-            kernel::log::warn("Truncating memory region from ", fmt::hex{end}, " to ", fmt::hex{MAX_MEMORY_BYTES});
+            log::warn("Truncating memory region from ", fmt::hex{end}, " to ", fmt::hex{MAX_MEMORY_BYTES});
             len = MAX_MEMORY_BYTES - addr;
         }
 
@@ -121,7 +121,7 @@ namespace kernel::pmm {
             frame++;
         }
 
-        kernel::panic("PMM: Out of physical memory");
+        panic("PMM: Out of physical memory");
 
         return nullptr;
     }
@@ -150,6 +150,6 @@ namespace kernel::pmm {
             }
         }
 
-        kernel::panic("PMM: Out of physical memory");
+        panic("PMM: Out of physical memory");
     }
 }

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "containers/kstring.hpp"
+#include <containers/kstring.hpp>
 #include <cstdint>
 
-namespace kernel::console {
+namespace console {
     enum class RgbColor : std::uint32_t {
         BLACK   = 0x00000000,
         WHITE   = 0x00FFFFFF,
@@ -51,5 +51,5 @@ namespace kernel::console {
     int put(char c);
     int put(const char* str);
     int put(const unsigned char* str);
-    int put(const kernel::kstring& str);
+    int put(const kstring& str);
 }

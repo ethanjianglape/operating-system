@@ -1,12 +1,11 @@
 #pragma once
 
-#include <kernel/memory/memory.hpp>
+#include <memory/memory.hpp>
 #include <crt/crt.h>
 
 #include <cstddef>
 
-namespace kernel {
-    class kstring final {
+class kstring final {
     private:
         static constexpr std::size_t INITIAL_CAPACITY = 4096;
         static constexpr std::size_t GROWTH_RATE = 2;
@@ -335,8 +334,7 @@ namespace kernel {
         }
     };
 
-    inline kstring operator+(const char* lhs, const kstring& rhs) {
-        kstring res{lhs};
-        return res += rhs;
-    }
+inline kstring operator+(const char* lhs, const kstring& rhs) {
+    kstring res{lhs};
+    return res += rhs;
 }

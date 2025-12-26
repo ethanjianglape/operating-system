@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace kernel::console::fonts {
+namespace console::fonts {
     inline constexpr std::uint8_t NUM_GLPHYS = 95;
     inline constexpr std::uint8_t FONT_WIDTH = 8;
     inline constexpr std::uint8_t FONT_HEIGHT = 16;

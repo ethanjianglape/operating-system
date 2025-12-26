@@ -1,6 +1,6 @@
 #include "irq.hpp"
-#include "kernel/kprintf/kprintf.hpp"
-#include "arch/x86_64/cpu/cpu.hpp"
+#include <kprint/kprint.hpp>
+#include <arch/x86_64/cpu/cpu.hpp>
 
 #include <cstdint>
 
@@ -16,16 +16,16 @@ void irq::register_irq_handler(const std::uint32_t vector, irq::irq_handler_fn h
 
 [[noreturn]]
 void handle_exception(const std::uint32_t vector, const std::uint32_t error) {
-    kernel::kprintln("~~ FATAL EXCEPTION ~~");
-    kernel::kprintln("vector = ", vector);
-    kernel::kprintln("error = ", error);
-    kernel::kprintln("Kernel Panic!");
+    kprintln("~~ FATAL EXCEPTION ~~");
+    kprintln("vector = ", vector);
+    kprintln("error = ", error);
+    kprintln("Kernel Panic!");
 
     // page faults
     if (vector == 14) {
         std::uint64_t addr;
         asm volatile("mov %%cr2, %0" : "=r"(addr));
-        kernel::kprintln("page fault at addr = ", fmt::hex{addr});
+        kprintln("page fault at addr = ", fmt::hex{addr});
     }
 
     cpu::cli();

@@ -51,6 +51,7 @@ set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
     ${LIB_DIR}/drivers/acpi/acpi.cpp
     ${LIB_DIR}/crt/crt.c
+    ${LIB_DIR}/algo/algo.cpp
 )
 
 # Architecture-specific boot files
@@ -67,24 +68,10 @@ set(CRT_SOURCES
 # Architecture-specific linker script
 set(LINKER_SCRIPT ${ARCH_DIR}/limine.ld)
 
-# Kernel headers - install to sysroot at configure time
-file(MAKE_DIRECTORY ${SYSROOT}/usr/include/kernel)
-file(GLOB_RECURSE KERNEL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/kernel/*.h")
-foreach(HEADER ${KERNEL_HEADERS})
-    file(RELATIVE_PATH REL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/kernel" ${HEADER})
-    get_filename_component(HEADER_DIR ${REL_PATH} DIRECTORY)
-    if(HEADER_DIR)
-        file(MAKE_DIRECTORY ${SYSROOT}/usr/include/kernel/${HEADER_DIR})
-    endif()
-    configure_file(${HEADER} ${SYSROOT}/usr/include/kernel/${REL_PATH} COPYONLY)
-endforeach()
-
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/x86_64/..." includes
-    ${SYSROOT}/usr/include
-    ${CMAKE_SOURCE_DIR}/include
 )
 
 # Set ASM flags for 64-bit assembly
@@ -131,4 +118,3 @@ set_target_properties(kernel_objs PROPERTIES
 message(STATUS "Kernel architecture: ${KERNEL_ARCH}")
 message(STATUS "Linker script: ${LINKER_SCRIPT}")
 message(STATUS "Boot sources: ${BOOT_SOURCES}")
-message(STATUS "Kernel headers installed to: ${SYSROOT}/usr/include/kernel")

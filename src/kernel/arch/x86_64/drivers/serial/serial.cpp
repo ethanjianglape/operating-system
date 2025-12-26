@@ -2,7 +2,7 @@
 
 #include <containers/kstring.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 
 namespace x86_64::drivers::serial {
     static bool is_transmit_ready() {
@@ -31,7 +31,7 @@ namespace x86_64::drivers::serial {
         return 1;
     }
 
-    int puts(const kernel::kstring& str) {
+    int puts(const kstring& str) {
         for (char c : str) {
             putchar(c);
         }

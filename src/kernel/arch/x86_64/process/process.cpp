@@ -1,7 +1,7 @@
 #include "process.hpp"
 
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 
 using namespace x86_64;
 
@@ -57,9 +57,9 @@ void process::init() {
     // Jump to LOW address copy (not high address original!)
     void (*user_entry)() = (void (*)())USER_CODE_ADDR;
 
-    kernel::log::debug("Entering userspace at ", fmt::hex{user_entry});
-    kernel::log::debug("Userspace stack top   ", fmt::hex{user_stack_top});
-    kernel::log::debug("code size = ", code_size);
+    log::debug("Entering userspace at ", fmt::hex{user_entry});
+    log::debug("Userspace stack top   ", fmt::hex{user_stack_top});
+    log::debug("code size = ", code_size);
     
     enter_userspace(user_entry, user_stack_top);
 }

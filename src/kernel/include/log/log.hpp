@@ -1,8 +1,8 @@
 #pragma once
 
-#include <kernel/kprintf/kprintf.hpp>
+#include <kprint/kprint.hpp>
 
-namespace kernel::log {
+namespace log {
     template <typename... Ts>
     void info(Ts... args) {
         kprintln("[INFO] ", args...);

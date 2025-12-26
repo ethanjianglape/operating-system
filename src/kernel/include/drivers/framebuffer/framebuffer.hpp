@@ -1,10 +1,10 @@
 #pragma once
 
-#include <kernel/console/console.hpp>
+#include <console/console.hpp>
 
 #include <cstdint>
 
-namespace kernel::drivers::framebuffer {
+namespace drivers::framebuffer {
     constexpr std::uint32_t RGB_BLACK = 0x00000000;
     constexpr std::uint32_t RGB_RED   = 0x00FF0000;
     constexpr std::uint32_t RGB_GREEN = 0x0000FF00;

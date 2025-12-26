@@ -1,14 +1,13 @@
-#include <arch/x86_64/drivers/keyboard/keyboard.hpp>
-#include <arch/x86_64/drivers/keyboard/scancodes.hpp>
+#include <arch.hpp>
+#include <console/console.hpp>
 #include <containers/kstring.hpp>
-#include <kernel/console/console.hpp>
+#include <log/log.hpp>
+#include <tty/tty.hpp>
+
 #include <cstddef>
 #include <cstdint>
-#include <kernel/tty/tty.hpp>
-#include <kernel/arch/arch.hpp>
-#include <kernel/log/log.hpp>
 
-namespace kernel::tty {
+namespace tty {
     namespace keyboard = arch::drivers::keyboard;
     using ScanCode = keyboard::ScanCode;
     using ExtendedScanCode = keyboard::ExtendedScanCode;
@@ -16,7 +15,7 @@ namespace kernel::tty {
     //constexpr std::size_t BUFFER_LEN = 512;
     //static char buffer[BUFFER_LEN] = {'\0'};
 
-    static kernel::kstring buffer{};
+    static kstring buffer{};
 
     static std::size_t buffer_index = 0;
 
@@ -119,7 +118,7 @@ namespace kernel::tty {
         }
     }
 
-    const kernel::kstring& read_line(std::size_t prompt_start) {
+    const kstring& read_line(std::size_t prompt_start) {
         while (true) {
             while (keyboard::KeyEvent* event = keyboard::read()) {
                 keyboard::ScanCode scancode = event->scancode;
@@ -150,13 +149,13 @@ namespace kernel::tty {
                     delete_forward();
                 }
 
-                kernel::console::disable_cursor();
-                kernel::console::set_cursor_x(prompt_start);
-                kernel::console::put(buffer);
-                kernel::console::set_cursor_x(prompt_start + buffer.size());
-                kernel::console::clear_to_eol();
-                kernel::console::enable_cursor();
-                kernel::console::set_cursor_x(prompt_start + buffer_index);
+                console::disable_cursor();
+                console::set_cursor_x(prompt_start);
+                console::put(buffer);
+                console::set_cursor_x(prompt_start + buffer.size());
+                console::clear_to_eol();
+                console::enable_cursor();
+                console::set_cursor_x(prompt_start + buffer_index);
             }
         }
     }
@@ -167,7 +166,7 @@ namespace kernel::tty {
     }
 
     void init() {
-        kernel::console::init();
+        console::init();
 
         reset();
     }

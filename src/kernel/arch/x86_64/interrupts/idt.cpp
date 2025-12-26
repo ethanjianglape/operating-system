@@ -1,6 +1,6 @@
 #include "idt.hpp"
 
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 #include <cstdint>
 
 extern "C" void* isr_stub_table[];
@@ -29,7 +29,7 @@ namespace x86_64::idt {
     }
 
     void init() {
-        kernel::log::init_start("IDT");
+        log::init_start("IDT");
 
         idtr.base = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
         idtr.limit = sizeof(IdtEntry) * IDT_MAX_DESCRIPTORS - 1;
@@ -49,7 +49,7 @@ namespace x86_64::idt {
 
         asm volatile("lidt %0" : : "m"(idtr));
 
-        kernel::log::init_end("IDT");
+        log::init_end("IDT");
     }
 }
 

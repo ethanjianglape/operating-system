@@ -1,10 +1,10 @@
 #include <cstdint>
-#include <kernel/arch/arch.hpp>
+#include <arch.hpp>
 
 #include <cstddef>
 #include <concepts>
 
-namespace kernel::pmm {
+namespace pmm {
     // For now, the PMM will have a hard coded upper limit of 2GiB
     // attempting to access beyond 2GiB will just truncate
     constexpr std::size_t MAX_MEMORY_BYTES = 2'147'483'648;

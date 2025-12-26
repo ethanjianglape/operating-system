@@ -1,7 +1,7 @@
 #include <cstdint>
-#include <kernel/timer/timer.hpp>
+#include <timer/timer.hpp>
 
-namespace kernel::timer {
+namespace timer {
     static TickHandler handler = nullptr;
 
     static std::uintmax_t ticks = 0;

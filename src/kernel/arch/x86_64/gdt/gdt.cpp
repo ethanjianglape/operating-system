@@ -2,7 +2,7 @@
 
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <fmt/fmt.hpp>
-#include <kernel/log/log.hpp>
+#include <log/log.hpp>
 
 extern "C" void load_gdt(x86_64::gdt::Gdtr* ptr);
 
@@ -83,11 +83,11 @@ namespace x86_64::gdt {
     }
 
     void log_gdt_entry(GdtEntry& entry, int i, const char* name) {
-        kernel::log::info("GDT[", i, "]: ", name, " [base (", fmt::hex{entry.base_low}, ",", fmt::hex{entry.base_mid}, ",", fmt::hex{entry.base_high}, ") limit (", fmt::hex{entry.limit_low}, ",", fmt::hex{entry.limit_high}, ") flags (", fmt::hex{entry.flags}, ") access (", fmt::hex{entry.access}, ")]");
+        log::info("GDT[", i, "]: ", name, " [base (", fmt::hex{entry.base_low}, ",", fmt::hex{entry.base_mid}, ",", fmt::hex{entry.base_high}, ") limit (", fmt::hex{entry.limit_low}, ",", fmt::hex{entry.limit_high}, ") flags (", fmt::hex{entry.flags}, ") access (", fmt::hex{entry.access}, ")]");
     }
 
     void init() {
-        kernel::log::init_start("GDT");
+        log::init_start("GDT");
 
         init_gdt_table();
         init_tss();
@@ -98,9 +98,9 @@ namespace x86_64::gdt {
         load_gdt(&gdtr);
         load_tss();
 
-        kernel::log::info("GDT created with 6 entries");
-        kernel::log::info("GDT.limit = ", fmt::hex{gdtr.limit});
-        kernel::log::info("GDT.base = ", fmt::hex{gdtr.base});
+        log::info("GDT created with 6 entries");
+        log::info("GDT.limit = ", fmt::hex{gdtr.limit});
+        log::info("GDT.base = ", fmt::hex{gdtr.base});
 
         log_gdt_entry(gdt_table.zero, 0, "NULL");
         log_gdt_entry(gdt_table.kernel_code, 1, "Kernel Code");
@@ -108,6 +108,6 @@ namespace x86_64::gdt {
         log_gdt_entry(gdt_table.user_code, 3, "User Data");
         log_gdt_entry(gdt_table.user_data, 4, "User Code");
 
-        kernel::log::init_end("GDT");
+        log::init_end("GDT");
     }
 }
