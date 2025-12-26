@@ -1,10 +1,7 @@
-#pragma once
-
-#include <containers/kstring.hpp>
-#include <containers/kvector.hpp>
+#include <algo/algo.hpp>
 
 namespace algo {
-    inline kvector<kstring> split(const kstring& str, char delim = ' ') {
+    kvector<kstring> split(const kstring& str, char delim) {
         kvector<kstring> result{};
         kstring part = "";
         

@@ -1,5 +1,4 @@
-#include <containers/kstring.hpp>
-#include <algo/string.hpp>
+#include <algo/algo.hpp>
 #include <tty/tty.hpp>
 #include <cstddef>
 #include <shell/shell.hpp>

@@ -51,6 +51,7 @@ set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
     ${LIB_DIR}/drivers/acpi/acpi.cpp
     ${LIB_DIR}/crt/crt.c
+    ${LIB_DIR}/algo/algo.cpp
 )
 
 # Architecture-specific boot files

@@ -1,4 +1,3 @@
-#include <algo/string.hpp>
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
