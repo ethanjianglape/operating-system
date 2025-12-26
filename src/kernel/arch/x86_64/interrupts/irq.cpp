@@ -1,5 +1,5 @@
 #include "irq.hpp"
-#include <kprintf/kprintf.hpp>
+#include <kprint/kprint.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 
 #include <cstdint>

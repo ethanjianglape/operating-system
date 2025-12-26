@@ -1,26 +1,22 @@
 #include <panic/panic.hpp>
 
+#include <arch.hpp>
 #include <log/log.hpp>
-#include <arch/x86_64/cpu/cpu.hpp>
 
-// TODO: kernel library code should not have arch specific dependencies
-// like x86_64::cpu::cli(), this should be abstracted away using something like
-// a preprocessor macro to check the current cpu architecture. For now this
-// will be left as is to reduce complexity.
 void panic(const char* str) {
-    x86_64::cpu::cli();
+    arch::cpu::cli();
 
     log::error("*** KERNEL PANIC ***");
     log::error(str);
     log::error("System will now halt.");
 
     while (true) {
-        x86_64::cpu::hlt();
+        arch::cpu::hlt();
     }
 }
 
 void panicf(const char* format, ...) {
-    x86_64::cpu::cli();
+    arch::cpu::cli();
 
     /*
     std::va_list args;
@@ -37,6 +33,6 @@ void panicf(const char* format, ...) {
     */
 
     while (true) {
-        x86_64::cpu::hlt();
+        arch::cpu::hlt();
     }
 }

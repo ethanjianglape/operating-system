@@ -1,7 +1,7 @@
 #include <drivers/acpi/acpi.hpp>
 #include <boot/boot.hpp>
 #include <boot/limine.h>
-#include <arch/arch.hpp>
+#include <arch.hpp>
 #include <console/console.hpp>
 #include <drivers/framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>

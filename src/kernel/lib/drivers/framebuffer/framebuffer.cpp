@@ -2,7 +2,7 @@
 #include <drivers/framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
-#include <arch/arch.hpp>
+#include <arch.hpp>
 
 #include <cstdint>
 
