@@ -16,66 +16,75 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 ## Target Architecture
 
 **Target:** x86_64 (AMD64/Intel 64)
-- Requires APIC support
-- Targets modern 64-bit x86 systems
-- Tested on: QEMU, VirtualBox
+- Requires APIC support (LAPIC + IOAPIC)
+- Uses Limine bootloader protocol
+- Tested on: QEMU
 
 ## Features
 
 **Current Status:**
-- ✅ Higher-half kernel (3GB/1GB memory split)
-- ✅ x86 protected mode with paging
+- ✅ Higher-half kernel with HHDM (Higher Half Direct Map)
+- ✅ Limine bootloader with framebuffer
+- ✅ Physical memory manager (PMM) with bitmap allocator
+- ✅ Virtual memory manager (VMM) with 4-level paging
 - ✅ GDT with ring 0/3 support
 - ✅ IDT with interrupt handling
-- ✅ Syscall mechanism (int 0x80)
-- ✅ TSS for privilege transitions
-- ✅ VGA text mode (80x25)
-- ✅ Colored kernel logging
-- ✅ Basic kprintf() implementation
-- 🚧 Process management (in progress)
+- ✅ ACPI table parsing (RSDP, XSDT, MADT)
+- ✅ APIC support (LAPIC + IOAPIC)
+- ✅ PS/2 keyboard driver with scancode translation
+- ✅ Framebuffer console with PSF font rendering
+- ✅ Serial output (COM1) for kernel logging
+- ✅ Dynamic containers (kstring, kvector)
+- ✅ Interactive shell with line editing
+- ✅ Syscall mechanism
 
-**Memory Layout:**
-```
-0x00000000 - 0x02000000  (0-32MB)    Kernel low (hardware/MMIO)
-0x02000000 - 0x04000000  (32-64MB)   Userspace
-0xC0000000 - 0xD0000000  (3GB-3GB+256MB)  Kernel high
-```
+**Planned:**
+- 🚧 VFS and initramfs
+- 🚧 Process management
 
 ## Project Structure
 
 ```
 os/
-├── src/
-│   ├── kernel/
-│   │   ├── kernel.cpp              # Kernel entry point
-│   │   ├── arch/x86_64/            # x86_64-specific code
-│   │   │   ├── boot/
-│   │   │   │   └── boot.s          # Bootloader, paging setup
-│   │   │   ├── gdt/                # Global Descriptor Table
-│   │   │   ├── idt/                # Interrupt Descriptor Table
-│   │   │   ├── paging/             # Virtual memory management
-│   │   │   ├── vga/                # VGA text mode driver
-│   │   │   ├── syscall/            # System call handling
-│   │   │   └── process/            # Process management
-│   │   ├── lib/                    # Kernel libraries
-│   │   │   ├── kprintf/            # Kernel printf
-│   │   │   └── log/                # Colored logging
-│   │   └── include/                # Kernel headers
-│   └── libc/                       # C standard library (freestanding)
-│       ├── stdio/
-│       ├── string/
-│       └── include/
-├── sysroot/                        # System root (installed files)
-└── CMakeLists.txt                  # Build configuration
+├── src/kernel/
+│   ├── kernel.cpp                  # Kernel entry point
+│   ├── include/                    # Kernel headers (flat structure)
+│   │   ├── arch.hpp                # Architecture abstraction
+│   │   ├── containers/             # kstring, kvector
+│   │   ├── log/                    # Logging utilities
+│   │   ├── kprint/                 # Serial output
+│   │   └── ...
+│   ├── lib/                        # Implementations (mirrors include/)
+│   │   ├── containers/
+│   │   ├── shell/
+│   │   ├── tty/
+│   │   └── ...
+│   ├── arch/x86_64/                # x86_64-specific (headers + source together)
+│   │   ├── boot/                   # Limine entry, early init
+│   │   ├── gdt/                    # Global Descriptor Table
+│   │   ├── interrupts/             # IDT, IRQ handling
+│   │   ├── vmm/                    # Virtual memory manager
+│   │   ├── drivers/
+│   │   │   ├── apic/               # LAPIC + IOAPIC
+│   │   │   ├── keyboard/           # PS/2 keyboard
+│   │   │   ├── serial/             # COM1 serial
+│   │   │   └── ...
+│   │   └── ...
+│   └── CONVENTIONS.md              # Code style and structure guide
+├── limine/                         # Limine bootloader files
+└── configure.sh                    # Build script
 ```
+
+See `src/kernel/CONVENTIONS.md` for namespace and code style conventions.
 
 ## Building
 
 **Requirements:**
-- GCC/G++ with 32-bit multilib support
+- GCC/G++ cross-compiler for x86_64-elf (or system compiler with proper flags)
 - CMake 3.16+
 - GNU assembler
-- GRUB (for bootable image)
+- Limine bootloader
+- xorriso (for ISO creation)
 - QEMU (for testing)
 
 **Build Commands:**
@@ -88,20 +97,27 @@ os/
 qemu-system-x86_64 -cdrom myos.iso
 ```
 
+**With serial output (recommended for debugging):**
+```bash
+qemu-system-x86_64 -cdrom myos.iso -serial stdio
+```
+
 ## Architecture
 
 **Boot Sequence:**
-1. GRUB loads kernel at physical `0x00200000`
-2. `boot.s` sets up GDT and enables paging
-3. Jump to higher-half (`kernel_main` at `0xC0000000`)
-4. Initialize subsystems (GDT, IDT, paging, etc.)
-5. Enter kernel main loop
+1. Limine loads kernel and provides framebuffer, memory map, RSDP
+2. Early init sets up GDT, IDT, PMM, VMM with HHDM
+3. Parse ACPI tables (MADT) for APIC configuration
+4. Initialize LAPIC and IOAPIC for interrupt routing
+5. Initialize drivers (keyboard, serial)
+6. Start interactive shell
 
 **Key Design Decisions:**
-- **Higher-half kernel**: Kernel at 3GB+, userspace at 0-3GB
-- **Function pointer abstraction**: Console/logging architecture-independent
-- **Modern C++**: Using C++23 with freestanding implementation
-- **Multiboot2**: Compatible with GRUB bootloader
+- **Higher-half kernel**: Kernel mapped at high addresses via HHDM
+- **Architecture abstraction**: `lib/` code uses `arch::` namespace, not `x86_64::` directly
+- **Flat namespaces**: No `kernel::` prefix; subsystems use flat namespaces (`pmm::`, `log::`, `tty::`)
+- **k-prefixed utilities**: Global types like `kstring`, `kvector`, `kprint()`
+- **Modern C++**: C++23 with freestanding implementation, concepts, fold expressions
 
 ## License
 
@@ -112,4 +128,4 @@ GNU General Public License v3.0
 Built following OS development resources:
 - Intel Software Developer Manual
 - OSDev Wiki
-- Linux kernel source code (for reference)
+- Limine bootloader documentation
