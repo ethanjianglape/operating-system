@@ -8,7 +8,7 @@
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
-- [ ] [Namespace Cleanup](#namespace-cleanup)
+- [x] [Namespace Cleanup](#namespace-cleanup)
 
 ---
 
@@ -25,8 +25,8 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 ```
 
 **Implementation:**
-- kprintf/kernel::log writes directly to serial output
-- kernel::console becomes purely for TTY/user interaction
+- kprint/log:: writes directly to serial output
+- console:: is purely for TTY/user interaction
 - TTY handles keyboard input, input buffer, line editing
 - Console handles character rendering, cursor, scrolling
 - Future: Add log levels to optionally route important messages to console
@@ -96,7 +96,7 @@ User/Shell: fs::open(), fs::read(), fs::readdir()
 
 **VFS interface:**
 ```cpp
-namespace kernel::fs {
+namespace fs {
     struct DirEntry { kstring name; bool is_dir; size_t size; };
 
     int open(const char* path);
@@ -190,35 +190,24 @@ namespace kernel::fs {
 
 ## Namespace Cleanup
 
-**Status:** Low priority (future refactor)
+**Status:** Complete
 
-**Current state:** Mixed approach with `kernel::` namespace for subsystems, `k` prefix for utility types (`kstring`, `kvector`), and short namespaces for utilities (`fmt::`, `algo::`).
+**Final structure:**
+- Removed `kernel::` namespace entirely (redundant - we're in the kernel)
+- Flat subsystem namespaces: `pmm::`, `log::`, `tty::`, `console::`, `fs::`
+- Global k-prefixed utilities: `kstring`, `kvector`, `kprint()`, `kprintln()`
+- Architecture code: `x86_64::vmm`, `x86_64::drivers::apic`, etc.
+- Architecture abstraction: `arch::` namespace aliases in `include/arch.hpp`
+- Implementation details: `subsystem_detail::` (not bare `detail::`)
 
-**Pain point:** `kernel::kvector<kernel::kvector<kernel::kstring>>` is verbose and painful to type/read.
+**File structure:**
+- `include/` - flat headers (no `include/kernel/` nesting)
+- `lib/` - implementations (mirrors include/)
+- `arch/x86_64/` - self-contained, headers next to source
 
-**Options considered:**
+**Rules:**
+- `lib/` code uses `arch::` abstraction, never `x86_64::` directly
+- Only `include/arch.hpp` bridges architectures
+- `#include <...>` for non-local, `#include "..."` for same-directory only
 
-1. **Global namespace with k-prefix (current for containers):**
-   - `kstring`, `kvector`, `kalloc`, `kfree`
-   - Pro: Short, no namespace noise
-   - Con: Inconsistent with subsystem namespacing
-
-2. **Unified `k::` namespace:**
-   - `k::string`, `k::vector`, `k::alloc`, `k::free`
-   - `k::pmm`, `k::vmm`, `k::log`, `k::drivers::`
-   - Pro: Consistent, short, clean
-   - Con: Requires mass rename
-
-3. **Keep `kernel::` for subsystems only:**
-   - Subsystems: `kernel::pmm`, `kernel::log`, `kernel::panic`
-   - Utilities: global with k-prefix or short namespaces
-   - Pro: Distinguishes subsystems from utilities
-   - Con: Still some verbosity for nested subsystem calls
-
-**Recommendation:** Consider unifying under `k::` when core functionality is stable. A simple find/replace refactor. Keeps arch-specific code under `x86_64::` for clear separation.
-
-**Example after refactor:**
-```cpp
-k::vector<k::string> args = algo::split(input, ' ');
-k::log::info("Processing: ", args[0]);
-```
+See `src/kernel/CONVENTIONS.md` for full details.
