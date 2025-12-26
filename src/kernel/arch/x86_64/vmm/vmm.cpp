@@ -47,7 +47,7 @@ namespace x86_64::vmm {
 
         if (!pml4[pml4_idx].p) {
             // Allocate a new 4KiB physical frame for this entry
-            auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
+            auto page_phys = pmm::alloc_frame<std::uintptr_t>();
 
             // Create the missing pte entry at this index
             make_pte(&pml4[pml4_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
@@ -60,7 +60,7 @@ namespace x86_64::vmm {
 
         if (!pdpt[pdpt_idx].p) {
             // Allocate a new 4KiB physical frame for this entry
-            auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
+            auto page_phys = pmm::alloc_frame<std::uintptr_t>();
 
             // Create the missing pte entry at this index
             make_pte(&pdpt[pdpt_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
@@ -73,7 +73,7 @@ namespace x86_64::vmm {
 
         if (!pd[pd_idx].p) {
             // Allocate a new 4KiB physical frame for this entry
-            auto page_phys = kernel::pmm::alloc_frame<std::uintptr_t>();
+            auto page_phys = pmm::alloc_frame<std::uintptr_t>();
 
             // Create the missing pte entry at this index
             make_pte(&pd[pd_idx], page_phys, flags | PAGE_PRESENT | PAGE_WRITE);
@@ -101,7 +101,7 @@ namespace x86_64::vmm {
     }
 
     void* alloc_contiguous_pages(std::size_t pages) {
-        auto phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(pages);
+        auto phys = pmm::alloc_contiguous_frames<std::uintptr_t>(pages);
 
         return phys_to_virt<void*>(phys);
     }
@@ -114,7 +114,7 @@ namespace x86_64::vmm {
         void* block = static_cast<std::uint8_t*>(virt) - sizeof(std::size_t);
         auto pages = *static_cast<std::size_t*>(block);
 
-        kernel::pmm::free_contiguous_frames(virt_to_phys(block), pages);
+        pmm::free_contiguous_frames(virt_to_phys(block), pages);
     }
 
     // Set our local pml4 to point to the pml4 created by Limine which
@@ -127,33 +127,33 @@ namespace x86_64::vmm {
         constexpr std::uint64_t bottom_12_mask = ~0xFFF;
         pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
-        kernel::log::info("VMM pml4 addr = ", fmt::hex{pml4});
+        log::info("VMM pml4 addr = ", fmt::hex{pml4});
     }
 
     void init_userspace() {
-        auto code_phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(8);
-        auto data_phys = kernel::pmm::alloc_contiguous_frames<std::uintptr_t>(8);
+        auto code_phys = pmm::alloc_contiguous_frames<std::uintptr_t>(8);
+        auto data_phys = pmm::alloc_contiguous_frames<std::uintptr_t>(8);
 
         map_page(0x00400000, code_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
         map_page(0x00800000, data_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
 
-        kernel::log::info("Mapped user code at virt ", fmt::hex{0x00400000}, " to phys ", fmt::hex{code_phys});
-        kernel::log::info("Mapped user data at virt ", fmt::hex{0x00800000}, " to phys ", fmt::hex{data_phys});
+        log::info("Mapped user code at virt ", fmt::hex{0x00400000}, " to phys ", fmt::hex{code_phys});
+        log::info("Mapped user data at virt ", fmt::hex{0x00800000}, " to phys ", fmt::hex{data_phys});
     }
 
     void init(std::uintptr_t offset) {
-        kernel::log::init_start("VMM");
+        log::init_start("VMM");
 
         hhdm_offset = offset;
         kernel_heap = reinterpret_cast<std::uint8_t*>(hhdm_offset);
 
-        kernel::log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
-        kernel::log::info("Kernel heap   = ", fmt::hex{kernel_heap});
+        log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
+        log::info("Kernel heap   = ", fmt::hex{kernel_heap});
 
         init_pml4();
         init_userspace();
 
-        kernel::log::init_end("VMM");
+        log::init_end("VMM");
     }
 }
 

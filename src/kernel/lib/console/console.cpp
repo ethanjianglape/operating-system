@@ -7,8 +7,8 @@
 
 #include <cstdint>
 
-namespace kernel::console {
-    namespace fb = kernel::drivers::framebuffer;
+namespace console {
+    namespace fb = drivers::framebuffer;
 
     static std::uint32_t cursor_x = 0;
     static std::uint32_t cursor_y = 0;
@@ -39,7 +39,7 @@ namespace kernel::console {
         cursor_y = 0;
         enable_cursor();
         draw_cursor();
-        kernel::timer::register_handler(blink_handler);
+        timer::register_handler(blink_handler);
     }
 
     void enable_cursor() {
@@ -198,7 +198,7 @@ namespace kernel::console {
         return written;
     }
 
-    int put(const kernel::kstring& str) {
+    int put(const kstring& str) {
         int written = 0;
 
         for (char c : str) {

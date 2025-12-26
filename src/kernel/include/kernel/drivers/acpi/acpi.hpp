@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-namespace kernel::drivers::acpi {
+namespace drivers::acpi {
     struct [[gnu::packed]] XSDP {
         char signature[8];
         std::uint8_t checksum;

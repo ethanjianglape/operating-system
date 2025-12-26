@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace kernel::drivers::framebuffer {
+namespace drivers::framebuffer {
     static std::uint64_t fb_width;
     static std::uint64_t fb_height;
     static std::uint64_t fb_pitch;
@@ -27,9 +27,9 @@ namespace kernel::drivers::framebuffer {
     }
 
     void init(const FrameBufferInfo& info) {
-        kernel::log::init_start("Framebuffer");
-        kernel::log::info("Framebuffer: ", info.width, "x", info.height, "x", info.bpp, " (pitch=", info.pitch, ")");
-        kernel::log::info("VRAM: ", fmt::hex{info.vram});
+        log::init_start("Framebuffer");
+        log::info("Framebuffer: ", info.width, "x", info.height, "x", info.bpp, " (pitch=", info.pitch, ")");
+        log::info("VRAM: ", fmt::hex{info.vram});
         
         fb_width = info.width;
         fb_height = info.height;
@@ -37,7 +37,7 @@ namespace kernel::drivers::framebuffer {
         fb_bpp = info.bpp;
         vram = info.vram;
 
-        kernel::log::init_end("Framebuffer");
+        log::init_end("Framebuffer");
     }
 
     void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {
@@ -92,7 +92,7 @@ namespace kernel::drivers::framebuffer {
     }
 
     void log() {
-        kernel::log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
-        kernel::log::info("VRAM   = ", fmt::hex{vram});
+        log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
+        log::info("VRAM   = ", fmt::hex{vram});
     }
 }

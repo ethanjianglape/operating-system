@@ -1,5 +1,5 @@
 #pragma once
 
-namespace kernel::shell {
+namespace shell {
     void init();
 }

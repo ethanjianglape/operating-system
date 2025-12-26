@@ -1,5 +1,5 @@
 #pragma once
 
-namespace kernel::boot {
+namespace boot {
     void init();
 }

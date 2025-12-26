@@ -6,7 +6,7 @@
 
 namespace x86_64::drivers::pic {
     bool init() {
-        kernel::log::init_start("Legacy PIT");
+        log::init_start("Legacy PIT");
         
         cpu::outb(PIC1_DATA, 0xFF);
         cpu::outb(PIC2_DATA, 0xFF);
@@ -16,11 +16,11 @@ namespace x86_64::drivers::pic {
         const auto success = master == 0xFF && slave == 0xFF;
 
         if (!success) {
-            kernel::panic("Failed to disable legacy PIT");
+            panic("Failed to disable legacy PIT");
         }
 
-        kernel::log::info("Legacy PIT has been disabled");
-        kernel::log::init_end("Legacy PIT");
+        log::info("Legacy PIT has been disabled");
+        log::init_end("Legacy PIT");
 
         return success;
     }

@@ -18,13 +18,13 @@
 
 [[noreturn]]
 void kernel_main() {
-    kernel::log::info("MyOS Booted into kernel_main() using Limine.");
-    kernel::log::info("Serial ouput on COM1 initialized");
+    log::info("MyOS Booted into kernel_main() using Limine.");
+    log::info("Serial ouput on COM1 initialized");
 
     x86_64::drivers::serial::init();
 
     
-    kernel::boot::init();
+    boot::init();
     
     x86_64::gdt::init();
     x86_64::idt::init();
@@ -36,13 +36,13 @@ void kernel_main() {
 
     x86_64::cpu::sti();
 
-    kernel::log::success("All core kernel features initialized!");
+    log::success("All core kernel features initialized!");
 
-    kernel::shell::init();
+    shell::init();
 
     //x86_64::process::init();
 
-    //kernel::log::info("back from userspace");
+    //log::info("back from userspace");
 
     while (true) {
         x86_64::cpu::hlt();

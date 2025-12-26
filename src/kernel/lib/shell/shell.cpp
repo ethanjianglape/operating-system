@@ -5,8 +5,8 @@
 #include <kernel/shell/shell.hpp>
 #include <kernel/console/console.hpp>
 
-namespace kernel::shell {
-    using RgbColor = kernel::console::RgbColor;
+namespace shell {
+    using RgbColor = console::RgbColor;
     
     constexpr char ps1[] = "$ >";
     constexpr std::size_t prompt_start = sizeof(ps1) - 1;
@@ -17,47 +17,47 @@ namespace kernel::shell {
         }
 
         if (line.empty()) {
-            kernel::console::newline();
+            console::newline();
             return;
         }
 
         auto split = algo::split(line);
 
         if (split.empty()) {
-            kernel::console::newline();
+            console::newline();
             return;
         }
 
         auto command = split[0];
 
         if (command == "clear") {
-            kernel::console::clear();
+            console::clear();
             return;
         }
 
-        kernel::console::set_color(RgbColor::RED, RgbColor::BLACK);
-        kernel::console::newline();
-        kernel::console::put("Invalid Command: ");
-        kernel::console::put(command);
-        kernel::console::reset_color();
-        kernel::console::newline();
+        console::set_color(RgbColor::RED, RgbColor::BLACK);
+        console::newline();
+        console::put("Invalid Command: ");
+        console::put(command);
+        console::reset_color();
+        console::newline();
     }
     
     void init() {
-        kernel::tty::init();
+        tty::init();
 
-        kernel::console::put("Welcome to MyOS!");
-        kernel::console::newline();
+        console::put("Welcome to MyOS!");
+        console::newline();
         
         while (true) {
-            kernel::console::disable_cursor();
-            kernel::console::put(ps1);
-            kernel::console::enable_cursor();
-            kernel::console::set_cursor_x(prompt_start);
-            const kstring& line = kernel::tty::read_line(prompt_start);
-            kernel::console::disable_cursor();
+            console::disable_cursor();
+            console::put(ps1);
+            console::enable_cursor();
+            console::set_cursor_x(prompt_start);
+            const kstring& line = tty::read_line(prompt_start);
+            console::disable_cursor();
             dispatch_command(line);
-            kernel::tty::reset();
+            tty::reset();
         }
     }
 }

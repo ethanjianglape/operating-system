@@ -2,7 +2,7 @@
 
 #include <kernel/kprintf/kprintf.hpp>
 
-namespace kernel::log {
+namespace log {
     template <typename... Ts>
     void info(Ts... args) {
         kprintln("[INFO] ", args...);

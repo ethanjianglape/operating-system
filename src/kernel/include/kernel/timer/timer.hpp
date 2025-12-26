@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-namespace kernel::timer {
+namespace timer {
     using TickHandler = void (*)(std::uintmax_t ticks);
     
     void tick();

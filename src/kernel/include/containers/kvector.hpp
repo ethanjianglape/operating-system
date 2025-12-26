@@ -10,9 +10,8 @@
 #include <initializer_list>
 #include <new> // IWYU pragma: keep (required for placement new)
 
-namespace kernel {
-    template <typename T>
-    concept kvector_storable = requires {
+template <typename T>
+concept kvector_storable = requires {
         requires sizeof(T) > 0;
         requires sizeof(T) <= 4096;
         requires std::destructible<T>;
@@ -275,7 +274,6 @@ namespace kernel {
                 }
             }
 
-            _size = 0;
-        }
-    };
-}
+        _size = 0;
+    }
+};

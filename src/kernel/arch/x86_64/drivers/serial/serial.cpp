@@ -31,7 +31,7 @@ namespace x86_64::drivers::serial {
         return 1;
     }
 
-    int puts(const kernel::kstring& str) {
+    int puts(const kstring& str) {
         for (char c : str) {
             putchar(c);
         }

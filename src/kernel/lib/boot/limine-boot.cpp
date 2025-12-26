@@ -54,9 +54,9 @@ static volatile limine_rsdp_request rsdp_request = {
 [[gnu::section(".limine_requests_end")]]
 static volatile std::uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_END_MARKER;
 
-namespace kernel::boot {
+namespace boot {
     void init() {
-        kernel::log::init_start("Limine Response");
+        log::init_start("Limine Response");
 
         limine_framebuffer* fb = framebuffer_request.response->framebuffers[0];
 
@@ -66,7 +66,7 @@ namespace kernel::boot {
         auto pitch = fb->pitch;
         auto bpp = fb->bpp;
 
-        auto fb_info = kernel::drivers::framebuffer::FrameBufferInfo {
+        auto fb_info = drivers::framebuffer::FrameBufferInfo {
             .width = width,
             .height = height,
             .pitch = pitch,
@@ -74,34 +74,34 @@ namespace kernel::boot {
             .vram = vram
         };
 
-        kernel::drivers::framebuffer::init(fb_info);
-        kernel::log::info("Switching to framebuffer logging");
+        drivers::framebuffer::init(fb_info);
+        log::info("Switching to framebuffer logging");
 
-        kernel::log::info("TESTING", 1,2,3,4,5);
+        log::info("TESTING", 1,2,3,4,5);
 
         auto entry_count = memmap_request.response->entry_count;
         limine_memmap_entry** entries = memmap_request.response->entries;
-        
-        kernel::pmm::init();
+
+        pmm::init();
 
         for (std::uint64_t i = 0; i < entry_count; i++) {
             auto base = entries[i]->base;
             auto length = entries[i]->length;
             auto type = entries[i]->type;
 
-            kernel::log::info("Limine memmap entry #", i, ": base (", fmt::hex{base}, ") length (", fmt::hex{length}, ") type (", type, ")");
+            log::info("Limine memmap entry #", i, ": base (", fmt::hex{base}, ") length (", fmt::hex{length}, ") type (", type, ")");
 
             if (type == LIMINE_MEMMAP_USABLE) {
-                kernel::pmm::add_free_memory(base, length);
+                pmm::add_free_memory(base, length);
             }
         }
 
         std::uint64_t hhdm_offset = hhdm_request.response->offset;
-        kernel::arch::vmm::init(hhdm_offset);
+        arch::vmm::init(hhdm_offset);
 
         void* rsdp_address = rsdp_request.response->address;
-        kernel::drivers::acpi::init(rsdp_address);
-        
-        kernel::log::init_end("Limine Response");
+        drivers::acpi::init(rsdp_address);
+
+        log::init_end("Limine Response");
     }
 }

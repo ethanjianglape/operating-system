@@ -3,9 +3,9 @@
 #include <containers/kstring.hpp>
 #include <cstddef>
 
-namespace kernel::tty {
+namespace tty {
     void init();
     void reset();
 
-    const kernel::kstring& read_line(std::size_t prompt_start);
+    const kstring& read_line(std::size_t prompt_start);
 }

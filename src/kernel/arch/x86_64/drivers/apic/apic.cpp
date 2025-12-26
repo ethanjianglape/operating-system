@@ -76,14 +76,14 @@ namespace x86_64::drivers::apic {
     }
 
     void init() {
-        kernel::log::init_start("APIC");
+        log::init_start("APIC");
 
         if (!check_support()) {
-            kernel::panic("APIC not supported - required for this kernel");
+            panic("APIC not supported - required for this kernel");
         }
 
         if (ioapic_virt_base == nullptr || lapic_virt_base == nullptr) {
-            kernel::panic("IOAPIC/LAPIC physical addresses have not been mapped yet!");
+            panic("IOAPIC/LAPIC physical addresses have not been mapped yet!");
         }
 
         enable();
@@ -100,11 +100,11 @@ namespace x86_64::drivers::apic {
 
         timer_init();
 
-        kernel::log::init_end("APIC");
+        log::init_end("APIC");
     }
 
     void apic_timer_handler(std::uint32_t vector) {
-        kernel::timer::tick();
+        timer::tick();
         send_eoi();
     }
 
@@ -127,7 +127,7 @@ namespace x86_64::drivers::apic {
 
         irq::register_irq_handler(32, apic_timer_handler);
 
-        kernel::log::info("APIC timer initialized on ISR32 (IRQ0) at ", ms, "ms resoluation.");
+        log::info("APIC timer initialized on ISR32 (IRQ0) at ", ms, "ms resoluation.");
     }
 }
 

@@ -4,8 +4,6 @@
 #include <containers/kvector.hpp>
 
 namespace algo {
-    using namespace kernel;
-    
     inline kvector<kstring> split(const kstring& str, char delim = ' ') {
         kvector<kstring> result{};
         kstring part = "";
