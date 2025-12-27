@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <drivers/acpi/acpi.hpp>
 #include <boot/boot.hpp>
 #include <boot/limine.h>
@@ -7,6 +8,7 @@
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
+#include <fs/initramfs/initramfs.hpp>
 
 #include <cstdint>
 
@@ -17,6 +19,16 @@ static volatile std::uint64_t limine_requests_end_marker[] = LIMINE_REQUESTS_STA
 [[gnu::used]]
 [[gnu::section(".limine_requests")]]
 static volatile std::uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(4);
+
+[[gnu::used]]
+[[gnu::section(".limine_requests")]]
+static volatile limine_module_request module_request = {
+    .id = LIMINE_MODULE_REQUEST_ID,
+    .revision = 0,
+    .response = nullptr,
+    .internal_module_count = 0,
+    .internal_modules = nullptr
+};
 
 [[gnu::used]]
 [[gnu::section(".limine_requests")]]
@@ -75,9 +87,6 @@ namespace boot {
         };
 
         drivers::framebuffer::init(fb_info);
-        log::info("Switching to framebuffer logging");
-
-        log::info("TESTING", 1,2,3,4,5);
 
         auto entry_count = memmap_request.response->entry_count;
         limine_memmap_entry** entries = memmap_request.response->entries;
@@ -101,6 +110,18 @@ namespace boot {
 
         void* rsdp_address = rsdp_request.response->address;
         drivers::acpi::init(rsdp_address);
+
+        limine_module_response* modules = module_request.response;
+
+        for (std::size_t i = 0; i < modules->module_count; i++) {
+            limine_file* mod = modules->modules[i];
+            auto addr = static_cast<std::uint8_t*>(mod->address);
+            auto size = mod->size;
+
+            log::info("Limine mod path: ", (const char*)mod->path, " addr = ", addr, " size = ", size);
+
+            fs::initramfs::init(addr, size);
+        }
 
         log::init_end("Limine Response");
     }

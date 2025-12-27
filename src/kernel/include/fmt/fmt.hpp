@@ -178,4 +178,16 @@ namespace fmt {
     inline const char* to_string(ptr_type auto ptr) {
         return to_string(reinterpret_cast<std::uintptr_t>(ptr), NumberFormat::HEX);
     }
+
+    inline std::uintmax_t parse_uint(const char* str, std::size_t len, NumberFormat format = NumberFormat::DEC) {
+        const auto divisor = number_format_divisor(format);
+        
+        std::uintmax_t result = 0;
+
+        for (std::size_t i = 0; i < len && str[i]; i++) {
+            result = result * divisor + (str[i] - '0');
+        }
+
+        return result;
+    }
 }
