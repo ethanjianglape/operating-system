@@ -1,3 +1,5 @@
+#include "fs/vfs.hpp"
+#include "log/log.hpp"
 #include <algo/algo.hpp>
 #include <tty/tty.hpp>
 #include <cstddef>
@@ -22,6 +24,10 @@ namespace shell {
 
         auto split = algo::split(line);
 
+        for (const auto& s : split) {
+            log::debug(s);
+        }
+
         if (split.empty()) {
             console::newline();
             return;
@@ -31,6 +37,36 @@ namespace shell {
 
         if (command == "clear") {
             console::clear();
+            return;
+        }
+
+        if (command == "cat") {
+            auto filename = split[1];
+
+            log::debug(filename);
+            log::debug(filename.c_str());
+
+            int fd = fs::open(filename.c_str(), fs::O_RDONLY);
+
+            log::debug("fd = ", fd);
+
+            if (fd >= 0) {
+                char buffer[512];
+                int read = fs::read(fd, buffer, 512);
+
+                log::debug("read = ", read);
+                
+                kstring file{buffer, read};
+
+                log::debug(file);
+
+                console::newline();
+                console::put(file);
+                console::newline();
+
+                fs::close(fd);
+            }
+
             return;
         }
 
@@ -47,7 +83,7 @@ namespace shell {
 
         console::put("Welcome to MyOS!");
         console::newline();
-        
+
         while (true) {
             console::disable_cursor();
             console::put(ps1);

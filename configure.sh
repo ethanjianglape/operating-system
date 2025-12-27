@@ -23,6 +23,11 @@ if [ ! -d "sysroot" ]; then
     mkdir sysroot
 fi
 
+if [ -d "initramfs" ]; then
+    echo "Creating initramfs.tar..."
+    tar -cvf ./sysroot/boot/initramfs.tar -C ./initramfs .
+fi
+
 cd build
 
 # Configure with CMake
