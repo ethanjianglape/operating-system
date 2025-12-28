@@ -4,20 +4,16 @@
 #include <cstdint>
 
 namespace slab {
-    constexpr std::size_t MAX_SLABS_PER_CLASS = 64;
-    
     struct Slab {
-        std::uint64_t magic;
-        void* page;
-        void* free_head;
-        std::size_t size;
-        std::size_t free_count;
+        std::uint64_t magic; // Magic value to identify slab headers
+        void* free_head;     // Pointer to next free slab chunk
+        std::size_t size;    // Size of this slab (32, 64, 128, etc)
+        Slab* next_slab;     // Pointer to next slab in the slab linked list
     };
 
     struct SizeClass {
-        std::size_t size;
-        std::size_t count;
-        Slab* slabs[MAX_SLABS_PER_CLASS];
+        std::size_t size; // Size of this slab class (32, 64, 128, etc)
+        Slab* first_slab; // Pointer to first slab in the slab linked list
     };
 
     bool can_alloc(std::size_t size);

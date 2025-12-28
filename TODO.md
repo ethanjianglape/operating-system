@@ -4,6 +4,7 @@
 
 - [x] [Logging and Console Separation](#logging-and-console-separation)
 - [x] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
+- [-] [Slab Allocator](#slab-allocator)
 - [ ] [VFS and Initramfs](#vfs-and-initramfs)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
@@ -43,13 +44,13 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 **Status:** Complete
 
-**Prerequisite:** kfree implementation (VMM header-based size tracking, PMM free_frames)
+**Prerequisite:** `kfree` implementation (VMM header-based size tracking, PMM `free_frames`)
 
 **Why needed:** Shell argument parsing, path handling, VFS entries, command history all benefit from dynamic containers. Working without them is increasingly painful.
 
 **Components:**
-- `kvector<T>` - dynamic array with push_back, pop_back, operator[], iterators
-- `kstring` - dynamic string with concatenation, c_str(), comparison
+- `kvector<T>` - dynamic array with `push_back`, `pop_back`, `operator[]`, iterators
+- `kstring` - dynamic string with concatenation, `c_str()`, comparison
 
 **Location:** `kernel/lib/containers/` or `kernel/lib/kstring.hpp`, `kernel/lib/kvector.hpp`
 
@@ -64,6 +65,27 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 - Path manipulation with string concatenation
 - VFS directory listings
 - Command history
+
+---
+
+## Slab Allocator
+
+**Status:** Partial
+
+**Goal:** Efficient allocation of small objects (<=1024 bytes) without wasting full pages.
+
+**Implemented:**
+- Size classes: 32, 64, 128, 256, 512, 1024 bytes
+- Slab metadata embedded in page header (`magic, free_head, size, next_slab`)
+- Per-chunk free list with O(1) alloc/free within a slab
+- Linked list of slabs per size class with O(1) head insertion
+- Newest slabs searched first (most likely to have free chunks)
+- Magic number validation for slab identification from arbitrary addresses
+
+**Location:** `kernel/lib/memory/slab.cpp`, `kernel/include/memory/slab.hpp`
+
+**Future improvement:**
+- Reclaim empty slabs back to page allocator (low priority - memory overhead is minimal even with thousands of small allocations)
 
 ---
 
