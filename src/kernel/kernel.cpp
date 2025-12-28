@@ -1,3 +1,5 @@
+#include "fmt/fmt.hpp"
+#include "memory/memory.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
@@ -36,6 +38,18 @@ void kernel_main() {
     x86_64::cpu::sti();
 
     log::success("All core kernel features initialized!");
+
+    auto* arr = kalloc<long>(32);
+
+    arr[0] = 0x12345678;
+    arr[1] = 0xDEADBEEF;
+    arr[31] = 0x12121212;
+
+    log::debug(fmt::hex{arr[31]});
+
+    kfree(arr);
+
+    log::debug(fmt::hex{arr[31]});
 
     shell::init();
 
