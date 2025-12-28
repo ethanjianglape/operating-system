@@ -47,6 +47,7 @@ set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/panic/panic.cpp
     ${LIB_DIR}/memory/memory.cpp
     ${LIB_DIR}/memory/pmm.cpp
+    ${LIB_DIR}/memory/slab.cpp
     ${LIB_DIR}/console/console.cpp
     ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
     ${LIB_DIR}/drivers/acpi/acpi.cpp
