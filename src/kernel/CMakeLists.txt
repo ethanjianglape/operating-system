@@ -9,6 +9,7 @@ set(KERNEL_ARCH "x86_64" CACHE STRING "Target architecture")
 set(ARCH_DIR "arch/${KERNEL_ARCH}")
 set(ARCH_DRIVERS_DIR "arch/${KERNEL_ARCH}/drivers")
 set(LIB_DIR "lib/")
+set(TEST_DIR "test/")
 
 # Kernel source files
 set(KERNEL_SOURCES
@@ -25,7 +26,7 @@ set(ARCH_KERNEL_SOURCES
     ${ARCH_DIR}/syscall/syscall.cpp
     ${ARCH_DIR}/syscall/syscall_entry.s
     ${ARCH_DIR}/syscall/int80_entry.s
-    ${ARCH_DIR}/vmm/vmm.cpp
+    ${ARCH_DIR}/memory/vmm.cpp
     ${ARCH_DIR}/process/process.cpp
     #${ARCH_DIR}/process/process.s
 )
@@ -57,6 +58,9 @@ set(LIB_KERNEL_SOURCES
     ${LIB_DIR}/fs/initramfs/initramfs.cpp
     ${LIB_DIR}/fs/initramfs/tar.cpp
 )
+
+# Test sources (compiled when KERNEL_TESTS is defined)
+file(GLOB_RECURSE TEST_SOURCES ${TEST_DIR}/*.cpp)
 
 # Architecture-specific boot files
 set(BOOT_SOURCES
@@ -94,6 +98,7 @@ add_library(kernel_objs OBJECT
   ${ARCH_DRIVER_KERNEL_SOURCES}
   ${ARCH_KERNEL_SOURCES}
   ${LIB_KERNEL_SOURCES}
+  ${TEST_SOURCES}
 )
 
 # Apply freestanding flags to boot objects
@@ -110,6 +115,9 @@ target_compile_options(kernel_objs PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
 )
+
+# Enable kernel tests
+target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS)
 
 # Set C++ standard
 set_target_properties(kernel_objs PROPERTIES

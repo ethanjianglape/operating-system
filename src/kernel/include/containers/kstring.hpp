@@ -267,7 +267,7 @@ class kstring final {
         if (pos == _length) {
             push_back(c);
         } else {
-            for (std::size_t i = _length - 1; i > pos; i--) {
+            for (std::size_t i = _length; i > pos; i--) {
                 _data[i] = _data[i - 1];
             }
 
@@ -282,7 +282,7 @@ class kstring final {
             return;
         }
 
-        for (std::size_t i = pos; i < _length - 1; i++) {
+        for (std::size_t i = pos; i < _length; i++) {
             _data[i] = _data[i + 1];
         }
 

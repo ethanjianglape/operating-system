@@ -89,21 +89,28 @@ namespace x86_64::vmm {
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
     }
 
-    void* alloc_contiguous_memory(std::size_t bytes) {
-        std::size_t total = bytes + sizeof(std::size_t);
-        std::size_t pages = (total / PAGE_SIZE) + 1;
-
-        void* block = alloc_contiguous_pages(pages);
-
-        *static_cast<std::size_t*>(block) = pages;
-
-        return static_cast<std::uint8_t*>(block) + sizeof(std::size_t);
+    void* alloc_raw_page() {
+        auto phys = pmm::alloc_frame<std::uintptr_t>();
+        return phys_to_virt<void*>(phys);
     }
 
-    void* alloc_contiguous_pages(std::size_t pages) {
-        auto phys = pmm::alloc_contiguous_frames<std::uintptr_t>(pages);
+    void free_raw_page(void* virt) {
+        if (virt == nullptr) {
+            return;
+        }
+        pmm::free_frame(virt_to_phys(virt));
+    }
 
-        return phys_to_virt<void*>(phys);
+    void* alloc_contiguous_memory(std::size_t bytes) {
+        std::size_t total = bytes + sizeof(std::size_t);
+        std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
+
+        auto phys = pmm::alloc_contiguous_frames<std::uintptr_t>(num_pages);
+        void* block = phys_to_virt<void*>(phys);
+
+        *static_cast<std::size_t*>(block) = num_pages;
+
+        return static_cast<std::uint8_t*>(block) + sizeof(std::size_t);
     }
 
     void free_contiguous_memory(void* virt) {
@@ -112,9 +119,9 @@ namespace x86_64::vmm {
         }
 
         void* block = static_cast<std::uint8_t*>(virt) - sizeof(std::size_t);
-        auto pages = *static_cast<std::size_t*>(block);
+        auto num_pages = *static_cast<std::size_t*>(block);
 
-        pmm::free_contiguous_frames(virt_to_phys(block), pages);
+        pmm::free_contiguous_frames(virt_to_phys(block), num_pages);
     }
 
     // Set our local pml4 to point to the pml4 created by Limine which

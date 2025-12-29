@@ -1,0 +1,115 @@
+#ifdef KERNEL_TESTS
+
+#include <test/test.hpp>
+#include <arch.hpp>
+#include <log/log.hpp>
+
+namespace test_vmm {
+    // Raw page allocation tests
+    void test_raw_page_returns_non_null() {
+        void* page = arch::vmm::alloc_raw_page();
+        test::assert_not_null(page, "alloc_raw_page returns non-null");
+        arch::vmm::free_raw_page(page);
+    }
+
+    void test_raw_page_returns_aligned() {
+        void* page = arch::vmm::alloc_raw_page();
+        auto addr = reinterpret_cast<std::uintptr_t>(page);
+        test::assert_eq(addr % arch::vmm::PAGE_SIZE, 0ul, "alloc_raw_page returns page-aligned address");
+        arch::vmm::free_raw_page(page);
+    }
+
+    void test_raw_page_is_writable() {
+        auto* page = static_cast<std::uint8_t*>(arch::vmm::alloc_raw_page());
+
+        // Write a pattern to entire page
+        for (std::size_t i = 0; i < arch::vmm::PAGE_SIZE; i++) {
+            page[i] = static_cast<std::uint8_t>(i & 0xFF);
+        }
+
+        // Verify the pattern
+        bool valid = true;
+        for (std::size_t i = 0; i < arch::vmm::PAGE_SIZE; i++) {
+            if (page[i] != static_cast<std::uint8_t>(i & 0xFF)) {
+                valid = false;
+                break;
+            }
+        }
+
+        test::assert_true(valid, "raw page is readable/writable");
+        arch::vmm::free_raw_page(page);
+    }
+
+    void test_raw_page_free_allows_realloc() {
+        void* page1 = arch::vmm::alloc_raw_page();
+        arch::vmm::free_raw_page(page1);
+
+        void* page2 = arch::vmm::alloc_raw_page();
+        test::assert_not_null(page2, "raw page allocation after free succeeds");
+        arch::vmm::free_raw_page(page2);
+    }
+
+    // Tracked allocation tests
+    void test_contiguous_memory_returns_non_null() {
+        void* mem = arch::vmm::alloc_contiguous_memory(128);
+        test::assert_not_null(mem, "alloc_contiguous_memory returns non-null");
+        arch::vmm::free_contiguous_memory(mem);
+    }
+
+    void test_contiguous_memory_is_writable() {
+        constexpr std::size_t SIZE = 1024;
+        auto* mem = static_cast<std::uint8_t*>(arch::vmm::alloc_contiguous_memory(SIZE));
+
+        // Write pattern
+        for (std::size_t i = 0; i < SIZE; i++) {
+            mem[i] = static_cast<std::uint8_t>(i & 0xFF);
+        }
+
+        // Verify pattern
+        bool valid = true;
+        for (std::size_t i = 0; i < SIZE; i++) {
+            if (mem[i] != static_cast<std::uint8_t>(i & 0xFF)) {
+                valid = false;
+                break;
+            }
+        }
+
+        test::assert_true(valid, "contiguous memory is readable/writable");
+        arch::vmm::free_contiguous_memory(mem);
+    }
+
+    void test_contiguous_memory_free_allows_realloc() {
+        void* mem1 = arch::vmm::alloc_contiguous_memory(512);
+        arch::vmm::free_contiguous_memory(mem1);
+
+        void* mem2 = arch::vmm::alloc_contiguous_memory(512);
+        test::assert_not_null(mem2, "contiguous memory allocation after free succeeds");
+        arch::vmm::free_contiguous_memory(mem2);
+    }
+
+    void test_sequential_allocs_differ() {
+        void* mem1 = arch::vmm::alloc_contiguous_memory(64);
+        void* mem2 = arch::vmm::alloc_contiguous_memory(64);
+        test::assert_ne(mem1, mem2, "sequential allocs return different addresses");
+        arch::vmm::free_contiguous_memory(mem1);
+        arch::vmm::free_contiguous_memory(mem2);
+    }
+
+    void run() {
+        log::info("Running VMM tests...");
+
+        // Raw page tests
+        test_raw_page_returns_non_null();
+        test_raw_page_returns_aligned();
+        test_raw_page_is_writable();
+        test_raw_page_free_allows_realloc();
+
+        // Tracked allocation tests
+        test_contiguous_memory_returns_non_null();
+        test_contiguous_memory_is_writable();
+        test_contiguous_memory_free_allows_realloc();
+        test_sequential_allocs_differ();
+    }
+}
+
+#endif // KERNEL_TESTS

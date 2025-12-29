@@ -33,15 +33,18 @@ namespace x86_64::vmm {
     static_assert(sizeof(PageTableEntry) == 8, "PTE must be 32 bits");
 
     std::uintptr_t get_hhdm_offset();
-    
+
     void init(std::uintptr_t hhdm_offset);
 
     std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags);
     void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
-    void* alloc_contiguous_memory(std::size_t bytes);
-    void* alloc_contiguous_pages(std::size_t num_pages);
+    // Raw single-page allocation (no header tracking) - for slab allocator
+    void* alloc_raw_page();
+    void free_raw_page(void* virt);
 
+    // Tracked allocation (stores size header) - for general use
+    void* alloc_contiguous_memory(std::size_t bytes);
     void free_contiguous_memory(void* virt);
 
     template <typename T>

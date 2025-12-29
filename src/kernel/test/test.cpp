@@ -1,0 +1,66 @@
+#ifdef KERNEL_TESTS
+
+#include <test/test.hpp>
+#include <log/log.hpp>
+#include <memory/pmm.hpp>
+
+// Forward declarations for test suites
+namespace test_pmm { void run(); }
+namespace test_vmm { void run(); }
+namespace test_slab { void run(); }
+namespace test_kmalloc { void run(); }
+namespace test_kvector { void run(); }
+namespace test_kstring { void run(); }
+
+namespace test {
+    static Results results = {0, 0};
+
+    void pass(const char* name) {
+        log::success("[PASS] ", name);
+        results.passed++;
+    }
+
+    void fail(const char* name, const std::source_location& loc) {
+        log::error("[FAIL] ", name, " at ", loc.file_name(), ":", loc.line());
+        results.failed++;
+    }
+
+    Results get_results() {
+        return results;
+    }
+
+    void run_all() {
+        log::info("======================================");
+        log::info("         Running kernel tests         ");
+        log::info("======================================");
+
+        results = {0, 0};
+
+        auto frames_before_test = pmm::get_free_frames();
+
+        test_pmm::run();
+        test_vmm::run();
+        test_slab::run();
+        test_kmalloc::run();
+        test_kvector::run();
+        test_kstring::run();
+
+        auto frames_after_test = pmm::get_free_frames();
+
+        log::info("======================================");
+        log::info("            Test Results              ");
+        log::info("======================================");
+        log::info("PMM free frames before test: ", frames_before_test);
+        log::info("PMM free frames after test:  ", frames_after_test);
+        log::info("Passed: ", results.passed, "/", results.passed + results.failed);
+        log::info("Failed: ", results.failed, "/", results.passed + results.failed);
+
+        if (results.failed == 0) {
+            log::success("All tests passed!");
+        } else {
+            log::error("Some tests failed!");
+        }
+    }
+}
+
+#endif // KERNEL_TESTS

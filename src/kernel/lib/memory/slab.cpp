@@ -1,4 +1,4 @@
-#include "arch/x86_64/vmm/vmm.hpp"
+#include "arch/x86_64/memory/vmm.hpp"
 #include "log/log.hpp"
 #include <cassert>
 #include <memory/slab.hpp>
@@ -89,14 +89,15 @@ namespace slab {
         {5, SIZE_1024, 0, nullptr, chunks_per_slab(SIZE_1024)}
     };
 
-    // Slabs always exist on a 4K page boundary, so for any aribtrary
+    // Slabs always exist on a 4K page boundary, so for any arbitrary
     // address we can get the address of its page by masking it to
-    // the 4K page boundary
-    Slab* addr_to_slab(void* addr) {
+    // the 4K page boundary. Returns nullptr if the address is not
+    // within a slab (magic number validation fails).
+    Slab* try_get_slab(void* addr) {
         if (addr == nullptr) {
             return nullptr;
         }
-        
+
         static constexpr std::uintptr_t PAGE_ALIGN_MASK = ~0xFFF;
         auto* page = (void*)((std::uintptr_t)addr & PAGE_ALIGN_MASK); // page align
         auto* slab = reinterpret_cast<Slab*>(page);
@@ -109,7 +110,7 @@ namespace slab {
     }
 
     bool is_slab(void* addr) {
-        return addr_to_slab(addr) != nullptr;
+        return try_get_slab(addr) != nullptr;
     }
 
     bool can_alloc(std::size_t bytes) {
@@ -128,7 +129,7 @@ namespace slab {
     }
 
     Slab* create_slab(SizeClass* sc) {
-        void* page = arch::vmm::alloc_contiguous_pages(1);
+        void* page = arch::vmm::alloc_raw_page();
         Slab* slab = reinterpret_cast<Slab*>(page);
 
         // instead of storing slab metadata externally, we will just
@@ -194,7 +195,7 @@ namespace slab {
 
         sc->num_slabs -= 1;
 
-        arch::vmm::free_contiguous_memory(slab);
+        arch::vmm::free_raw_page(slab);
     }
 
     void* alloc(std::size_t size) {
@@ -218,7 +219,7 @@ namespace slab {
     }
 
     void free(void* addr) {
-        Slab* slab = addr_to_slab(addr);
+        Slab* slab = try_get_slab(addr);
 
         if (slab == nullptr) {
             return;

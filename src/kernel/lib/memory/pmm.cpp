@@ -15,7 +15,8 @@ namespace pmm {
 
     static std::size_t total_memory;
     static std::size_t total_frames;
-
+    static std::size_t free_frames;
+    
     bool is_frame_free(std::size_t frame) {
         const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
         const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
@@ -30,6 +31,7 @@ namespace pmm {
         const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
 
         frame_bitmap[index] |= (FRAME_USED << offset);
+        free_frames--;
     }
 
     void set_frame_free(std::size_t frame) {
@@ -38,6 +40,7 @@ namespace pmm {
         const std::size_t mask = ~(FRAME_USED << offset);
 
         frame_bitmap[index] &= mask;
+        free_frames++;
     }
 
     void init() {
@@ -48,12 +51,10 @@ namespace pmm {
 
         total_memory = 0;
         total_frames = 0;
+        free_frames = 0;
     }
 
     void add_free_memory(std::size_t addr, std::size_t len) {
-        total_memory += len;
-        total_frames += (len / FRAME_SIZE) + 1;
-
         std::uint64_t end = addr + len;
 
         if (end >= MAX_MEMORY_BYTES) {
@@ -66,11 +67,19 @@ namespace pmm {
             len = MAX_MEMORY_BYTES - addr;
         }
 
+        total_memory += len;
+        total_frames += (len / FRAME_SIZE) + 1;
+        free_frames += total_frames;
+
         set_addr_free(addr, len);
     }
 
     std::size_t get_total_memory() {
         return total_memory;
+    }
+
+    std::size_t get_free_frames() {
+        return free_frames;
     }
 
     void set_addr_free(std::size_t addr, std::size_t length) {
