@@ -10,12 +10,14 @@ namespace log {
 
     template <typename... Ts>
     void init_start(Ts... args) {
+        kprintln("[INIT] ======================================");
         kprintln("[INIT] ", args..., " initializing...");
     }
 
     template <typename... Ts>
     void init_end(Ts... args) {
         kprintln("[INIT] ", args..., " initialized!");
+        kprintln("[INIT] ======================================");
     }
 
     template <typename... Ts>

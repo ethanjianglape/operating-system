@@ -3,7 +3,7 @@
 
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/interrupts/irq.hpp>
-#include <arch/x86_64/vmm/vmm.hpp>
+#include <arch/x86_64/memory/vmm.hpp>
 #include <log/log.hpp>
 
 #include <arch/x86_64/drivers/pit/pit.hpp>

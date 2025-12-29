@@ -122,6 +122,8 @@ namespace fmt {
             buffer[index++] = reverse[--ri];
         }
 
+        // Pad hex and bin formats with 0 so they fit within 8/16/32/64 bits
+        // ex: 0x1234 -> 0x00001234, 0b1101 -> 0b0000101
         if (format == NumberFormat::HEX || format == NumberFormat::BIN) {
             std::size_t len = index - 2;
             std::size_t zeros = (8 - len) & 7;

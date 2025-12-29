@@ -1,5 +1,3 @@
-#include "fmt/fmt.hpp"
-#include "memory/memory.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
@@ -16,6 +14,10 @@
 #include <drivers/framebuffer/framebuffer.hpp>
 
 #include <containers/kstring.hpp>
+
+#ifdef KERNEL_TESTS
+#include <test/test.hpp>
+#endif
 
 [[noreturn]]
 void kernel_main() {
@@ -38,6 +40,10 @@ void kernel_main() {
     x86_64::cpu::sti();
 
     log::success("All core kernel features initialized!");
+
+#ifdef KERNEL_TESTS
+    test::run_all();
+#endif
 
     shell::init();
 

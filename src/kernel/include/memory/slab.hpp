@@ -25,6 +25,8 @@ namespace slab {
 
     bool is_slab(void* addr);
 
+    Slab* try_get_slab(void* addr);
+
     void* alloc(std::size_t size);
 
     void free(void* addr);

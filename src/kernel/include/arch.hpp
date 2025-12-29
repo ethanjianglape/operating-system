@@ -1,6 +1,6 @@
 #pragma once
 
-#include <arch/x86_64/vmm/vmm.hpp>
+#include <arch/x86_64/memory/vmm.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/drivers/serial/serial.hpp>
 #include <arch/x86_64/drivers/apic/apic.hpp>

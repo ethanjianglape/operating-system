@@ -1,0 +1,159 @@
+#ifdef KERNEL_TESTS
+
+#include <test/test.hpp>
+#include <memory/slab.hpp>
+#include <log/log.hpp>
+
+namespace test_slab {
+    void test_can_alloc_valid_sizes() {
+        test::assert_true(slab::can_alloc(1), "can_alloc(1) returns true");
+        test::assert_true(slab::can_alloc(32), "can_alloc(32) returns true");
+        test::assert_true(slab::can_alloc(64), "can_alloc(64) returns true");
+        test::assert_true(slab::can_alloc(128), "can_alloc(128) returns true");
+        test::assert_true(slab::can_alloc(256), "can_alloc(256) returns true");
+        test::assert_true(slab::can_alloc(512), "can_alloc(512) returns true");
+        test::assert_true(slab::can_alloc(1024), "can_alloc(1024) returns true");
+    }
+
+    void test_can_alloc_invalid_sizes() {
+        test::assert_true(!slab::can_alloc(1025), "can_alloc(1025) returns false");
+        test::assert_true(!slab::can_alloc(2048), "can_alloc(2048) returns false");
+        test::assert_true(!slab::can_alloc(4096), "can_alloc(4096) returns false");
+    }
+
+    void test_alloc_returns_non_null() {
+        void* ptr = slab::alloc(32);
+        test::assert_not_null(ptr, "slab::alloc returns non-null");
+        slab::free(ptr);
+    }
+
+    void test_is_slab_returns_true() {
+        void* ptr = slab::alloc(64);
+        test::assert_true(slab::is_slab(ptr), "is_slab returns true for slab allocation");
+        slab::free(ptr);
+    }
+
+    void test_is_slab_returns_false_for_null() {
+        test::assert_true(!slab::is_slab(nullptr), "is_slab returns false for nullptr");
+    }
+
+    void test_sequential_allocs_differ() {
+        void* ptr1 = slab::alloc(32);
+        void* ptr2 = slab::alloc(32);
+        test::assert_ne(ptr1, ptr2, "sequential slab allocs return different addresses");
+        slab::free(ptr1);
+        slab::free(ptr2);
+    }
+
+    void test_free_allows_realloc() {
+        void* ptr1 = slab::alloc(64);
+        slab::free(ptr1);
+
+        void* ptr2 = slab::alloc(64);
+        test::assert_not_null(ptr2, "slab allocation after free succeeds");
+        slab::free(ptr2);
+    }
+
+    void test_size_class_selection_32() {
+        void* ptr = slab::alloc(1);  // Should use 32-byte class
+        slab::Slab* s = slab::try_get_slab(ptr);
+        test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
+        test::assert_eq(s->size_class_index, (std::uint8_t)0, "1-byte alloc uses size class 0 (32 bytes)");
+        slab::free(ptr);
+    }
+
+    void test_size_class_selection_64() {
+        void* ptr = slab::alloc(33);  // Should use 64-byte class
+        slab::Slab* s = slab::try_get_slab(ptr);
+        test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
+        test::assert_eq(s->size_class_index, (std::uint8_t)1, "33-byte alloc uses size class 1 (64 bytes)");
+        slab::free(ptr);
+    }
+
+    void test_size_class_selection_128() {
+        void* ptr = slab::alloc(65);  // Should use 128-byte class
+        slab::Slab* s = slab::try_get_slab(ptr);
+        test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
+        test::assert_eq(s->size_class_index, (std::uint8_t)2, "65-byte alloc uses size class 2 (128 bytes)");
+        slab::free(ptr);
+    }
+
+    void test_size_class_selection_1024() {
+        void* ptr = slab::alloc(513);  // Should use 1024-byte class
+        slab::Slab* s = slab::try_get_slab(ptr);
+        test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
+        test::assert_eq(s->size_class_index, (std::uint8_t)5, "513-byte alloc uses size class 5 (1024 bytes)");
+        slab::free(ptr);
+    }
+
+    void test_free_chunk_count_decreases() {
+        void* ptr = slab::alloc(32);
+        slab::Slab* s = slab::try_get_slab(ptr);
+        test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
+        std::uint8_t before = s->free_chunks;
+
+        void* ptr2 = slab::alloc(32);
+        std::uint8_t after = s->free_chunks;
+
+        test::assert_eq(after, (std::uint8_t)(before - 1), "alloc decreases free_chunks by 1");
+
+        slab::free(ptr);
+        slab::free(ptr2);
+    }
+
+    void test_free_chunk_count_increases() {
+        void* ptr1 = slab::alloc(32);
+        void* ptr2 = slab::alloc(32);
+        slab::Slab* s = slab::try_get_slab(ptr1);
+        test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
+
+        std::uint8_t before = s->free_chunks;
+        slab::free(ptr1);
+        std::uint8_t after = s->free_chunks;
+
+        test::assert_eq(after, (std::uint8_t)(before + 1), "free increases free_chunks by 1");
+        slab::free(ptr2);
+    }
+
+    void test_allocated_memory_is_writable() {
+        auto* ptr = static_cast<std::uint8_t*>(slab::alloc(64));
+
+        // Write pattern
+        for (int i = 0; i < 64; i++) {
+            ptr[i] = static_cast<std::uint8_t>(i);
+        }
+
+        // Verify pattern
+        bool valid = true;
+        for (int i = 0; i < 64; i++) {
+            if (ptr[i] != static_cast<std::uint8_t>(i)) {
+                valid = false;
+                break;
+            }
+        }
+
+        test::assert_true(valid, "slab allocated memory is readable/writable");
+        slab::free(ptr);
+    }
+
+    void run() {
+        log::info("Running slab tests...");
+
+        test_can_alloc_valid_sizes();
+        test_can_alloc_invalid_sizes();
+        test_alloc_returns_non_null();
+        test_is_slab_returns_true();
+        test_is_slab_returns_false_for_null();
+        test_sequential_allocs_differ();
+        test_free_allows_realloc();
+        test_size_class_selection_32();
+        test_size_class_selection_64();
+        test_size_class_selection_128();
+        test_size_class_selection_1024();
+        test_free_chunk_count_decreases();
+        test_free_chunk_count_increases();
+        test_allocated_memory_is_writable();
+    }
+}
+
+#endif // KERNEL_TESTS
