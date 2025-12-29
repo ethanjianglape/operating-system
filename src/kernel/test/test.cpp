@@ -16,7 +16,9 @@ namespace test {
     static Results results = {0, 0};
 
     void pass(const char* name) {
+#ifndef KERNEL_TESTS_QUIET
         log::success("[PASS] ", name);
+#endif
         results.passed++;
     }
 

@@ -117,7 +117,11 @@ target_compile_options(kernel_objs PRIVATE
 )
 
 # Enable kernel tests
+option(KERNEL_TESTS_QUIET "Suppress passing test output" ON)
 target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS)
+if(KERNEL_TESTS_QUIET)
+    target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS_QUIET)
+endif()
 
 # Set C++ standard
 set_target_properties(kernel_objs PROPERTIES

@@ -1,3 +1,4 @@
+#include "containers/kvector.hpp"
 #include <arch.hpp>
 #include <console/console.hpp>
 #include <containers/kstring.hpp>
@@ -16,8 +17,10 @@ namespace tty {
     //static char buffer[BUFFER_LEN] = {'\0'};
 
     static kstring buffer{};
+    static kvector<kstring> history{};
 
     static std::size_t buffer_index = 0;
+    static std::size_t history_index = 0;
 
     // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
     // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -102,6 +105,38 @@ namespace tty {
         buffer.truncate(buffer_index);
     }
 
+    void add_buffer_history() {
+        // do not add empty string or back to back duplicates to history
+        if (buffer.empty()) {
+            return;
+        }
+
+        if (!history.empty() && buffer == history.back()) {
+            return;
+        }
+        
+        history.push_back(buffer);
+        history_index = history.size();
+    }
+
+    void buffer_history_up() {
+        if (!history.empty() && history_index > 0) {
+            buffer = history[--history_index];
+            buffer_index = buffer.size();
+        }
+    }
+
+    void buffer_history_down() {
+        if (history_index + 1 < history.size()) {
+            buffer = history[++history_index];
+            buffer_index = buffer.size();
+        } else {
+            buffer = "";
+            buffer_index = buffer.size();
+            history_index = history.size();
+        }
+    }
+
     void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode extended) {
         if (c == ScanCode::A) {
             move_to_start();
@@ -140,6 +175,8 @@ namespace tty {
                 } else if (scancode == ScanCode::Backspace) {
                     delete_back();
                 } else if (scancode == ScanCode::Enter) {
+                    add_buffer_history();
+                    
                     return buffer;
                 } else if (extended == ExtendedScanCode::LeftArrow) {
                     move_left();
@@ -147,6 +184,10 @@ namespace tty {
                     move_right();
                 } else if (extended == ExtendedScanCode::Delete) {
                     delete_forward();
+                } else if (extended == ExtendedScanCode::UpArrow) {
+                    buffer_history_up();
+                } else if (extended == ExtendedScanCode::DownArrow) {
+                    buffer_history_down();
                 }
 
                 console::disable_cursor();

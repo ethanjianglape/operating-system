@@ -2,6 +2,7 @@
 
 #include "containers/kstring.hpp"
 #include "containers/kvector.hpp"
+#include "fs/vfs.hpp"
 #include <cstddef>
 #include <cstdint>
 namespace fs::initramfs::tar {
@@ -42,4 +43,6 @@ namespace fs::initramfs::tar {
     kvector<TarMeta*> list(const kstring& dir);
 
     std::size_t read(TarMeta* meta, void* buffer, std::size_t count, std::size_t offset);
+
+    kvector<DirEntry> readdir(const kstring& path);
 }

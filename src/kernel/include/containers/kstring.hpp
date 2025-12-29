@@ -92,6 +92,8 @@ class kstring final {
         bool operator!=(const const_iterator& other) const { return _ptr != other._ptr; }
     };
 
+    static constexpr std::size_t npos = -1;
+
     // Default constructor
     kstring() : _data{nullptr}, _length{0}, _capacity{0} {}
 
@@ -300,6 +302,22 @@ class kstring final {
         _length = pos;
     }
 
+    kstring substr(std::size_t pos, std::size_t len = npos) const {
+        if (pos >= _length) {
+            return "";
+        }
+
+        kstring result;
+
+        result.ensure_capacity(_length);
+
+        for (std::size_t i = pos; i < _length && i - pos < len; i++) {
+            result.push_back(_data[i]);
+        }
+
+        return result;
+    }
+
     // Concatenation
     kstring& operator+=(const kstring& other) {
         if (other.empty()) {
@@ -344,6 +362,7 @@ class kstring final {
         if (_length != other._length) {
             return false;
         }
+
         return memcmp(_data, other._data, _length) == 0;
     }
 

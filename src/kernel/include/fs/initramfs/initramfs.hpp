@@ -9,4 +9,6 @@ namespace fs::initramfs {
     void init(std::uint8_t* addr, std::size_t size);
 
     Inode open(const char* path, int flags);
+
+    kvector<DirEntry> readdir(const kstring& path);
 }

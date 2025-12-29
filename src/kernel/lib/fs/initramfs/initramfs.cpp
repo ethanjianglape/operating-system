@@ -1,3 +1,4 @@
+#include "containers/kstring.hpp"
 #include "containers/kvector.hpp"
 #include "fs/vfs.hpp"
 #include "log/log.hpp"
@@ -26,6 +27,7 @@ namespace fs::initramfs {
         .name = "initramfs",
         .read = read,
         .open = open,
+        .readdir = readdir
     };
     
     void init(std::uint8_t* addr, std::size_t size) {
@@ -33,7 +35,7 @@ namespace fs::initramfs {
         fs_size = size;
 
         tar::init(addr);
-        fs::mount("./", &initramfs_fs);
+        fs::mount("/", &initramfs_fs);
     }
 
     Inode open(const char* path, int flags) {
@@ -45,7 +47,7 @@ namespace fs::initramfs {
             return NULL_INODE;
         }
 
-        FileType type = meta->header->typeflag == tar::TYPEFLAG_DIR ? FileType::Dir : FileType::File;
+        FileType type = meta->header->typeflag == tar::TYPEFLAG_DIR ? FileType::DIRECTORY : FileType::FILE;
         std::size_t size = meta->size_bytes;
 
         log::debug("size = ", size);
@@ -56,5 +58,20 @@ namespace fs::initramfs {
             .metadata = meta,
             .fs = &initramfs_fs
         };
+    }
+
+    kvector<DirEntry> readdir(const kstring& path) {
+        kvector<DirEntry> entries;
+        kvector<tar::TarMeta*> metas = tar::list(path);
+
+        for (tar::TarMeta* meta : metas) {
+            entries.push_back(DirEntry{
+                .type = meta->header->typeflag == tar::TYPEFLAG_DIR ? FileType::DIRECTORY : FileType::FILE,
+                .size = meta->size_bytes,
+                .name = meta->filename_str
+            });
+        }
+        
+        return entries;
     }
 }

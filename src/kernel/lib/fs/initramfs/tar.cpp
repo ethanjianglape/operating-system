@@ -25,13 +25,17 @@ namespace fs::initramfs::tar {
         kstring filename;
 
         if (header->prefix[0] != '\0') {
-            filename += header->prefix;
+            filename += header->prefix + 2;
             filename += '/';
             filename += header->filename;
         } else {
-            filename += header->filename;
+            filename += header->filename + 2;
         }
-        
+
+        if (filename.back() == '/') {
+            filename.pop_back();
+        }
+
         std::uintmax_t size = fmt::parse_uint((const char*)header->size, 12, fmt::NumberFormat::OCT);
         std::uintmax_t num_blocks = (size + 511) / 512;
         std::uint8_t* data = size > 0 ? addr + 512 : nullptr;
@@ -80,29 +84,31 @@ namespace fs::initramfs::tar {
     kvector<TarMeta*> list(const kstring& dir) {
         kvector<TarMeta*> entries;
 
+        bool is_root = dir.empty();
+
         for (auto& meta : metas) {
             const kstring& filename = meta.filename_str;
             
-            if (!filename.starts_with(dir)) {
+            if (!filename.starts_with(dir) || dir == filename) {
                 continue;
             }
 
             bool is_dir = meta.header->typeflag == '5';
             int dir_count = 0;
 
-            for (std::size_t i = dir.length() - 1; i < filename.length(); i++) {
+            for (std::size_t i = dir.length(); i < filename.length(); i++) {
                 if (filename[i] == '/') {
                     dir_count++;
                 }
             }
 
-            // This is dir itself
-            if (is_dir && dir_count == 1) {
+            // we are in root, no sub dirs should be listed
+            if (is_root && dir_count > 0) {
                 continue;
             }
 
             // This is a sub-sub dir
-            if (is_dir && dir_count > 2) {
+            if (is_dir && dir_count > 1) {
                 continue;
             }
 

@@ -26,4 +26,19 @@ namespace algo {
         
         return result;
     }
+
+    kstring join(const kvector<kstring>& parts, char delim) {
+        kstring result;
+
+        for (const auto& part : parts) {
+            result += part;
+            result += delim;
+        }
+
+        if (!result.empty()) {
+            result.pop_back();
+        }
+
+        return result;
+    }
 }

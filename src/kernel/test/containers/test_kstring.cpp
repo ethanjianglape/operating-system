@@ -208,6 +208,48 @@ namespace test_kstring {
         test::assert_eq(sum, 'a' + 'b' + 'c', "range-based for loop works");
     }
 
+    void test_substr_from_start() {
+        kstring s("hello world");
+        kstring sub = s.substr(0, 5);
+        test::assert_true(sub == "hello", "substr(0, 5) returns first 5 chars");
+    }
+
+    void test_substr_from_middle() {
+        kstring s("hello world");
+        kstring sub = s.substr(6, 5);
+        test::assert_true(sub == "world", "substr(6, 5) returns 'world'");
+    }
+
+    void test_substr_to_end() {
+        kstring s("hello world");
+        kstring sub = s.substr(6);
+        test::assert_true(sub == "world", "substr(6) returns rest of string");
+    }
+
+    void test_substr_single_char() {
+        kstring s("hello");
+        kstring sub = s.substr(1, 1);
+        test::assert_true(sub == "e", "substr(1, 1) returns single char");
+    }
+
+    void test_substr_pos_out_of_bounds() {
+        kstring s("hello");
+        kstring sub = s.substr(10, 3);
+        test::assert_true(sub.empty(), "substr with pos >= length returns empty");
+    }
+
+    void test_substr_len_exceeds_string() {
+        kstring s("hello");
+        kstring sub = s.substr(2, 100);
+        test::assert_true(sub == "llo", "substr with len past end returns to end");
+    }
+
+    void test_substr_empty_string() {
+        kstring s;
+        kstring sub = s.substr(0, 5);
+        test::assert_true(sub.empty(), "substr on empty string returns empty");
+    }
+
     void test_large_string_uses_vmm() {
         // Build a string > 1024 bytes to ensure VMM allocation path
         kstring s;
@@ -261,6 +303,13 @@ namespace test_kstring {
         test_erase();
         test_truncate();
         test_iterator();
+        test_substr_from_start();
+        test_substr_from_middle();
+        test_substr_to_end();
+        test_substr_single_char();
+        test_substr_pos_out_of_bounds();
+        test_substr_len_exceeds_string();
+        test_substr_empty_string();
         test_large_string_uses_vmm();
     }
 }
