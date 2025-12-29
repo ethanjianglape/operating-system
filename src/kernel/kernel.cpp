@@ -39,18 +39,6 @@ void kernel_main() {
 
     log::success("All core kernel features initialized!");
 
-    auto* arr = kalloc<long>(32);
-
-    arr[0] = 0x12345678;
-    arr[1] = 0xDEADBEEF;
-    arr[31] = 0x12121212;
-
-    log::debug(fmt::hex{arr[31]});
-
-    kfree(arr);
-
-    log::debug(fmt::hex{arr[31]});
-
     shell::init();
 
     //x86_64::process::init();

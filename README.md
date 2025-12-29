@@ -27,6 +27,7 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 - ✅ Limine bootloader with framebuffer
 - ✅ Physical memory manager (PMM) with bitmap allocator
 - ✅ Virtual memory manager (VMM) with 4-level paging
+- ✅ Slab allocator for efficient small object allocation (32-1024 bytes)
 - ✅ GDT with ring 0/3 support
 - ✅ IDT with interrupt handling
 - ✅ ACPI table parsing (RSDP, XSDT, MADT)
@@ -51,13 +52,15 @@ os/
 │   ├── include/                    # Kernel headers (flat structure)
 │   │   ├── arch.hpp                # Architecture abstraction
 │   │   ├── containers/             # kstring, kvector
+│   │   ├── memory/                 # kmalloc, PMM, Slab allocator
 │   │   ├── log/                    # Logging utilities
 │   │   ├── kprint/                 # Serial output
 │   │   └── ...
 │   ├── lib/                        # Implementations (mirrors include/)
 │   │   ├── containers/
-│   │   ├── shell/
-│   │   ├── tty/
+│   │   ├── memory/                 # kmalloc, PMM, Slab allocator
+│   │   ├── shell/                  # Interactive shell, command parsing
+│   │   ├── tty/                    # Terminal handling, line editing
 │   │   └── ...
 │   ├── arch/x86_64/                # x86_64-specific (headers + source together)
 │   │   ├── boot/                   # Limine entry, early init

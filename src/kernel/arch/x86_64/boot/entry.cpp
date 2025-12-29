@@ -2,7 +2,7 @@
 
 extern void kernel_main();
 
-[[noreturn]]
+extern "C" [[noreturn]]
 void _start(void) {
     kernel_main();
 

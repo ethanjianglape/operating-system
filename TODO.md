@@ -4,7 +4,7 @@
 
 - [x] [Logging and Console Separation](#logging-and-console-separation)
 - [x] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
-- [-] [Slab Allocator](#slab-allocator)
+- [x] [Slab Allocator](#slab-allocator)
 - [ ] [VFS and Initramfs](#vfs-and-initramfs)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
@@ -70,22 +70,25 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 ## Slab Allocator
 
-**Status:** Partial
+**Status:** Complete
 
 **Goal:** Efficient allocation of small objects (<=1024 bytes) without wasting full pages.
 
 **Implemented:**
 - Size classes: 32, 64, 128, 256, 512, 1024 bytes
-- Slab metadata embedded in page header (`magic, free_head, size, next_slab`)
+- Slab metadata embedded in page header (40 bytes)
 - Per-chunk free list with O(1) alloc/free within a slab
-- Linked list of slabs per size class with O(1) head insertion
+- Doubly-linked list of slabs per size class for O(1) insertion and removal
 - Newest slabs searched first (most likely to have free chunks)
 - Magic number validation for slab identification from arbitrary addresses
+- Empty slab reclamation: slabs are freed back to VMM when all chunks are returned (keeps at least one slab per size class)
+
+**Optimizations:**
+- `Slab::size_class_index` (1 byte) instead of full size (8 bytes) - enables O(1) SizeClass lookup via direct array indexing in `free()`
+- `chunks_per_slab` stored in SizeClass (computed once at compile time) rather than per-slab
+- Compact 40-byte header leaves 126 chunks per slab for 32-byte allocations
 
 **Location:** `kernel/lib/memory/slab.cpp`, `kernel/include/memory/slab.hpp`
-
-**Future improvement:**
-- Reclaim empty slabs back to page allocator (low priority - memory overhead is minimal even with thousands of small allocations)
 
 ---
 
