@@ -5,7 +5,9 @@
 - [x] [Logging and Console Separation](#logging-and-console-separation)
 - [x] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
 - [x] [Slab Allocator](#slab-allocator)
-- [ ] [VFS and Initramfs](#vfs-and-initramfs)
+- [x] [Unit Testing Framework](#unit-testing-framework)
+- [~] [VFS and Initramfs](#vfs-and-initramfs)
+- [ ] [Userspace Program Loading](#userspace-program-loading)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
@@ -92,9 +94,41 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 ---
 
+## Unit Testing Framework
+
+**Status:** Complete
+
+**Goal:** In-kernel unit tests to validate critical subsystems, especially the memory allocation pipeline.
+
+**Implementation:**
+- Test framework in `test/test.hpp` and `test/test.cpp`
+- Assertions using `std::source_location` (no macros)
+- `KERNEL_TESTS` compile flag enables tests
+- `KERNEL_TESTS_QUIET` suppresses passing test output (default ON)
+- Tests run at boot, before shell
+
+**Test suites (160+ tests):**
+- `test_pmm` - physical frame allocation, contiguous frames
+- `test_vmm` - raw pages, tracked allocations
+- `test_slab` - size classes, chunk management, slab lifecycle
+- `test_kmalloc` - routing between slab/VMM, boundary conditions
+- `test_kvector` - all container operations, copy/move semantics
+- `test_kstring` - string manipulation, concatenation, substr
+
+**PMM sanity check:** Compares free frame count before/after all tests to detect memory leaks in test code itself.
+
+**Bugs caught:**
+- VMM alloc/free API mismatch (would have caused undefined behavior)
+- kstring insert/erase off-by-one errors
+- kstring substr loop condition bugs
+
+**Location:** `kernel/test/`
+
+---
+
 ## VFS and Initramfs
 
-**Status:** Not started
+**Status:** Partially complete
 
 **Prerequisite:** Dynamic collections (kvector/kstring)
 
@@ -102,10 +136,10 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 **Architecture:**
 ```
-User/Shell: fs::open(), fs::read(), fs::readdir()
+User/Shell: vfs::open(), vfs::read(), vfs::readdir()
                     │
                     ▼
-                   VFS (uniform interface)
+               VFS layer (path canonicalization, mount resolution)
                     │
         ┌───────────┼───────────┐
         ▼           ▼           ▼
@@ -113,33 +147,60 @@ User/Shell: fs::open(), fs::read(), fs::readdir()
     (memory)      (disk)       (CD)
 ```
 
-**Initial implementation (initramfs):**
-- Load tar archive as Limine module
-- Parse tar headers (512-byte blocks, simple format)
-- Mount as root filesystem in memory
-- Read-only is fine initially
+**Completed:**
+- Initramfs loaded as Limine module
+- Tar parser with relative path handling (strips `./` prefix)
+- Initramfs mounted at `/` as root filesystem
+- VFS path canonicalization (resolves `.`, `..`, redundant slashes)
+- `vfs::stat()` for file type checking (FILE, DIRECTORY, NOT_FOUND)
+- `vfs::readdir()` for directory listing
+- Shell commands: `cd`, `ls`, `cat`, `pwd` (in prompt)
+- Relative and absolute path support
+- Current working directory tracking
 
-**VFS interface:**
-```cpp
-namespace fs {
-    struct DirEntry { kstring name; bool is_dir; size_t size; };
-
-    int open(const char* path);
-    ssize_t read(int fd, void* buf, size_t count);
-    kvector<DirEntry> readdir(const char* path);
-    void close(int fd);
-}
-```
-
-**Shell commands this enables:**
-- `ls [path]` - list directory contents
-- `cat <file>` - print file contents
-- `pwd` / `cd` - working directory (once state is added)
+**Remaining cleanup:**
+- Error handling consistency
+- Code organization/cleanup
+- Additional VFS operations as needed
 
 **Future backends:**
 - FAT32 for USB drives / SD cards
 - ext2 for more Unix-like semantics
 - ISO9660 for CD-ROM images
+
+---
+
+## Userspace Program Loading
+
+**Status:** Not started
+
+**Prerequisite:** VFS (to read executables), VMM (to map user pages)
+
+**Goal:** Load and execute ELF binaries from initramfs in ring 3.
+
+**Build infrastructure (complete):**
+- `src/user/` directory for userspace programs
+- Separate CMakeLists.txt with freestanding flags (no `-mcmodel=kernel`)
+- Custom linker script (`user.ld`) loads at 0x400000
+- Output to `initramfs/bin/` for VFS access
+- Minimal `hello.c` test program (infinite loop)
+
+**Kernel work required:**
+- ELF header parsing (verify magic, read program headers)
+- Load PT_LOAD segments into user address space
+- Set up user page tables with USER flag
+- Allocate and map user stack
+- Context switch to ring 3 (`iretq` with user segments)
+- Syscall interface for user programs to interact with kernel
+
+**Initial syscalls needed:**
+- `exit` - terminate program
+- `write` - output to console (for hello world)
+
+**Future:**
+- More syscalls (read, open, etc.)
+- Process management (fork, exec, wait)
+- Signal handling
 
 ---
 
