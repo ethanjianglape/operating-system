@@ -15,7 +15,7 @@ void* kmalloc(std::size_t size) {
         return slab::alloc(size);
     }
 
-    return arch::vmm::alloc_contiguous_memory(size);
+    return arch::vmm::alloc_contiguous_kmem(size);
 }
 
 void kfree(void* ptr) {
@@ -26,6 +26,6 @@ void kfree(void* ptr) {
     if (slab::is_slab(ptr)) {
         slab::free(ptr);
     } else {
-        arch::vmm::free_contiguous_memory(ptr);        
+        arch::vmm::free_contiguous_kmem(ptr);        
     }
 }

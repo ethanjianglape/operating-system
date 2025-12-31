@@ -129,7 +129,7 @@ namespace slab {
     }
 
     Slab* create_slab(SizeClass* sc) {
-        void* page = arch::vmm::alloc_raw_page();
+        void* page = arch::vmm::alloc_kpage();
         Slab* slab = reinterpret_cast<Slab*>(page);
 
         // instead of storing slab metadata externally, we will just
@@ -195,7 +195,7 @@ namespace slab {
 
         sc->num_slabs -= 1;
 
-        arch::vmm::free_raw_page(slab);
+        arch::vmm::free_kpage(slab);
     }
 
     void* alloc(std::size_t size) {

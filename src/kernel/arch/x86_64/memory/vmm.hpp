@@ -39,13 +39,16 @@ namespace x86_64::vmm {
     std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags);
     void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
-    // Raw single-page allocation (no header tracking) - for slab allocator
-    void* alloc_raw_page();
-    void free_raw_page(void* virt);
+    // Raw single-page HHDM allocation (no header tracking) - for slab allocator
+    void* alloc_kpage();
+    void free_kpage(void* virt);
 
-    // Tracked allocation (stores size header) - for general use
-    void* alloc_contiguous_memory(std::size_t bytes);
-    void free_contiguous_memory(void* virt);
+    // Tracked HHDM allocation (stores size header) - for general kernel use
+    void* alloc_contiguous_kmem(std::size_t bytes);
+    void free_contiguous_kmem(void* virt);
+
+    std::size_t map_mem_at(std::uintptr_t virt, std::size_t bytes, std::uint32_t flags);
+    void free_mem_at(void* virt, std::size_t num_pages);
 
     template <typename T>
     inline std::uintptr_t virt_to_phys(T addr) {

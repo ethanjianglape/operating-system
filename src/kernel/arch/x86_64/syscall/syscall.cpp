@@ -7,10 +7,15 @@
 #include <cstdint>
 
 static int sys_write(int fd, const char* buff, std::size_t count) {
-    const char* msg = "hello from syscall!";
+    kstring str{buff, (int)count};
 
-    log::info("sys_write: ", msg);
-
+    if (fd == 1) {
+        // fd=1 hard coded to print directly to console for now
+        console::put(str);
+    } else {
+        log::info("sys_write:", str);
+    }
+    
     return count;
 }
 
@@ -34,6 +39,8 @@ void syscall_entry();
 
 extern "C"
 std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
+    using namespace x86_64::syscall;
+    
     std::uint64_t syscall_num = frame->rax;
     std::uint64_t arg1 = frame->rdi;
     std::uint64_t arg2 = frame->rsi;
@@ -52,7 +59,13 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     log::debug("RCX  = ", fmt::hex{frame->rcx});
     log::debug("R11  = ", fmt::hex{frame->r11});
 
-    return sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
+    switch (frame->rax) {
+    case SYS_WRITE:
+        return sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
+    default:
+        log::error("Unsupported syscall: ", frame->rax);
+        return ENOSYS;
+    }
 }
 
 namespace x86_64::syscall {

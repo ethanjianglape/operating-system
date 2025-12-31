@@ -89,19 +89,19 @@ namespace x86_64::vmm {
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
     }
 
-    void* alloc_raw_page() {
+    void* alloc_kpage() {
         auto phys = pmm::alloc_frame<std::uintptr_t>();
         return phys_to_virt<void*>(phys);
     }
 
-    void free_raw_page(void* virt) {
+    void free_kpage(void* virt) {
         if (virt == nullptr) {
             return;
         }
         pmm::free_frame(virt_to_phys(virt));
     }
 
-    void* alloc_contiguous_memory(std::size_t bytes) {
+    void* alloc_contiguous_kmem(std::size_t bytes) {
         std::size_t total = bytes + sizeof(std::size_t);
         std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
 
@@ -113,7 +113,7 @@ namespace x86_64::vmm {
         return static_cast<std::uint8_t*>(block) + sizeof(std::size_t);
     }
 
-    void free_contiguous_memory(void* virt) {
+    void free_contiguous_kmem(void* virt) {
         if (virt == nullptr) {
             return;
         }
@@ -122,6 +122,18 @@ namespace x86_64::vmm {
         auto num_pages = *static_cast<std::size_t*>(block);
 
         pmm::free_contiguous_frames(virt_to_phys(block), num_pages);
+    }
+
+    std::size_t map_mem_at(std::uintptr_t virt, std::size_t bytes, std::uint32_t flags){
+        std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+
+        for (std::size_t page = 0; page < num_pages; page++){
+            auto phys = pmm::alloc_frame<std::uintptr_t>();
+
+            map_page(virt + (page * PAGE_SIZE), phys, flags);
+        }
+
+        return num_pages;
     }
 
     // Set our local pml4 to point to the pml4 created by Limine which
@@ -158,7 +170,6 @@ namespace x86_64::vmm {
         log::info("Kernel heap   = ", fmt::hex{kernel_heap});
 
         init_pml4();
-        init_userspace();
 
         log::init_end("VMM");
     }

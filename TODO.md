@@ -12,6 +12,7 @@
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
+- [ ] [Documentation and References](#documentation-and-references)
 
 ---
 
@@ -297,3 +298,43 @@ User/Shell: vfs::open(), vfs::read(), vfs::readdir()
 - `#include <...>` for non-local, `#include "..."` for same-directory only
 
 See `src/kernel/CONVENTIONS.md` for full details.
+
+---
+
+## Documentation and References
+
+**Status:** Not started
+
+**Goal:** Create a `docs/` folder with references and explanations for major OS concepts implemented in this project.
+
+**Structure:**
+```
+docs/
+├── REFERENCES.md      # Links to external specs and resources
+├── pmm.md             # Physical memory management explained
+├── vmm.md             # Virtual memory and paging
+├── slab.md            # Slab allocator design
+├── vfs.md             # Virtual filesystem layer
+├── elf.md             # ELF format (what we actually use)
+├── interrupts.md      # IDT, APIC, interrupt handling
+└── syscalls.md        # System call interface
+```
+
+**Content approach:**
+- Focus on "the 10% we actually use" rather than full spec dumps
+- Link to authoritative external sources (ELF spec, Intel manuals, OSDev wiki)
+- Explain our implementation choices and trade-offs
+- Include diagrams where helpful
+- Cross-reference with Linux equivalents per project philosophy
+
+**Key references to include:**
+- ELF64 specification
+- Intel SDM (relevant volumes)
+- System V ABI AMD64 supplement
+- ACPI specification
+- Limine boot protocol
+
+**Benefits:**
+- Supports educational mission of the project
+- Provides context for readers exploring the code
+- Documents design decisions for future reference
