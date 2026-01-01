@@ -48,15 +48,5 @@ namespace x86_64::vmm {
     void free_contiguous_kmem(void* virt);
 
     std::size_t map_mem_at(std::uintptr_t virt, std::size_t bytes, std::uint32_t flags);
-    void free_mem_at(void* virt, std::size_t num_pages);
-
-    template <typename T>
-    inline std::uintptr_t virt_to_phys(T addr) {
-        return reinterpret_cast<std::uintptr_t>(addr) - get_hhdm_offset();
-    }
-
-    template <typename T>
-    inline T phys_to_virt(std::unsigned_integral auto phys) {
-        return reinterpret_cast<T>(phys + get_hhdm_offset());
-    }
+    void free_mem_at(std::uintptr_t virt, std::size_t num_pages);
 }
