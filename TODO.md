@@ -7,7 +7,8 @@
 - [x] [Slab Allocator](#slab-allocator)
 - [x] [Unit Testing Framework](#unit-testing-framework)
 - [~] [VFS and Initramfs](#vfs-and-initramfs)
-- [ ] [Userspace Program Loading](#userspace-program-loading)
+- [x] [Userspace Program Loading](#userspace-program-loading)
+- [ ] [Process Scheduling](#process-scheduling)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
@@ -173,35 +174,96 @@ User/Shell: vfs::open(), vfs::read(), vfs::readdir()
 
 ## Userspace Program Loading
 
-**Status:** Not started
+**Status:** Complete
 
 **Prerequisite:** VFS (to read executables), VMM (to map user pages)
 
 **Goal:** Load and execute ELF binaries from initramfs in ring 3.
 
-**Build infrastructure (complete):**
+**Implemented:**
+- ELF64 parser with header validation (magic, class, machine type)
+- Program header parsing to find PT_LOAD segments
+- Per-process page tables (`create_user_pml4()` with kernel mappings copied)
+- VMM functions parameterized by PML4 for process-specific mappings
+- `map_mem_at(pml4, vaddr, size, flags)` maps non-contiguous physical frames
+- User stack allocation and mapping
+- Process struct with PID, state, PML4, entry point, allocation tracking
+- `kvector<ProcessAllocation>` for cleanup on process exit
+- Context switch to ring 3 via `iretq` with user segments (cs=0x23, ss=0x1B)
+- `sys_write` syscall working (hello world prints to console)
+
+**Build infrastructure:**
 - `src/user/` directory for userspace programs
 - Separate CMakeLists.txt with freestanding flags (no `-mcmodel=kernel`)
 - Custom linker script (`user.ld`) loads at 0x400000
 - Output to `initramfs/bin/` for VFS access
-- Minimal `hello.c` test program (infinite loop)
+- Standard ELF binaries compatible with Linux toolchain
 
-**Kernel work required:**
-- ELF header parsing (verify magic, read program headers)
-- Load PT_LOAD segments into user address space
-- Set up user page tables with USER flag
-- Allocate and map user stack
-- Context switch to ring 3 (`iretq` with user segments)
-- Syscall interface for user programs to interact with kernel
+**Key insight:** Programs compiled on Linux with standard gcc run unmodified on this OS. Same ELF format, same x86-64 ABI, same syscall convention.
 
-**Initial syscalls needed:**
-- `exit` - terminate program
-- `write` - output to console (for hello world)
-
-**Future:**
+**Next steps (see Process Scheduling):**
+- `sys_exit` to cleanly terminate and free resources
+- Scheduler to manage multiple processes
 - More syscalls (read, open, etc.)
-- Process management (fork, exec, wait)
-- Signal handling
+
+---
+
+## Process Scheduling
+
+**Status:** Not started
+
+**Prerequisite:** Userspace program loading (complete), timer interrupts (working)
+
+**Goal:** Run multiple processes concurrently with preemptive multitasking.
+
+**Architecture:**
+```
+Timer interrupt fires
+        │
+        ▼
+Save current process state (rip, rsp, registers)
+        │
+        ▼
+Scheduler picks next READY process
+        │
+        ▼
+Switch CR3 to next process's PML4
+        │
+        ▼
+Restore next process state
+        │
+        ▼
+iretq → process resumes where it left off
+```
+
+**Process states:**
+- `RUNNING` - currently executing (only one at a time, single CPU)
+- `READY` - can run, waiting for CPU time
+- `BLOCKED` - waiting for I/O or event
+- `DEAD` - terminated, awaiting cleanup
+
+**Implementation required:**
+- Context save/restore (all callee-saved registers + rip, rsp, rflags)
+- `schedule()` function to pick next READY process
+- Timer interrupt handler calls `schedule()` for preemption
+- `sys_exit` marks process DEAD, calls `schedule()`
+- Process cleanup (free allocations, remove from list)
+- Idle loop or idle process when nothing is READY
+
+**Syscalls enabled by scheduler:**
+- `exit` - terminate process, scheduler picks next
+- `read` (blocking) - mark BLOCKED, scheduler picks next, wake on I/O ready
+- `wait` - parent waits for child to exit
+
+**Future enhancements:**
+- Priority levels
+- Sleep/wake primitives
+- Multi-CPU support (per-CPU run queues)
+
+**Note on APIC timer:** Currently calibrated using PIT to fire at ~10ms intervals. Consider improving calibration accuracy with a better time source:
+- HPET (High Precision Event Timer) - more accurate than PIT
+- TSC (Time Stamp Counter) with `cpuid` to get frequency on modern CPUs
+- ACPI PM timer - consistent 3.579545 MHz across systems
 
 ---
 

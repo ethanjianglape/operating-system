@@ -11,8 +11,8 @@
 
 namespace process {
     constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
-    constexpr std::size_t    USER_SACK_SIZE  = 16 * 1024; // 16KiB
-    constexpr std::uintptr_t USER_STACK_TOP  = USER_STACK_BASE + USER_SACK_SIZE;
+    constexpr std::size_t    USER_STACK_SIZE  = 16 * 1024; // 16KiB
+    constexpr std::uintptr_t USER_STACK_TOP  = USER_STACK_BASE + USER_STACK_SIZE;
 
     static std::size_t g_pid = 1;
 
@@ -25,18 +25,21 @@ namespace process {
             return;
         }
 
+        arch::vmm::PageTableEntry* pml4 = arch::vmm::create_user_pml4();
+        arch::vmm::switch_pml4(pml4);
+
         Process p{};
 
         p.pid = g_pid++;
-        p.buffer = buffer;
         p.entry = file.entry;
+        p.pml4 = pml4;
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;
             auto size = header.p_filesz;
             auto offset = header.p_offset;
 
-            std::size_t code_pages = arch::vmm::map_mem_at(virt, size, arch::vmm::PAGE_USER);
+            std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, size, arch::vmm::PAGE_USER);
 
             p.allocations.push_back(ProcessAllocation{
                 .virt_addr = virt,
@@ -48,7 +51,7 @@ namespace process {
                    size);
         }
 
-        std::size_t stack_pages = arch::vmm::map_mem_at(USER_STACK_BASE, USER_SACK_SIZE, arch::vmm::PAGE_USER);
+        std::size_t stack_pages = arch::vmm::map_mem_at(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER);
 
         p.allocations.push_back(ProcessAllocation{
             .virt_addr = USER_STACK_BASE,
@@ -62,7 +65,7 @@ namespace process {
     
     void load(std::uint8_t* buffer, std::size_t size) {
         if (buffer == nullptr) {
-            log::error("Attmpt to load program at NULL");
+            log::error("Attempt to load program at NULL");
             return;
         }
         

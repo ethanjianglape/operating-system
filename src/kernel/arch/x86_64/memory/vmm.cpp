@@ -9,7 +9,7 @@
 #include <cstdint>
 
 namespace x86_64::vmm {
-    static PageTableEntry* pml4;
+    static PageTableEntry* kernel_pml4;
 
     static std::uintptr_t hhdm_offset;
 
@@ -31,11 +31,11 @@ namespace x86_64::vmm {
         const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
         const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
 
-        if (!pml4[pml4_idx].p) {
+        if (!kernel_pml4[pml4_idx].p) {
             return nullptr;
         }
         
-        auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
+        auto* pdpt = phys_to_virt<PageTableEntry*>(kernel_pml4[pml4_idx].addr << 12);
 
         if (!pdpt[pdpt_idx].p) {
             return nullptr;
@@ -85,7 +85,7 @@ namespace x86_64::vmm {
     std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags) {
         std::uintptr_t virt = get_hhdm_offset() + phys;
 
-        map_page(virt, phys, flags);
+        map_kpage(virt, phys, flags);
 
         return virt;
     }
@@ -103,7 +103,7 @@ namespace x86_64::vmm {
         }
     }
 
-    void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
+    void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
         const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
         const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
         const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
@@ -121,6 +121,10 @@ namespace x86_64::vmm {
         make_pte(&pt[pt_idx], phys, flags | PAGE_PRESENT | PAGE_WRITE);
 
         asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+    }
+
+    void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
+        map_page(kernel_pml4, virt, phys, flags);
     }
 
     void unmap_page(std::uintptr_t virt) {
@@ -175,13 +179,13 @@ namespace x86_64::vmm {
         pmm::free_contiguous_frames(hhdm_virt_to_phys(block), num_pages);
     }
 
-    std::size_t map_mem_at(std::uintptr_t virt, std::size_t bytes, std::uint32_t flags) {
+    std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags) {
         std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
 
         for (std::size_t page = 0; page < num_pages; page++){
             auto phys = pmm::alloc_frame<std::uintptr_t>();
 
-            map_page(virt + (page * PAGE_SIZE), phys, flags);
+            map_page(pml4, virt + (page * PAGE_SIZE), phys, flags);
         }
 
         return num_pages;
@@ -201,20 +205,35 @@ namespace x86_64::vmm {
 
         // The bottom 12 bits of the pml4 physical address should be ignored
         constexpr std::uint64_t bottom_12_mask = ~0xFFF;
-        pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
+        kernel_pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
-        log::info("VMM pml4 addr = ", fmt::hex{pml4});
+        log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
     }
 
-    void init_userspace() {
-        auto code_phys = pmm::alloc_contiguous_frames<std::uintptr_t>(8);
-        auto data_phys = pmm::alloc_contiguous_frames<std::uintptr_t>(8);
+    std::size_t get_kernel_pml4_index() {
+        return (hhdm_offset >> 39) & 0x1FF;
+    }
 
-        map_page(0x00400000, code_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
-        map_page(0x00800000, data_phys, PAGE_PRESENT | PAGE_WRITE | PAGE_USER);
+    PageTableEntry* create_user_pml4() {
+        auto phys = pmm::alloc_frame<std::uintptr_t>();
+        auto* virt = phys_to_virt<std::uintptr_t*>(phys);
+        auto* new_pml4 = reinterpret_cast<PageTableEntry*>(virt);
 
-        log::info("Mapped user code at virt ", fmt::hex{0x00400000}, " to phys ", fmt::hex{code_phys});
-        log::info("Mapped user data at virt ", fmt::hex{0x00800000}, " to phys ", fmt::hex{data_phys});
+        zero_page(virt);
+
+        std::size_t kernel_start = get_kernel_pml4_index();
+
+        log::debug("kernel start = ", kernel_start);
+
+        for (std::size_t i = kernel_start; i < NUM_PT_ENTRIES; i++) {
+            new_pml4[i] = kernel_pml4[i];
+        }
+
+        return new_pml4;
+    }
+
+    void switch_pml4(PageTableEntry* pml4) {
+        asm volatile("mov %0, %%cr3" : : "r"(hhdm_virt_to_phys(pml4)) : "memory");
     }
 
     void init(std::uintptr_t offset) {
