@@ -11,10 +11,10 @@
 
 namespace process {
     constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
-    constexpr std::size_t    USER_STACK_SIZE  = 16 * 1024; // 16KiB
+    constexpr std::size_t    USER_STACK_SIZE = 16 * 1024; // 16KiB
     constexpr std::uintptr_t USER_STACK_TOP  = USER_STACK_BASE + USER_STACK_SIZE;
 
-    static std::size_t g_pid = 1;
+    static std::uint64_t g_pid = 1;
 
     static kvector<Process> processes;
     

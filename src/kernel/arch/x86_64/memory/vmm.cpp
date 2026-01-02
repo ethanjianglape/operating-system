@@ -223,8 +223,6 @@ namespace x86_64::vmm {
 
         std::size_t kernel_start = get_kernel_pml4_index();
 
-        log::debug("kernel start = ", kernel_start);
-
         for (std::size_t i = kernel_start; i < NUM_PT_ENTRIES; i++) {
             new_pml4[i] = kernel_pml4[i];
         }
@@ -234,6 +232,10 @@ namespace x86_64::vmm {
 
     void switch_pml4(PageTableEntry* pml4) {
         asm volatile("mov %0, %%cr3" : : "r"(hhdm_virt_to_phys(pml4)) : "memory");
+    }
+
+    void switch_kernel_pml4() {
+        switch_pml4(kernel_pml4);
     }
 
     void init(std::uintptr_t offset) {

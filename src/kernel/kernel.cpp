@@ -1,3 +1,4 @@
+#include "arch/x86_64/drivers/tsc/tsc.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
@@ -40,15 +41,12 @@ void kernel_main() {
 
     log::success("All core kernel features initialized!");
 
+
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif
 
     shell::init();
-
-    //x86_64::process::init();
-
-    //log::info("back from userspace");
 
     while (true) {
         x86_64::cpu::hlt();

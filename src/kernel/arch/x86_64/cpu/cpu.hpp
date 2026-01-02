@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cpuid.h>
 
 namespace x86_64::cpu {
     [[gnu::always_inline]]
@@ -20,6 +21,10 @@ namespace x86_64::cpu {
     [[gnu::always_inline]]
     inline void cpuid(std::uint32_t code, std::uint32_t* a, std::uint32_t* d) {
         asm volatile("cpuid" : "=a"(*a), "=d"(*d) : "a"(code) : "ebx", "ecx", "memory");
+    }
+
+    inline void cpuid(std::uint32_t code, std::uint32_t* eax, std::uint32_t* ebx, std::uint32_t* ecx) {
+        asm volatile("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx) : "a"(code) : "edx", "memory");
     }
 
     [[gnu::always_inline]]

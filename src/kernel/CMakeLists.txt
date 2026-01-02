@@ -37,6 +37,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
   ${ARCH_DRIVERS_DIR}/apic/apic.cpp
   ${ARCH_DRIVERS_DIR}/serial/serial.cpp
   ${ARCH_DRIVERS_DIR}/keyboard/keyboard.cpp
+  ${ARCH_DRIVERS_DIR}/tsc/tsc.cpp
 )
 
 # General purpose kernel library sources (not arch specific)

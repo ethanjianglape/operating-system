@@ -51,5 +51,7 @@ namespace x86_64::vmm {
     void free_mem_at(std::uintptr_t virt, std::size_t num_pages);
 
     PageTableEntry* create_user_pml4();
+    
     void switch_pml4(PageTableEntry* pml4);
+    void switch_kernel_pml4();
 }
