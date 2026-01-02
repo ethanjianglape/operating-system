@@ -1,3 +1,88 @@
+/**
+ * Advanced Programmable Interrupt Controller (APIC)
+ * ==================================================
+ *
+ * What is the APIC?
+ *
+ *   The APIC is the modern interrupt controller for x86 systems, replacing the
+ *   legacy 8259 PIC (which we disable in pic.cpp). It actually consists of two
+ *   distinct components that work together:
+ *
+ *   ┌─────────────────────────────────────────────────────────────────────────┐
+ *   │                              System Overview                            │
+ *   └─────────────────────────────────────────────────────────────────────────┘
+ *
+ *   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+ *   │   Keyboard   │     │    Timer     │     │   Network    │
+ *   │   (IRQ 1)    │     │   (IRQ 0)    │     │   (IRQ 11)   │
+ *   └──────┬───────┘     └──────┬───────┘     └──────┬───────┘
+ *          │                    │                    │
+ *          ▼                    ▼                    ▼
+ *   ┌─────────────────────────────────────────────────────────────────────────┐
+ *   │                          I/O APIC                                       │
+ *   │                  (Usually at 0xFEC00000)                                │
+ *   │                                                                         │
+ *   │  Routes external device interrupts to the appropriate CPU core.         │
+ *   │  Contains a Redirection Table: IRQ → which CPU + which vector           │
+ *   └───────────────────────────────┬─────────────────────────────────────────┘
+ *                                   │
+ *                                   │ (Interrupt messages via system bus)
+ *                                   │
+ *          ┌────────────────────────┼────────────────────────┐
+ *          │                        │                        │
+ *          ▼                        ▼                        ▼
+ *   ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
+ *   │ Local APIC  │          │ Local APIC  │          │ Local APIC  │
+ *   │   (CPU 0)   │          │   (CPU 1)   │          │   (CPU 2)   │
+ *   │             │          │             │          │             │
+ *   │ @ 0xFEE00000│          │ @ 0xFEE00000│          │ @ 0xFEE00000│
+ *   └──────┬──────┘          └──────┬──────┘          └──────┬──────┘
+ *          │                        │                        │
+ *          ▼                        ▼                        ▼
+ *   ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
+ *   │   CPU 0     │          │   CPU 1     │          │   CPU 2     │
+ *   └─────────────┘          └─────────────┘          └─────────────┘
+ *
+ * Local APIC (LAPIC):
+ *
+ *   Each CPU core has its own Local APIC, memory-mapped at 0xFEE00000 (same
+ *   virtual address, but each core sees its own LAPIC). The LAPIC handles:
+ *
+ *   - Receiving interrupts from the I/O APIC
+ *   - Local timer (we use this for scheduling)
+ *   - Inter-Processor Interrupts (IPIs) for multi-core communication
+ *   - Priority arbitration (which interrupt to handle first)
+ *   - End-of-Interrupt signaling (EOI)
+ *
+ * I/O APIC:
+ *
+ *   The I/O APIC sits on the motherboard and routes external device interrupts
+ *   to the appropriate CPU. It has a Redirection Table that maps each IRQ to:
+ *
+ *   - A destination CPU (or set of CPUs)
+ *   - An interrupt vector number
+ *   - Trigger mode (edge/level)
+ *   - Polarity (active high/low)
+ *   - Delivery mode (fixed, lowest priority, etc.)
+ *
+ * Why APIC instead of PIC?
+ *
+ *   1. Multi-core support: PIC can only signal one CPU; APIC routes to any core
+ *   2. More interrupts: 224 vectors vs PIC's 15
+ *   3. MSI support: Modern PCIe devices use Message Signaled Interrupts
+ *   4. Better priority: 16 priority levels vs PIC's fixed priority
+ *   5. Performance: No need to mask/unmask, just send EOI
+ *
+ * Timer Calibration:
+ *
+ *   The LAPIC timer runs at the CPU's bus frequency, which varies by system.
+ *   We calibrate it by:
+ *   1. Set a known count and start it
+ *   2. Wait a known time (using PIT, which has a fixed frequency)
+ *   3. Read how many ticks elapsed → now we know ticks/ms
+ *   4. Configure periodic interrupts at our desired rate
+ */
+
 #include "apic.hpp"
 #include <timer/timer.hpp>
 
@@ -62,17 +147,17 @@ namespace x86_64::drivers::apic {
     }
 
     void ioapic_route_keyboard(std::uint8_t vector) {
-        // For now, use these hardcoded assumptions:
-        // - GSI base = 0, so IRQ1 = IOAPIC Pin 1
-        // - No overrides, so edge triggered, active high
-        
-        std::uint64_t entry = 0;
+        // Route keyboard (IRQ 1) to the specified interrupt vector.
+        // Assumptions (valid for most systems):
+        // - GSI base = 0, so IRQ 1 = I/O APIC pin 1
+        // - Edge triggered, active high (default for keyboard)
+        // - Destination = CPU 0 (bits 56-63, which default to 0)
 
-        entry |= vector;
-        entry |= 0UL << 56;
+        constexpr std::uint32_t KEYBOARD_IRQ = 1;
+        const std::uint64_t entry = vector;  // Low 8 bits = vector, rest = 0 (defaults)
 
-        ioapic_write(0x12, static_cast<std::uint32_t>(entry));
-        ioapic_write(0x13, static_cast<std::uint32_t>(entry >> 32));
+        ioapic_write(IOAPIC_REDTBL_LO(KEYBOARD_IRQ), static_cast<std::uint32_t>(entry));
+        ioapic_write(IOAPIC_REDTBL_HI(KEYBOARD_IRQ), static_cast<std::uint32_t>(entry >> 32));
     }
 
     void init() {
@@ -96,7 +181,7 @@ namespace x86_64::drivers::apic {
         // Clear task priority to enable all interrupts
         lapic_write(LAPIC_TPR, 0);
 
-        ioapic_route_keyboard(33);
+        ioapic_route_keyboard(irq::IRQ_KEYBOARD);
 
         timer_init();
 
@@ -121,13 +206,13 @@ namespace x86_64::drivers::apic {
 
         const std::uint32_t ticks = initial_count - lapic_read(LAPIC_TIMER_CURRENT);
 
-        lapic_write(LAPIC_TIMER, 32 | TIMER_MODE_PERIODIC);
+        lapic_write(LAPIC_TIMER, irq::IRQ_TIMER | TIMER_MODE_PERIODIC);
         lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
         lapic_write(LAPIC_TIMER_INIT_COUNT, ticks);
 
-        irq::register_irq_handler(32, apic_timer_handler);
+        irq::register_irq_handler(irq::IRQ_TIMER, apic_timer_handler);
 
-        log::info("APIC timer initialized on ISR32 (IRQ0) at ", ms, "ms resoluation.");
+        log::info("APIC timer initialized on vector ", irq::IRQ_TIMER, " at ", ms, "ms resolution.");
     }
 }
 
