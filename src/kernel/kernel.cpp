@@ -41,7 +41,6 @@ void kernel_main() {
 
     log::success("All core kernel features initialized!");
 
-
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif

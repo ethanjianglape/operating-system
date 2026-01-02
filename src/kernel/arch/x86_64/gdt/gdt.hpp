@@ -8,33 +8,29 @@ namespace x86_64::gdt {
     inline constexpr std::uint8_t FLAG_64BIT       = 0x2;
     inline constexpr std::uint8_t FLAG_AVL         = 0x1;
 
-    inline constexpr std::uint8_t FLAGS_32BIT_4KB = FLAG_GRANULARITY | FLAG_32BIT;
     inline constexpr std::uint8_t FLAGS_64BIT_4KB = FLAG_GRANULARITY | FLAG_64BIT;
 
-    inline constexpr std::uint8_t TSS_ACCESS   = 0x89;
-
-    inline constexpr uint8_t ACCESS_PRESENT    = 0x80;  // 1 << 7
-    inline constexpr uint8_t ACCESS_RING_0     = 0x00;  // DPL = 0
-    inline constexpr uint8_t ACCESS_RING_3     = 0x60;  // DPL = 3
-    inline constexpr uint8_t ACCESS_CODE_DATA  = 0x10;  // S bit
-    inline constexpr uint8_t ACCESS_EXECUTABLE = 0x08;  // Code segment
-    inline constexpr uint8_t ACCESS_READABLE   = 0x02;  // Code can be read
-    inline constexpr uint8_t ACCESS_WRITABLE   = 0x02;  // Data can be written
+    inline constexpr std::uint8_t ACCESS_PRESENT    = 0x80;  // 1 << 7
+    inline constexpr std::uint8_t ACCESS_RING_0     = 0x00;  // DPL = 0
+    inline constexpr std::uint8_t ACCESS_RING_3     = 0x60;  // DPL = 3
+    inline constexpr std::uint8_t ACCESS_CODE_DATA  = 0x10;  // S bit
+    inline constexpr std::uint8_t ACCESS_EXECUTABLE = 0x08;  // Code segment
+    inline constexpr std::uint8_t ACCESS_READABLE   = 0x02;  // Code can be read
+    inline constexpr std::uint8_t ACCESS_WRITABLE   = 0x02;  // Data can be written
     inline constexpr std::uint8_t ACCESS_TSS   = 0x09;
 
-    inline constexpr uint8_t KERNEL_CODE = ACCESS_PRESENT | ACCESS_RING_0 |
-                                           ACCESS_CODE_DATA | ACCESS_EXECUTABLE | ACCESS_READABLE;
+    inline constexpr std::uint8_t KERNEL_CODE = ACCESS_PRESENT | ACCESS_RING_0 |
+                                                ACCESS_CODE_DATA | ACCESS_EXECUTABLE | ACCESS_READABLE;
 
-    inline constexpr uint8_t KERNEL_DATA = ACCESS_PRESENT | ACCESS_RING_0 |
-                                           ACCESS_CODE_DATA | ACCESS_WRITABLE;
+    inline constexpr std::uint8_t KERNEL_DATA = ACCESS_PRESENT | ACCESS_RING_0 |
+                                                ACCESS_CODE_DATA | ACCESS_WRITABLE;
 
-    inline constexpr uint8_t USER_CODE   = ACCESS_PRESENT | ACCESS_RING_3 |
-                                           ACCESS_CODE_DATA | ACCESS_EXECUTABLE | ACCESS_READABLE;
+    inline constexpr std::uint8_t USER_CODE = ACCESS_PRESENT | ACCESS_RING_3 |
+                                              ACCESS_CODE_DATA | ACCESS_EXECUTABLE | ACCESS_READABLE;
 
-    inline constexpr uint8_t USER_DATA   = ACCESS_PRESENT | ACCESS_RING_3 |
-                                           ACCESS_CODE_DATA | ACCESS_WRITABLE;
+    inline constexpr std::uint8_t USER_DATA = ACCESS_PRESENT | ACCESS_RING_3 |
+                                              ACCESS_CODE_DATA | ACCESS_WRITABLE;
 
-    
     struct [[gnu::packed]] GdtEntry {
         std::uint16_t limit_low;
         std::uint16_t base_low;
@@ -69,9 +65,9 @@ namespace x86_64::gdt {
         std::uint32_t reserved0;   // Unused
         std::uint64_t rsp0;        // Kernel stack pointer
         std::uint64_t rsp1;        // Ring 1 stack (unused)
-        std::uint64_t rsp2;        // Ring 3 stack (unsed)
+        std::uint64_t rsp2;        // Ring 2 stack (unused)
         std::uint64_t reserved1;   // Unused
-        std::uint64_t ist1;        // Iterrupt stack table entries
+        std::uint64_t ist1;        // Interrupt stack table entries
         std::uint64_t ist2;
         std::uint64_t ist3;
         std::uint64_t ist4;

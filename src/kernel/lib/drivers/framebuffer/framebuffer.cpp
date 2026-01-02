@@ -28,7 +28,7 @@ namespace drivers::framebuffer {
 
     void init(const FrameBufferInfo& info) {
         log::init_start("Framebuffer");
-        log::info("Framebuffer: ", info.width, "x", info.height, "x", info.bpp, " (pitch=", info.pitch, ")");
+        log::info("Framebuffer: ", info.width, "x", info.height, " @ ", info.bpp, " bpp (pitch=", info.pitch, ")");
         log::info("VRAM: ", fmt::hex{info.vram});
         
         fb_width = info.width;
