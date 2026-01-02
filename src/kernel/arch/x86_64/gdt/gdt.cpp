@@ -1,6 +1,6 @@
 /**
- * Global Descriptor Table (GDT) - 64-bit Long Mode
- * =================================================
+ * @file gdt.cpp
+ * @brief Global Descriptor Table (GDT) and Task State Segment (TSS) initialization.
  *
  * What is the GDT?
  *   The GDT is a CPU data structure that defines memory segments. In legacy
@@ -133,6 +133,14 @@ namespace x86_64::gdt {
     // 16KiB array.
     alignas(16) static std::uint8_t kernel_stack[4096 * 4];
 
+    /**
+     * @brief Constructs a GDT entry from its component fields.
+     * @param base Base address (ignored in 64-bit mode for code/data segments).
+     * @param limit Segment limit (ignored in 64-bit mode for code/data segments).
+     * @param access Access byte defining segment type and privilege level.
+     * @param flags Flags including granularity and 64-bit mode flag.
+     * @return The constructed GdtEntry.
+     */
     GdtEntry make_gdt_entry(std::uint32_t base, std::uint32_t limit, std::uint8_t access, std::uint8_t flags) {
         GdtEntry entry{};
 
@@ -151,6 +159,14 @@ namespace x86_64::gdt {
         return entry;
     }
 
+    /**
+     * @brief Constructs the TSS descriptor for the GDT.
+     *
+     * The TSS descriptor is 16 bytes (spans 2 GDT slots) because it requires
+     * a full 64-bit base address to locate the TSS structure in memory.
+     *
+     * @return The constructed TssDescriptor.
+     */
     TssDescriptor make_tss_descriptor() {
         TssDescriptor desc{};
 
@@ -169,6 +185,11 @@ namespace x86_64::gdt {
         return desc;
     }
 
+    /**
+     * @brief Populates the GDT with all segment descriptors.
+     *
+     * Creates the null descriptor, kernel code/data, user code/data, and TSS entries.
+     */
     void init_gdt_table() {
         // Entry 0: null descriptor
         gdt_table.zero = {};
@@ -189,6 +210,11 @@ namespace x86_64::gdt {
         gdt_table.tss = make_tss_descriptor();
     }
 
+    /**
+     * @brief Initializes the Task State Segment structure.
+     *
+     * Sets RSP0 to point to the kernel stack for ring 3 to ring 0 transitions.
+     */
     void init_tss() {
         tss = {};
 
@@ -196,6 +222,12 @@ namespace x86_64::gdt {
         tss.iopb_offset = sizeof(TssEntry);
     }
 
+    /**
+     * @brief Logs a GDT entry's fields for debugging.
+     * @param entry The GDT entry to log.
+     * @param i The index of the entry in the GDT.
+     * @param name Human-readable name for the entry.
+     */
     void log_gdt_entry(GdtEntry& entry, int i, const char* name) {
         log::info("GDT[", i, "]: ", name, " [base (", fmt::hex{entry.base_low}, ",",
                   fmt::hex{entry.base_mid}, ",", fmt::hex{entry.base_high}, ") limit (",
@@ -203,6 +235,13 @@ namespace x86_64::gdt {
                   fmt::bin{entry.flags}, ") access (", fmt::hex{entry.access}, ")]");
     }
 
+    /**
+     * @brief Initializes the GDT and TSS, then loads them into the CPU.
+     *
+     * This is a one-time setup during boot. After LGDT and LTR are executed,
+     * the CPU uses these structures automatically for privilege checks and
+     * stack switching.
+     */
     void init() {
         log::init_start("GDT");
 

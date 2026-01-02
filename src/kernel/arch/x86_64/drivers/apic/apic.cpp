@@ -1,8 +1,8 @@
 /**
- * Advanced Programmable Interrupt Controller (APIC)
- * ==================================================
+ * @file apic.cpp
+ * @brief Advanced Programmable Interrupt Controller (APIC) driver.
  *
- * NOTE: This file is unusually heavily commented. Unlike most OS concepts
+ * @note This file is unusually heavily commented. Unlike most OS concepts
  * (memory management, scheduling, etc.) which follow general design principles,
  * the APIC is pure x86 hardware magic. There's no way to intuit that "enabling
  * the APIC requires setting bit 11 of MSR 0x1B" - you either read the Intel
@@ -124,6 +124,24 @@ namespace x86_64::drivers::apic {
     static volatile std::uint8_t* lapic_virt_base = nullptr;
     static volatile std::uint8_t* ioapic_virt_base = nullptr;
 
+    /**
+     * @brief Sets the Local APIC base address by mapping the physical address.
+     * @param lapic_phys_addr Physical address of the LAPIC (from ACPI MADT).
+     */
+    void set_lapic_addr(std::uintptr_t lapic_phys_addr) {
+        lapic_virt_base =
+            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(lapic_phys_addr, vmm::PAGE_CACHE_DISABLE | vmm::PAGE_WRITE));
+    }
+
+    /**
+     * @brief Sets the I/O APIC base address by mapping the physical address.
+     * @param ioapic_phys_addr Physical address of the I/O APIC (from ACPI MADT).
+     */
+    void set_ioapic_addr(std::uintptr_t ioapic_phys_addr) {
+        ioapic_virt_base =
+            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(ioapic_phys_addr, vmm::PAGE_CACHE_DISABLE | vmm::PAGE_WRITE));
+    }
+
     // =========================================================================
     // LAPIC Register Access
     // =========================================================================
@@ -139,10 +157,20 @@ namespace x86_64::drivers::apic {
     // The 'volatile' keyword is critical - it tells the compiler these memory
     // locations can change outside of program control (hardware changes them).
 
+    /**
+     * @brief Reads a 32-bit value from a Local APIC register.
+     * @param reg Register offset from the LAPIC base address.
+     * @return The 32-bit value read from the register.
+     */
     static inline std::uint32_t lapic_read(std::uint32_t reg) {
         return *reinterpret_cast<volatile std::uint32_t*>(lapic_virt_base + reg);
     }
 
+    /**
+     * @brief Writes a 32-bit value to a Local APIC register.
+     * @param reg Register offset from the LAPIC base address.
+     * @param value The 32-bit value to write.
+     */
     static inline void lapic_write(std::uint32_t reg, std::uint32_t value) {
         *reinterpret_cast<volatile std::uint32_t*>(lapic_virt_base + reg) = value;
     }
@@ -164,57 +192,59 @@ namespace x86_64::drivers::apic {
     // entries × 2 registers each = 48+ registers), but only occupies a small
     // memory region. Indirect access keeps the memory footprint small.
 
+    /**
+     * @brief Reads a 32-bit value from an I/O APIC register using indirect access.
+     * @param reg Register number to read from.
+     * @return The 32-bit value read from the register.
+     */
+    [[gnu::used]]
     static inline std::uint32_t ioapic_read(std::uint32_t reg) {
         *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOREGSEL) = reg;
         return *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOWIN);
     }
 
+    /**
+     * @brief Writes a 32-bit value to an I/O APIC register using indirect access.
+     * @param reg Register number to write to.
+     * @param value The 32-bit value to write.
+     */
+    [[gnu::used]]
     static inline void ioapic_write(std::uint32_t reg, std::uint32_t value) {
         *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOREGSEL) = reg;
         *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOWIN) = value;
     }
 
-    void set_lapic_addr(std::uintptr_t lapic_phys_addr) {
-        lapic_virt_base =
-            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(lapic_phys_addr, vmm::PAGE_CACHE_DISABLE));
-    }
-
-    void set_ioapic_addr(std::uintptr_t ioapic_phys_addr) {
-        ioapic_virt_base =
-            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(ioapic_phys_addr, vmm::PAGE_CACHE_DISABLE));
-    }
-
-    // =========================================================================
-    // End of Interrupt (EOI)
-    // =========================================================================
-    //
-    // After handling an interrupt, we MUST signal "End of Interrupt" to the LAPIC.
-    // This tells the LAPIC we're done and it can deliver the next pending interrupt.
-    //
-    // If we forget to send EOI, the LAPIC thinks we're still handling the interrupt
-    // and won't deliver any more interrupts of equal or lower priority - the system
-    // will appear to hang.
-    //
-    // The value written doesn't matter (we use 0). The act of writing to the EOI
-    // register is what signals completion.
-
+    /**
+     * @brief Signals End of Interrupt (EOI) to the Local APIC.
+     *
+     * After handling an interrupt, we MUST signal "End of Interrupt" to the LAPIC.
+     * This tells the LAPIC we're done and it can deliver the next pending interrupt.
+     *
+     * @warning If we forget to send EOI, the LAPIC thinks we're still handling the
+     *          interrupt and won't deliver any more interrupts of equal or lower
+     *          priority - the system will appear to hang.
+     *
+     * @note The value written doesn't matter (we use 0). The act of writing to the
+     *       EOI register is what signals completion.
+     */
     void send_eoi() {
         lapic_write(LAPIC_EOI, 0);
     }
 
-    // =========================================================================
-    // CPUID Feature Detection
-    // =========================================================================
-    //
-    // Before using the APIC, we need to verify the CPU actually has one.
-    // The CPUID instruction returns feature flags that tell us what the CPU supports.
-    //
-    // CPUID with EAX=1 returns feature flags in EDX. Bit 9 indicates APIC support:
-    //   EDX bit 9 = 1: APIC is present
-    //   EDX bit 9 = 0: No APIC (ancient CPU or disabled in BIOS)
-    //
-    // Virtually all x86-64 CPUs have an APIC, but we check anyway.
-
+    /**
+     * @brief Checks if the CPU supports APIC via CPUID.
+     *
+     * Before using the APIC, we need to verify the CPU actually has one.
+     * The CPUID instruction returns feature flags that tell us what the CPU supports.
+     *
+     * CPUID with EAX=1 returns feature flags in EDX. Bit 9 indicates APIC support:
+     *   - EDX bit 9 = 1: APIC is present
+     *   - EDX bit 9 = 0: No APIC (ancient CPU or disabled in BIOS)
+     *
+     * @note Virtually all x86-64 CPUs have an APIC, but we check anyway.
+     *
+     * @return true if APIC is supported, false otherwise.
+     */
     bool check_support() {
         std::uint32_t eax;
         std::uint32_t edx;
@@ -224,63 +254,72 @@ namespace x86_64::drivers::apic {
         return (edx & CPUID_FEAT_EDX_APIC) != 0;
     }
 
-    // =========================================================================
-    // Enable APIC via MSR
-    // =========================================================================
-    //
-    // The APIC has a global enable/disable bit in the IA32_APIC_BASE MSR (0x1B).
-    // MSR = Model Specific Register, accessed via RDMSR/WRMSR instructions.
-    //
-    // IA32_APIC_BASE register layout:
-    //   Bits 0-7:   Reserved
-    //   Bit 8:      BSP flag (1 = this is the bootstrap processor) - read only
-    //   Bit 9:      Reserved
-    //   Bit 10:     x2APIC enable (we don't use this, it's for newer APIC mode)
-    //   Bit 11:     APIC Global Enable - THIS IS WHAT WE SET
-    //   Bits 12-35: APIC Base Address (physical, 4KB aligned)
-    //   Bits 36-63: Reserved
-    //
-    // Even though the LAPIC might already be enabled by the BIOS, we set bit 11
-    // explicitly to be sure. This doesn't change the base address.
-
+    /**
+     * @brief Enables the APIC globally via the IA32_APIC_BASE MSR.
+     *
+     * The APIC has a global enable/disable bit in the IA32_APIC_BASE MSR (0x1B).
+     * MSR = Model Specific Register, accessed via RDMSR/WRMSR instructions.
+     *
+     * IA32_APIC_BASE register layout:
+     *   - Bits 0-7:   Reserved
+     *   - Bit 8:      BSP flag (1 = this is the bootstrap processor) - read only
+     *   - Bit 9:      Reserved
+     *   - Bit 10:     x2APIC enable (we don't use this, it's for newer APIC mode)
+     *   - Bit 11:     APIC Global Enable - THIS IS WHAT WE SET
+     *   - Bits 12-35: APIC Base Address (physical, 4KB aligned)
+     *   - Bits 36-63: Reserved
+     *
+     * @note Even though the LAPIC might already be enabled by the BIOS, we set
+     *       bit 11 explicitly to be sure. This doesn't change the base address.
+     */
     void enable_apic() {
         std::uint64_t apic_msr = cpu::rdmsr(MSR_APIC_BASE);
         apic_msr |= MSR_APIC_BASE_ENABLE;  // Set bit 11
         cpu::wrmsr(MSR_APIC_BASE, apic_msr);
     }
 
-    // =========================================================================
-    // I/O APIC Redirection Table
-    // =========================================================================
-    //
-    // The I/O APIC has a Redirection Table that maps each external IRQ to an
-    // interrupt delivery configuration. Each entry is 64 bits:
-    //
-    //   Bits 0-7:   Interrupt Vector (which IDT entry to invoke, 0x10-0xFE)
-    //   Bits 8-10:  Delivery Mode:
-    //                 000 = Fixed (deliver to CPUs listed in destination)
-    //                 001 = Lowest Priority (deliver to lowest-priority CPU)
-    //                 010 = SMI (System Management Interrupt)
-    //                 100 = NMI
-    //                 101 = INIT
-    //                 111 = ExtINT (external interrupt, legacy mode)
-    //   Bit 11:     Destination Mode (0 = Physical, 1 = Logical)
-    //   Bit 12:     Delivery Status (read-only, 0 = idle, 1 = pending)
-    //   Bit 13:     Pin Polarity (0 = Active High, 1 = Active Low)
-    //   Bit 14:     Remote IRR (read-only, for level-triggered)
-    //   Bit 15:     Trigger Mode (0 = Edge, 1 = Level)
-    //   Bit 16:     Mask (0 = Enabled, 1 = Masked/Disabled)
-    //   Bits 17-55: Reserved
-    //   Bits 56-63: Destination (which CPU(s) to deliver to)
-    //
-    // For most simple cases, we just set the vector and leave everything else
-    // at defaults (0), which gives us: Fixed delivery, Physical mode, Active
-    // High, Edge triggered, Enabled, deliver to CPU 0.
+    /**
+     * @brief Configures the Spurious Interrupt Vector Register (SVR).
+     *
+     * Sets the SVR to 0x1FF which:
+     *   - Bit 8 (0x100): Software enable for the LAPIC
+     *   - Bits 0-7 (0xFF): Spurious interrupt vector
+     *
+     * @see init() for details on why both MSR and SVR enables are needed.
+     */
+    void configure_svr() {
+        lapic_write(LAPIC_SPURIOUS, 0x1FF);
+    }
 
+    /**
+     * @brief Routes the keyboard interrupt (IRQ 1) to the specified vector.
+     *
+     * Configures the I/O APIC Redirection Table entry for the keyboard. Each
+     * redirection table entry is 64 bits with the following layout:
+     *
+     *   - Bits 0-7:   Interrupt Vector (which IDT entry to invoke, 0x10-0xFE)
+     *   - Bits 8-10:  Delivery Mode:
+     *                   - 000 = Fixed (deliver to CPUs listed in destination)
+     *                   - 001 = Lowest Priority (deliver to lowest-priority CPU)
+     *                   - 010 = SMI (System Management Interrupt)
+     *                   - 100 = NMI
+     *                   - 101 = INIT
+     *                   - 111 = ExtINT (external interrupt, legacy mode)
+     *   - Bit 11:     Destination Mode (0 = Physical, 1 = Logical)
+     *   - Bit 12:     Delivery Status (read-only, 0 = idle, 1 = pending)
+     *   - Bit 13:     Pin Polarity (0 = Active High, 1 = Active Low)
+     *   - Bit 14:     Remote IRR (read-only, for level-triggered)
+     *   - Bit 15:     Trigger Mode (0 = Edge, 1 = Level)
+     *   - Bit 16:     Mask (0 = Enabled, 1 = Masked/Disabled)
+     *   - Bits 17-55: Reserved
+     *   - Bits 56-63: Destination (which CPU(s) to deliver to)
+     *
+     * We use all defaults (0 for upper bits): Fixed delivery, Physical mode,
+     * Active High, Edge triggered, Enabled, deliver to CPU 0.
+     *
+     * @param vector The interrupt vector number to route keyboard interrupts to.
+     */
     void ioapic_route_keyboard(std::uint8_t vector) {
-        // Route keyboard (IRQ 1) to the specified interrupt vector.
-        // We use all defaults: Fixed delivery, Edge triggered, Active High, CPU 0.
-
         constexpr std::uint32_t KEYBOARD_IRQ = 1;
         const std::uint64_t entry = vector;  // Low 8 bits = vector, rest = 0 (defaults)
 
@@ -288,10 +327,22 @@ namespace x86_64::drivers::apic {
         ioapic_write(IOAPIC_REDTBL_HI(KEYBOARD_IRQ), static_cast<std::uint32_t>(entry >> 32));
     }
 
-    // =========================================================================
-    // APIC Initialization
-    // =========================================================================
-
+    /**
+     * @brief Initializes the APIC subsystem (both Local APIC and I/O APIC).
+     *
+     * This function performs complete APIC initialization:
+     *   1. Verifies APIC support via CPUID
+     *   2. Enables the APIC globally via MSR
+     *   3. Configures the Spurious Interrupt Vector Register (SVR)
+     *   4. Clears the Task Priority Register (TPR) to accept all interrupts
+     *   5. Routes keyboard interrupts via the I/O APIC
+     *   6. Initializes the LAPIC timer for scheduling
+     *
+     * @pre set_lapic_addr() and set_ioapic_addr() must be called first.
+     * @pre The legacy PIC must be disabled (see pic.cpp).
+     *
+     * @throws Panics if APIC is not supported or addresses are not set.
+     */
     void init() {
         log::init_start("APIC");
 
@@ -321,7 +372,7 @@ namespace x86_64::drivers::apic {
         //      these to vector 0xFF so we can ignore them.
         //
         // 0x1FF = 0001 1111 1111 = bit 8 (enable) + vector 0xFF
-        lapic_write(LAPIC_SPURIOUS, 0x1FF);
+        configure_svr();
 
         // Step 3: Clear the Task Priority Register (TPR)
         //
@@ -346,44 +397,53 @@ namespace x86_64::drivers::apic {
         log::init_end("APIC");
     }
 
-    // Timer interrupt handler - called every tick
+    /**
+     * @brief Timer interrupt handler called every LAPIC timer tick.
+     *
+     * Increments the global tick counter and signals End of Interrupt.
+     *
+     * @param vector The interrupt vector number (unused).
+     *
+     * @warning Must call send_eoi() or no further timer interrupts will occur.
+     */
     void apic_timer_handler(std::uint32_t vector) {
         timer::tick();
-        send_eoi();  // MUST send EOI or no more timer interrupts!
+        send_eoi();
     }
 
-    // =========================================================================
-    // LAPIC Timer Calibration and Setup
-    // =========================================================================
-    //
-    // The LAPIC has a built-in timer that can generate periodic interrupts.
-    // This is essential for preemptive multitasking (the scheduler needs a
-    // regular "tick" to switch between processes).
-    //
-    // The Problem:
-    //   The LAPIC timer runs off the CPU's bus clock, which varies by system.
-    //   A 3 GHz CPU might have a 100 MHz bus clock, or 133 MHz, or something
-    //   else entirely. We can't just hardcode a timer value.
-    //
-    // The Solution:
-    //   Calibrate the timer using a KNOWN time source. The legacy PIT (8254)
-    //   runs at exactly 1.193182 MHz on all PCs - it's been this way since 1981.
-    //   We use the PIT to measure how many LAPIC ticks occur in a known time.
-    //
-    // Timer Registers:
-    //   LAPIC_TIMER_DIVIDE:      Clock divider (1, 2, 4, 8, 16, 32, 64, or 128)
-    //   LAPIC_TIMER_INIT_COUNT:  Starting count value (counts DOWN to 0)
-    //   LAPIC_TIMER_CURRENT:     Current count value (read-only)
-    //   LAPIC_TIMER (LVT):       Mode and vector configuration
-    //
-    // LVT Timer Register bits:
-    //   Bits 0-7:   Interrupt vector
-    //   Bit 16:     Mask (1 = disabled)
-    //   Bits 17-18: Timer mode:
-    //                 00 = One-shot (fire once, stop)
-    //                 01 = Periodic (auto-reload and repeat)
-    //                 10 = TSC-Deadline (advanced, we don't use)
-
+    /**
+     * @brief Calibrates and initializes the LAPIC timer for periodic interrupts.
+     *
+     * The LAPIC has a built-in timer that can generate periodic interrupts.
+     * This is essential for preemptive multitasking (the scheduler needs a
+     * regular "tick" to switch between processes).
+     *
+     * **The Problem:**
+     * The LAPIC timer runs off the CPU's bus clock, which varies by system.
+     * A 3 GHz CPU might have a 100 MHz bus clock, or 133 MHz, or something
+     * else entirely. We can't just hardcode a timer value.
+     *
+     * **The Solution:**
+     * Calibrate the timer using a KNOWN time source. The legacy PIT (8254)
+     * runs at exactly 1.193182 MHz on all PCs - it's been this way since 1981.
+     * We use the PIT to measure how many LAPIC ticks occur in a known time.
+     *
+     * **Timer Registers:**
+     *   - LAPIC_TIMER_DIVIDE:     Clock divider (1, 2, 4, 8, 16, 32, 64, or 128)
+     *   - LAPIC_TIMER_INIT_COUNT: Starting count value (counts DOWN to 0)
+     *   - LAPIC_TIMER_CURRENT:    Current count value (read-only)
+     *   - LAPIC_TIMER (LVT):      Mode and vector configuration
+     *
+     * **LVT Timer Register bits:**
+     *   - Bits 0-7:   Interrupt vector
+     *   - Bit 16:     Mask (1 = disabled)
+     *   - Bits 17-18: Timer mode:
+     *       - 00 = One-shot (fire once, stop)
+     *       - 01 = Periodic (auto-reload and repeat)
+     *       - 10 = TSC-Deadline (advanced, we don't use)
+     *
+     * @post Timer interrupts will fire every 10ms, calling apic_timer_handler().
+     */
     void timer_init() {
         constexpr std::uint32_t initial_count = 0xFFFFFFFF;  // Max value
         constexpr std::uint32_t calibration_ms = 10;         // Calibrate over 10ms
