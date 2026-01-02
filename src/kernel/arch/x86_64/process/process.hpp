@@ -12,4 +12,6 @@ namespace x86_64::process {
     };
     
     void init();
+
+    void enter_userspace(std::uintptr_t entry, std::uintptr_t stack_top);
 }

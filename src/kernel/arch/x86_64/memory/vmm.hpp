@@ -6,8 +6,8 @@
 namespace x86_64::vmm {
     extern "C" char KERNEL_VIRT_BASE[];
     
-    constexpr std::uint32_t NUM_PT_ENTRIES  = 512;
-    constexpr std::uint32_t PAGE_SIZE       = 4096;
+    constexpr std::size_t NUM_PT_ENTRIES  = 512;
+    constexpr std::size_t PAGE_SIZE       = 4096;
 
     constexpr std::uint32_t PAGE_PRESENT       = 0x01; // p
     constexpr std::uint32_t PAGE_WRITE         = 0x02; // rw
@@ -37,23 +37,21 @@ namespace x86_64::vmm {
     void init(std::uintptr_t hhdm_offset);
 
     std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags);
-    void map_page(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
+    void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
-    // Raw single-page allocation (no header tracking) - for slab allocator
-    void* alloc_raw_page();
-    void free_raw_page(void* virt);
+    // Raw single-page HHDM allocation (no header tracking) - for slab allocator
+    void* alloc_kpage();
+    void free_kpage(void* virt);
 
-    // Tracked allocation (stores size header) - for general use
-    void* alloc_contiguous_memory(std::size_t bytes);
-    void free_contiguous_memory(void* virt);
+    // Tracked HHDM allocation (stores size header) - for general kernel use
+    void* alloc_contiguous_kmem(std::size_t bytes);
+    void free_contiguous_kmem(void* virt);
 
-    template <typename T>
-    inline std::uintptr_t virt_to_phys(T addr) {
-        return reinterpret_cast<std::uintptr_t>(addr) - get_hhdm_offset();
-    }
+    std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags);
+    void free_mem_at(std::uintptr_t virt, std::size_t num_pages);
 
-    template <typename T>
-    inline T phys_to_virt(std::unsigned_integral auto phys) {
-        return reinterpret_cast<T>(phys + get_hhdm_offset());
-    }
+    PageTableEntry* create_user_pml4();
+    
+    void switch_pml4(PageTableEntry* pml4);
+    void switch_kernel_pml4();
 }

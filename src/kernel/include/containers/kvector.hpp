@@ -211,6 +211,9 @@ concept kvector_storable = requires {
         const_iterator begin() const { return const_iterator{_data}; }
         const_iterator end() const { return const_iterator{_data + _size}; }
 
+        T* data() { return _data; }
+        const T* data() const { return _data; }
+
         T& front() { return _data[0]; }
         const T& front() const { return _data[0]; }
 

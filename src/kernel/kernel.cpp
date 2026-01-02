@@ -1,3 +1,4 @@
+#include "arch/x86_64/drivers/tsc/tsc.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
@@ -21,11 +22,10 @@
 
 [[noreturn]]
 void kernel_main() {
-    log::info("MyOS Booted into kernel_main() using Limine.");
-    log::info("Serial ouput on COM1 initialized");
-
     x86_64::drivers::serial::init();
 
+    log::info("MyOS Booted into kernel_main() using Limine.");
+    log::info("Serial ouput on COM1 initialized");
     
     boot::init();
     
@@ -41,15 +41,12 @@ void kernel_main() {
 
     log::success("All core kernel features initialized!");
 
+
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif
 
     shell::init();
-
-    //x86_64::process::init();
-
-    //log::info("back from userspace");
 
     while (true) {
         x86_64::cpu::hlt();

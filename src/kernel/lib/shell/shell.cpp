@@ -1,10 +1,14 @@
+#include "containers/kvector.hpp"
+#include "fmt/fmt.hpp"
 #include "fs/vfs.hpp"
 #include "log/log.hpp"
+#include "memory/memory.hpp"
 #include <algo/algo.hpp>
 #include <tty/tty.hpp>
 #include <cstddef>
 #include <shell/shell.hpp>
 #include <console/console.hpp>
+#include <process/process.hpp>
 
 namespace shell {
     using RgbColor = console::RgbColor;
@@ -93,7 +97,7 @@ namespace shell {
             return;
         }
 
-        if (command == "cat") {
+        if (command == "run") {
             auto filename = split[1];
 
             if (filename[0] != '/'){
@@ -102,7 +106,30 @@ namespace shell {
 
             int fd = fs::open(filename.c_str(), fs::O_RDONLY);
 
-            log::debug("fd = ", fd);
+            if (fd >= 0) {
+                fs::Stat stat = fs::stat(filename.c_str());
+                auto* buffer = kalloc<std::uint8_t>(stat.size);
+
+                fs::read(fd, buffer, stat.size);
+
+                process::load(buffer, stat.size);
+
+                fs::close(fd);
+                kfree(buffer);
+            }
+
+            console::newline();
+            return;
+        }
+
+        if (command == "cat") {
+            auto filename = split[1];
+
+            if (filename[0] != '/'){
+                filename = pwd + "/" + filename;
+            }
+
+            int fd = fs::open(filename.c_str(), fs::O_RDONLY);
 
             if (fd >= 0) {
                 char buffer[512];

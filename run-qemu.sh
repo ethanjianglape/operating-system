@@ -3,7 +3,7 @@
 BIOS="/usr/share/edk2/x64/OVMF.4m.fd"
 
 if [[ -f "$BIOS" ]]; then
-    qemu-system-x86_64 -bios /usr/share/edk2/x64/OVMF.4m.fd -serial stdio -m 512M -cdrom myos.iso
+    qemu-system-x86_64 -accel kvm -cpu host,+invtsc,migratable=no -bios /usr/share/edk2/x64/OVMF.4m.fd -serial stdio -m 512M  -cdrom myos.iso
 else
     echo "Failed to find BIOS file at $BIOS"
     echo "edk2-ovmf must be installed to run qemu in UEFI mode"

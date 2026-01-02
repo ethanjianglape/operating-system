@@ -5,11 +5,15 @@
 - [x] [Logging and Console Separation](#logging-and-console-separation)
 - [x] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
 - [x] [Slab Allocator](#slab-allocator)
-- [ ] [VFS and Initramfs](#vfs-and-initramfs)
+- [x] [Unit Testing Framework](#unit-testing-framework)
+- [~] [VFS and Initramfs](#vfs-and-initramfs)
+- [x] [Userspace Program Loading](#userspace-program-loading)
+- [ ] [Process Scheduling](#process-scheduling)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
+- [ ] [Documentation and References](#documentation-and-references)
 
 ---
 
@@ -92,9 +96,41 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 ---
 
+## Unit Testing Framework
+
+**Status:** Complete
+
+**Goal:** In-kernel unit tests to validate critical subsystems, especially the memory allocation pipeline.
+
+**Implementation:**
+- Test framework in `test/test.hpp` and `test/test.cpp`
+- Assertions using `std::source_location` (no macros)
+- `KERNEL_TESTS` compile flag enables tests
+- `KERNEL_TESTS_QUIET` suppresses passing test output (default ON)
+- Tests run at boot, before shell
+
+**Test suites (160+ tests):**
+- `test_pmm` - physical frame allocation, contiguous frames
+- `test_vmm` - raw pages, tracked allocations
+- `test_slab` - size classes, chunk management, slab lifecycle
+- `test_kmalloc` - routing between slab/VMM, boundary conditions
+- `test_kvector` - all container operations, copy/move semantics
+- `test_kstring` - string manipulation, concatenation, substr
+
+**PMM sanity check:** Compares free frame count before/after all tests to detect memory leaks in test code itself.
+
+**Bugs caught:**
+- VMM alloc/free API mismatch (would have caused undefined behavior)
+- kstring insert/erase off-by-one errors
+- kstring substr loop condition bugs
+
+**Location:** `kernel/test/`
+
+---
+
 ## VFS and Initramfs
 
-**Status:** Not started
+**Status:** Partially complete
 
 **Prerequisite:** Dynamic collections (kvector/kstring)
 
@@ -102,10 +138,10 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 **Architecture:**
 ```
-User/Shell: fs::open(), fs::read(), fs::readdir()
+User/Shell: vfs::open(), vfs::read(), vfs::readdir()
                     │
                     ▼
-                   VFS (uniform interface)
+               VFS layer (path canonicalization, mount resolution)
                     │
         ┌───────────┼───────────┐
         ▼           ▼           ▼
@@ -113,33 +149,121 @@ User/Shell: fs::open(), fs::read(), fs::readdir()
     (memory)      (disk)       (CD)
 ```
 
-**Initial implementation (initramfs):**
-- Load tar archive as Limine module
-- Parse tar headers (512-byte blocks, simple format)
-- Mount as root filesystem in memory
-- Read-only is fine initially
+**Completed:**
+- Initramfs loaded as Limine module
+- Tar parser with relative path handling (strips `./` prefix)
+- Initramfs mounted at `/` as root filesystem
+- VFS path canonicalization (resolves `.`, `..`, redundant slashes)
+- `vfs::stat()` for file type checking (FILE, DIRECTORY, NOT_FOUND)
+- `vfs::readdir()` for directory listing
+- Shell commands: `cd`, `ls`, `cat`, `pwd` (in prompt)
+- Relative and absolute path support
+- Current working directory tracking
 
-**VFS interface:**
-```cpp
-namespace fs {
-    struct DirEntry { kstring name; bool is_dir; size_t size; };
-
-    int open(const char* path);
-    ssize_t read(int fd, void* buf, size_t count);
-    kvector<DirEntry> readdir(const char* path);
-    void close(int fd);
-}
-```
-
-**Shell commands this enables:**
-- `ls [path]` - list directory contents
-- `cat <file>` - print file contents
-- `pwd` / `cd` - working directory (once state is added)
+**Remaining cleanup:**
+- Error handling consistency
+- Code organization/cleanup
+- Additional VFS operations as needed
 
 **Future backends:**
 - FAT32 for USB drives / SD cards
 - ext2 for more Unix-like semantics
 - ISO9660 for CD-ROM images
+
+---
+
+## Userspace Program Loading
+
+**Status:** Complete
+
+**Prerequisite:** VFS (to read executables), VMM (to map user pages)
+
+**Goal:** Load and execute ELF binaries from initramfs in ring 3.
+
+**Implemented:**
+- ELF64 parser with header validation (magic, class, machine type)
+- Program header parsing to find PT_LOAD segments
+- Per-process page tables (`create_user_pml4()` with kernel mappings copied)
+- VMM functions parameterized by PML4 for process-specific mappings
+- `map_mem_at(pml4, vaddr, size, flags)` maps non-contiguous physical frames
+- User stack allocation and mapping
+- Process struct with PID, state, PML4, entry point, allocation tracking
+- `kvector<ProcessAllocation>` for cleanup on process exit
+- Context switch to ring 3 via `iretq` with user segments (cs=0x23, ss=0x1B)
+- `sys_write` syscall working (hello world prints to console)
+
+**Build infrastructure:**
+- `src/user/` directory for userspace programs
+- Separate CMakeLists.txt with freestanding flags (no `-mcmodel=kernel`)
+- Custom linker script (`user.ld`) loads at 0x400000
+- Output to `initramfs/bin/` for VFS access
+- Standard ELF binaries compatible with Linux toolchain
+
+**Key insight:** Programs compiled on Linux with standard gcc run unmodified on this OS. Same ELF format, same x86-64 ABI, same syscall convention.
+
+**Next steps (see Process Scheduling):**
+- `sys_exit` to cleanly terminate and free resources
+- Scheduler to manage multiple processes
+- More syscalls (read, open, etc.)
+
+---
+
+## Process Scheduling
+
+**Status:** Not started
+
+**Prerequisite:** Userspace program loading (complete), timer interrupts (working)
+
+**Goal:** Run multiple processes concurrently with preemptive multitasking.
+
+**Architecture:**
+```
+Timer interrupt fires
+        │
+        ▼
+Save current process state (rip, rsp, registers)
+        │
+        ▼
+Scheduler picks next READY process
+        │
+        ▼
+Switch CR3 to next process's PML4
+        │
+        ▼
+Restore next process state
+        │
+        ▼
+iretq → process resumes where it left off
+```
+
+**Process states:**
+- `RUNNING` - currently executing (only one at a time, single CPU)
+- `READY` - can run, waiting for CPU time
+- `BLOCKED` - waiting for I/O or event
+- `DEAD` - terminated, awaiting cleanup
+
+**Implementation required:**
+- Context save/restore (all callee-saved registers + rip, rsp, rflags)
+- `schedule()` function to pick next READY process
+- Timer interrupt handler calls `schedule()` for preemption
+- `sys_exit` marks process DEAD, calls `schedule()`
+- Process cleanup (free allocations, remove from list)
+- Idle loop or idle process when nothing is READY
+
+**Syscalls enabled by scheduler:**
+- `exit` - terminate process, scheduler picks next
+- `read` (blocking) - mark BLOCKED, scheduler picks next, wake on I/O ready
+- `wait` - parent waits for child to exit
+
+**Future enhancements:**
+- Priority levels
+- Sleep/wake primitives
+- Multi-CPU support (per-CPU run queues)
+
+**Note on APIC timer:** Currently calibrated using PIT to fire at ~10ms intervals. Consider improving calibration accuracy with a better time source:
+- HPET (High Precision Event Timer) - more accurate than PIT
+- TSC (Time Stamp Counter) with `cpuid` to get frequency on modern CPUs
+- ACPI PM timer - consistent 3.579545 MHz across systems
 
 ---
 
@@ -236,3 +360,43 @@ namespace fs {
 - `#include <...>` for non-local, `#include "..."` for same-directory only
 
 See `src/kernel/CONVENTIONS.md` for full details.
+
+---
+
+## Documentation and References
+
+**Status:** Not started
+
+**Goal:** Create a `docs/` folder with references and explanations for major OS concepts implemented in this project.
+
+**Structure:**
+```
+docs/
+├── REFERENCES.md      # Links to external specs and resources
+├── pmm.md             # Physical memory management explained
+├── vmm.md             # Virtual memory and paging
+├── slab.md            # Slab allocator design
+├── vfs.md             # Virtual filesystem layer
+├── elf.md             # ELF format (what we actually use)
+├── interrupts.md      # IDT, APIC, interrupt handling
+└── syscalls.md        # System call interface
+```
+
+**Content approach:**
+- Focus on "the 10% we actually use" rather than full spec dumps
+- Link to authoritative external sources (ELF spec, Intel manuals, OSDev wiki)
+- Explain our implementation choices and trade-offs
+- Include diagrams where helpful
+- Cross-reference with Linux equivalents per project philosophy
+
+**Key references to include:**
+- ELF64 specification
+- Intel SDM (relevant volumes)
+- System V ABI AMD64 supplement
+- ACPI specification
+- Limine boot protocol
+
+**Benefits:**
+- Supports educational mission of the project
+- Provides context for readers exploring the code
+- Documents design decisions for future reference

@@ -21,6 +21,10 @@ namespace x86_64::syscall {
 
     constexpr std::uint32_t ENOSYS = -1;
 
+    constexpr std::uint64_t SYS_READ  = 0;
+    constexpr std::uint64_t SYS_WRITE = 1;
+    constexpr std::uint64_t SYS_EXIT  = 60;    
+
     enum class syscall_number : std::uint32_t {
         SYS_WRITE = 4,
         TEST = 42

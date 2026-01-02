@@ -51,6 +51,9 @@ set(SYSROOT "${CMAKE_SOURCE_DIR}/sysroot" CACHE PATH "Sysroot directory")
 # Add kernel subdirectory (this installs kernel headers to sysroot)
 add_subdirectory(src/kernel)
 
+# Add userspace programs (compiled separately, output to initramfs/bin)
+add_subdirectory(src/user)
+
 # Include directories (sysroot comes first for libc headers)
 include_directories(${SYSROOT}/usr/include)
 include_directories(${CMAKE_SOURCE_DIR}/include)
