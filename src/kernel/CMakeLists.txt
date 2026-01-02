@@ -18,6 +18,7 @@ set(KERNEL_SOURCES
 
 # Architecture-specific kernel sources
 set(ARCH_KERNEL_SOURCES
+  ${ARCH_DIR}/cpu/cpu.cpp
   ${ARCH_DIR}/gdt/gdt.cpp
   ${ARCH_DIR}/gdt/gdt.s
   ${ARCH_DIR}/interrupts/idt.cpp

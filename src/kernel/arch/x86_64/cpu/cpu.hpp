@@ -3,7 +3,27 @@
 #include <cstdint>
 #include <cpuid.h>
 
+// Forward declaration to avoid circular include
+namespace x86_64::irq {
+    struct InterruptFrame;
+}
+
 namespace x86_64::cpu {
+
+    // =========================================================================
+    // Debug Functions
+    // =========================================================================
+
+    // Dump current CPU state (control regs, segment regs, flags)
+    void dump();
+
+    // Dump CPU state from an interrupt context (includes all GPRs, RIP, etc.)
+    void dump(const irq::InterruptFrame* frame);
+
+    // =========================================================================
+    // I/O Port Functions
+    // =========================================================================
+
     [[gnu::always_inline]]
     inline void outb(const std::uint16_t port, const std::uint8_t value) {
         asm volatile("outb %0, %1" : : "a"(value), "Nd"(port) : "memory");

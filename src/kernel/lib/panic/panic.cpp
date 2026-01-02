@@ -10,6 +10,8 @@ void panic(const char* str) {
     log::error(str);
     log::error("System will now halt.");
 
+    arch::cpu::cli();
+
     while (true) {
         arch::cpu::hlt();
     }
