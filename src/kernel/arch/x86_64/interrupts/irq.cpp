@@ -1,6 +1,6 @@
 /**
- * IRQ Dispatcher - C++ Interrupt Handling
- * ========================================
+ * @file irq.cpp
+ * @brief IRQ dispatcher and exception handling for interrupts.
  *
  * This is the C++ side of interrupt handling - where we actually DO something
  * in response to interrupts. The assembly stubs (isr.s) just save registers
@@ -87,6 +87,11 @@ namespace x86_64::irq {
     // Vectors 0-31 are exceptions (handled specially), 32-255 are IRQs.
     static irq_handler_fn irq_handlers[NUM_IRQ_HANDLERS] = {nullptr};
 
+    /**
+     * @brief Registers a callback function for a hardware IRQ vector.
+     * @param vector Interrupt vector number (must be > 31 for IRQs).
+     * @param handler Function to call when this interrupt fires.
+     */
     void register_irq_handler(const std::uint32_t vector, irq_handler_fn handler) {
         if (vector > EXC_MAX && vector < NUM_IRQ_HANDLERS) {
             irq_handlers[vector] = handler;
@@ -124,6 +129,10 @@ namespace x86_64::irq {
         "Reserved"
     };
 
+    /**
+     * @brief Decodes and logs page fault details from CR2 and error code.
+     * @param error The page fault error code pushed by the CPU.
+     */
     static void handle_page_fault(std::uint64_t error) {
         std::uint64_t fault_addr;
         asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
@@ -199,11 +208,15 @@ namespace x86_64::irq {
 // =============================================================================
 // Main Entry Point (called from isr.s)
 // =============================================================================
-//
-// This is extern "C" so the assembly can call it by name without C++ mangling.
-// It receives a pointer to the InterruptFrame on the stack, containing all
-// saved registers and the vector/error code pushed by the stub.
 
+/**
+ * @brief Main interrupt dispatcher called from assembly ISR stubs.
+ *
+ * This is extern "C" so the assembly can call it by name without C++ mangling.
+ * Dispatches to handle_exception() for vectors 0-31, or handle_irq() for 32+.
+ *
+ * @param frame Pointer to the saved register state and vector/error code.
+ */
 extern "C"
 void interrupt_handler(x86_64::irq::InterruptFrame* frame) {
     const auto vector = frame->vector;

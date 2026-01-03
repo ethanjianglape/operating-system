@@ -1,6 +1,6 @@
 /**
- * Legacy 8259 PIC (Programmable Interrupt Controller)
- * ====================================================
+ * @file pic.cpp
+ * @brief Legacy 8259 PIC driver — disables the PIC in favor of the APIC.
  *
  * What is the PIC?
  *
@@ -58,6 +58,14 @@
 #include <panic/panic.hpp>
 
 namespace x86_64::drivers::pic {
+    /**
+     * @brief Disables the legacy PIC by masking all IRQ lines.
+     *
+     * Writes 0xFF to both PIC data ports to mask all interrupts, then verifies
+     * the masks were applied. This must be called before enabling the APIC.
+     *
+     * @return true if successfully disabled, false otherwise (also panics on failure).
+     */
     bool init() {
         log::init_start("Legacy PIC");
 

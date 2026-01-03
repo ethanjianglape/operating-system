@@ -1,6 +1,6 @@
 /**
- * Programmable Interval Timer (8254 PIT)
- * =======================================
+ * @file pit.cpp
+ * @brief Programmable Interval Timer (8254 PIT) driver for APIC calibration.
  *
  * The PIT is a legacy timer chip dating back to the original IBM PC (1981).
  * It runs at exactly 1.193182 MHz - this frequency has been constant across
@@ -37,6 +37,14 @@ namespace x86_64::drivers::pit {
     //   - When it hits 0, the OUT pin goes high
     //   - Counter stops (one-shot, not periodic)
 
+    /**
+     * @brief Busy-waits for approximately the specified number of milliseconds.
+     *
+     * Uses PIT channel 0 in one-shot mode. Only used during early boot for
+     * APIC timer calibration — not suitable for general timing.
+     *
+     * @param ms Number of milliseconds to wait.
+     */
     void sleep_ms(std::uint32_t ms) {
         // Build the command byte for the PIT:
         //   Bits 6-7: Channel select (00 = channel 0)

@@ -92,6 +92,7 @@ typical C++ convention of documenting in headers, but is intentional:
 2. **Don't over-document** — If the code is self-explanatory, don't add a
    comment. Prefer clear naming over comments.
 
-3. **Hardware-specific code gets more comments** — Low-level hardware interaction (APIC, GDT, etc.) benefits from extensive comments explaining register layouts and magic numbers, since these can't be intuited.
+3. **Hardware-specific code gets more comments** — Low-level hardware interaction (APIC, GDT, etc.) 
+   benefits from extensive comments explaining register layouts and magic numbers, since these can't be intuited.
 
 4. **Keep comments updated** — Wrong comments are worse than no comments.

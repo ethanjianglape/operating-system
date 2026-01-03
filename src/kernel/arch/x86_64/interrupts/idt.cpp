@@ -1,6 +1,6 @@
 /**
- * Interrupt Descriptor Table (IDT) - 64-bit Long Mode
- * ====================================================
+ * @file idt.cpp
+ * @brief Interrupt Descriptor Table (IDT) initialization for 64-bit long mode.
  *
  * What is the IDT?
  *   The IDT tells the CPU what code to run when an interrupt occurs. An
@@ -122,6 +122,13 @@ namespace x86_64::idt {
     alignas(16) static IdtEntry idt_entries[IDT_MAX_DESCRIPTORS];
     alignas(16) static Idtr idtr;
 
+    /**
+     * @brief Configures an IDT entry for a specific interrupt vector.
+     * @param vector Interrupt vector number (0-255).
+     * @param isr_ptr Pointer to the interrupt service routine.
+     * @param ist Interrupt Stack Table index (0 = don't switch stacks, 1-7 = use IST entry).
+     * @param flags Attributes byte (IDT_KERNEL_INT or IDT_USER_INT).
+     */
     void set_descriptor(std::uint8_t vector, void* isr_ptr, std::uint8_t ist, std::uint8_t flags) {
         IdtEntry* desc = &idt_entries[vector];
 
@@ -139,6 +146,12 @@ namespace x86_64::idt {
         desc->reserved = 0x0;
     }
 
+    /**
+     * @brief Initializes all 256 IDT entries and loads the IDT into the CPU.
+     *
+     * All vectors default to kernel-only (DPL=0) except vector 0x80 (syscall)
+     * which is set to DPL=3 so userspace can trigger it via INT 0x80.
+     */
     void init() {
         log::init_start("IDT");
 

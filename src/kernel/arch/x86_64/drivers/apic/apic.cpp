@@ -241,7 +241,7 @@ namespace x86_64::drivers::apic {
      *   - EDX bit 9 = 1: APIC is present
      *   - EDX bit 9 = 0: No APIC (ancient CPU or disabled in BIOS)
      *
-     * @note Virtually all x86-64 CPUs have an APIC, but we check anyway.
+     * @note Virtually all x86-64 CPUs have an APIC, but good to check anyway.
      *
      * @return true if APIC is supported, false otherwise.
      */
