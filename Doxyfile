@@ -1,0 +1,62 @@
+# Doxyfile for OS kernel documentation
+
+#---------------------------------------------------------------------------
+# Project settings
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "OS Kernel"
+PROJECT_BRIEF          = "x86-64 hobby operating system"
+OUTPUT_DIRECTORY       = docs
+
+#---------------------------------------------------------------------------
+# Input settings
+#---------------------------------------------------------------------------
+INPUT                  = src/kernel
+RECURSIVE              = YES
+FILE_PATTERNS          = *.cpp *.hpp *.h
+
+# Also include the documentation standards file
+INPUT                  += DOCUMENTATION.md
+
+#---------------------------------------------------------------------------
+# Output settings
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+
+#---------------------------------------------------------------------------
+# Extraction settings
+#---------------------------------------------------------------------------
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+# We document in .cpp files, not headers
+EXTRACT_LOCAL_CLASSES  = YES
+
+#---------------------------------------------------------------------------
+# Source browsing
+#---------------------------------------------------------------------------
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+
+#---------------------------------------------------------------------------
+# Preprocessing
+#---------------------------------------------------------------------------
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = NO
+
+#---------------------------------------------------------------------------
+# Diagram settings (requires graphviz)
+#---------------------------------------------------------------------------
+HAVE_DOT               = NO
+# Set to YES and install graphviz for call graphs, inheritance diagrams, etc.
+
+#---------------------------------------------------------------------------
+# Warnings
+#---------------------------------------------------------------------------
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES

@@ -1,12 +1,3 @@
-#include "arch/x86_64/memory/vmm.hpp"
-#include "log/log.hpp"
-#include <cassert>
-#include <memory/slab.hpp>
-#include <arch.hpp>
-
-#include <cstddef>
-#include <cstdint>
-
 /**
  * @file slab.cpp
  * @brief Slab allocator for fixed-size kernel object allocation.
@@ -65,6 +56,14 @@
  *   Header:  40 bytes
  *   Chunks:  (4096 - 40) / 32 = 126 chunks per slab
  */
+
+#include <memory/slab.hpp>
+#include <log/log.hpp>
+#include <arch.hpp>
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace slab {
     static constexpr std::uint64_t SLAB_MAGIC = 0x51AB51AB51AB51AB; // 51AB == slab in leetspeak
