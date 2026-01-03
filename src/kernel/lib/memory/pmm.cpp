@@ -1,3 +1,20 @@
+/**
+ * @file pmm.cpp
+ * @brief Physical Memory Manager — bitmap-based frame allocator.
+ *
+ * The PMM tracks which 4KiB physical memory frames are free or in use.
+ * It uses a bitmap where each bit represents one frame:
+ *   - 0 = free
+ *   - 1 = used
+ *
+ * During boot, the bootloader (Limine) tells us which memory regions are
+ * usable. We mark those as free in the bitmap, then allocate from them
+ * as needed for page tables, kernel data structures, etc.
+ *
+ * This is a simple first-fit allocator. For contiguous allocations, it
+ * scans for consecutive free frames.
+ */
+
 #include <memory/pmm.hpp>
 #include <panic/panic.hpp>
 #include <fmt/fmt.hpp>
@@ -8,7 +25,7 @@
 #include <cstddef>
 
 namespace pmm {
-    // 1 bit used per frame, 0 = free, 1 = used
+    // Bitmap where each bit represents a 4KiB frame (0 = free, 1 = used)
     static std::size_t frame_bitmap[FRAME_BITMAP_SIZE];
     static std::size_t frame_bitmap_start;
     static std::size_t frame_bitmap_end;
@@ -54,6 +71,15 @@ namespace pmm {
         free_frames = 0;
     }
 
+    /**
+     * @brief Registers a region of physical memory as available for allocation.
+     *
+     * Called during boot for each usable memory region reported by Limine.
+     * Regions beyond MAX_MEMORY_BYTES are truncated or ignored.
+     *
+     * @param addr Physical start address of the region.
+     * @param len Length of the region in bytes.
+     */
     void add_free_memory(std::size_t addr, std::size_t len) {
         std::uint64_t end = addr + len;
 
@@ -117,6 +143,14 @@ namespace pmm {
         }
     }
 
+    /**
+     * @brief Allocates a single 4KiB physical frame.
+     *
+     * Uses first-fit search starting from the last allocation point.
+     *
+     * @return Physical address of the allocated frame.
+     * @throws Panics if no free frames are available.
+     */
     void* alloc_frame() {
         std::size_t frame = frame_bitmap_start;
 
@@ -135,6 +169,17 @@ namespace pmm {
         return nullptr;
     }
 
+    /**
+     * @brief Allocates multiple contiguous physical frames.
+     *
+     * Scans the entire bitmap for a run of consecutive free frames.
+     * Slower than single-frame allocation but necessary for DMA buffers
+     * and other hardware that requires physically contiguous memory.
+     *
+     * @param num_frames Number of contiguous frames to allocate.
+     * @return Physical address of the first frame.
+     * @throws Panics if not enough contiguous frames are available.
+     */
     void* alloc_contiguous_frames(std::size_t num_frames) {
         std::size_t consecutive = 0;
         std::size_t start_frame = 0;

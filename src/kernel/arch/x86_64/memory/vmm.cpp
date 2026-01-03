@@ -1,3 +1,33 @@
+/**
+ * @file vmm.cpp
+ * @brief Virtual Memory Manager — x86-64 paging and address space management.
+ *
+ * This module manages virtual memory through x86-64's 4-level page tables.
+ * It provides functions to map/unmap pages, allocate kernel memory, and
+ * create/switch address spaces for user processes.
+ *
+ * Page Table Hierarchy (4-level paging):
+ *
+ *   Virtual Address (48 bits used):
+ *   ┌────────┬────────┬────────┬────────┬──────────────┐
+ *   │ PML4   │ PDPT   │  PD    │  PT    │    Offset    │
+ *   │ [47:39]│ [38:30]│ [29:21]│ [20:12]│    [11:0]    │
+ *   └────────┴────────┴────────┴────────┴──────────────┘
+ *      9 bits   9 bits   9 bits   9 bits    12 bits
+ *
+ *   CR3 → PML4 → PDPT → PD → PT → Physical Page
+ *
+ * Higher Half Direct Map (HHDM):
+ *
+ *   Limine maps all physical memory at a fixed virtual offset (typically
+ *   0xFFFF800000000000). This lets us access any physical address by simply
+ *   adding the HHDM offset. We use this to access page tables themselves,
+ *   since they're stored in physical memory.
+ *
+ *   phys_to_virt(phys) = phys + hhdm_offset
+ *   virt_to_phys(virt) = virt - hhdm_offset  (for HHDM addresses)
+ */
+
 #include "vmm.hpp"
 
 #include <fmt/fmt.hpp>
@@ -25,6 +55,11 @@ namespace x86_64::vmm {
         return reinterpret_cast<T>(phys + get_hhdm_offset());
     }
 
+    /**
+     * @brief Walks the page table hierarchy to find the PTE for a virtual address.
+     * @param virt The virtual address to look up.
+     * @return Pointer to the page table entry, or nullptr if not mapped.
+     */
     PageTableEntry* get_pte(std::uintptr_t virt){
         const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
         const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
@@ -68,12 +103,18 @@ namespace x86_64::vmm {
         return pte->addr << 12;
     }
 
+    /**
+     * @brief Populates a page table entry with a physical address and flags.
+     * @param pte Pointer to the page table entry to modify.
+     * @param phys Physical address to map (must be page-aligned).
+     * @param flags Page flags (PAGE_PRESENT, PAGE_WRITE, PAGE_USER, etc.).
+     */
     void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags) {
         pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
         pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
         pte->us = (flags & PAGE_USER) ? 1 : 0;
         pte->pcd = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
-        pte->addr = phys >> 12;
+        pte->addr = phys >> 12; // the bottom 12 bits of the physical address are not stored
     }
 
     void zero_page(std::uintptr_t* virt) {
@@ -90,6 +131,16 @@ namespace x86_64::vmm {
         return virt;
     }
 
+    /**
+     * @brief Ensures a page table entry points to a valid next-level table.
+     *
+     * If the entry is not present, allocates a new physical frame, zeros it,
+     * and populates the entry. Used during page table walks to lazily create
+     * intermediate tables (PDPT, PD, PT) as needed.
+     *
+     * @param pte Pointer to the page table entry to check/populate.
+     * @param flags Flags to set on the entry if newly allocated.
+     */
     void ensure_table_present(PageTableEntry* pte, std::uint32_t flags) {
         if (!pte->p) {
             // Allocate a new 4KiB physical frame for this entry
@@ -103,6 +154,17 @@ namespace x86_64::vmm {
         }
     }
 
+    /**
+     * @brief Maps a virtual address to a physical address in the given page table.
+     *
+     * Walks the 4-level page table, creating intermediate tables as needed,
+     * then creates the final mapping. Invalidates the TLB entry for this address.
+     *
+     * @param pml4 The top-level page table (PML4) to modify.
+     * @param virt Virtual address to map (must be page-aligned).
+     * @param phys Physical address to map to (must be page-aligned).
+     * @param flags Page flags (PAGE_PRESENT, PAGE_WRITE, PAGE_USER, etc.).
+     */
     void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
         const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
         const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
@@ -127,6 +189,10 @@ namespace x86_64::vmm {
         map_page(kernel_pml4, virt, phys, flags);
     }
 
+    /**
+     * @brief Unmaps a virtual address and frees its physical frame.
+     * @param virt Virtual address to unmap.
+     */
     void unmap_page(std::uintptr_t virt) {
         PageTableEntry* pte = get_pte(virt);
 
@@ -214,6 +280,15 @@ namespace x86_64::vmm {
         return (hhdm_offset >> 39) & 0x1FF;
     }
 
+    /**
+     * @brief Creates a new PML4 for a user process.
+     *
+     * Allocates a new page table and copies the kernel's higher-half mappings
+     * (from HHDM index onwards) so the kernel is accessible from user space.
+     * The lower half is left empty for user mappings.
+     *
+     * @return Pointer to the new PML4 (virtual address).
+     */
     PageTableEntry* create_user_pml4() {
         auto phys = pmm::alloc_frame<std::uintptr_t>();
         auto* virt = phys_to_virt<std::uintptr_t*>(phys);
@@ -238,6 +313,10 @@ namespace x86_64::vmm {
         switch_pml4(kernel_pml4);
     }
 
+    /**
+     * @brief Initializes the Virtual Memory Manager.
+     * @param offset The HHDM offset provided by Limine.
+     */
     void init(std::uintptr_t offset) {
         log::init_start("VMM");
 

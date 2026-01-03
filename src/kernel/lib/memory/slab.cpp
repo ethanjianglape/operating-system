@@ -8,8 +8,8 @@
 #include <cstdint>
 
 /**
- * Slab Allocator
- * ==============
+ * @file slab.cpp
+ * @brief Slab allocator for fixed-size kernel object allocation.
  *
  * Organization:
  *   - Each SizeClass (32, 64, 128, 256, 512, 1024 bytes) maintains a
@@ -89,10 +89,15 @@ namespace slab {
         {5, SIZE_1024, 0, nullptr, chunks_per_slab(SIZE_1024)}
     };
 
-    // Slabs always exist on a 4K page boundary, so for any arbitrary
-    // address we can get the address of its page by masking it to
-    // the 4K page boundary. Returns nullptr if the address is not
-    // within a slab (magic number validation fails).
+    /**
+     * @brief Gets the Slab containing an address, if it's a valid slab allocation.
+     *
+     * Slabs always exist on a 4K page boundary, so we mask the address to find
+     * the page start, then validate the magic number.
+     *
+     * @param addr Any address potentially within a slab.
+     * @return Pointer to the Slab, or nullptr if not a valid slab address.
+     */
     Slab* try_get_slab(void* addr) {
         if (addr == nullptr) {
             return nullptr;
@@ -128,6 +133,15 @@ namespace slab {
         return nullptr;
     }
 
+    /**
+     * @brief Creates a new slab for a size class.
+     *
+     * Allocates a 4K page, initializes the slab header and free list,
+     * then inserts the slab at the head of the size class's slab list.
+     *
+     * @param sc The size class to create a slab for.
+     * @return Pointer to the new Slab.
+     */
     Slab* create_slab(SizeClass* sc) {
         void* page = arch::vmm::alloc_kpage();
         Slab* slab = reinterpret_cast<Slab*>(page);
@@ -169,6 +183,15 @@ namespace slab {
         return slab;
     }
 
+    /**
+     * @brief Destroys a slab and returns its page to the VMM.
+     *
+     * Unlinks the slab from its size class's doubly-linked list.
+     * Refuses to destroy the last slab in a size class.
+     *
+     * @param sc The size class the slab belongs to.
+     * @param slab The slab to destroy.
+     */
     void destroy_slab(SizeClass* sc, Slab* slab) {
         if (sc == nullptr || slab == nullptr) {
             log::warn("Attempt to destroy NULL slab");
@@ -198,6 +221,15 @@ namespace slab {
         arch::vmm::free_kpage(slab);
     }
 
+    /**
+     * @brief Allocates memory from the slab allocator.
+     *
+     * Finds the appropriate size class, locates a slab with free chunks
+     * (creating one if needed), and returns a chunk from the free list.
+     *
+     * @param size Number of bytes to allocate (max 1024).
+     * @return Pointer to the allocated memory.
+     */
     void* alloc(std::size_t size) {
         SizeClass* sc = get_size_class(size);
         Slab* slab = sc->first_slab;
@@ -218,6 +250,15 @@ namespace slab {
         return chunk;
     }
 
+    /**
+     * @brief Frees memory back to the slab allocator.
+     *
+     * Returns the chunk to its slab's free list. If the slab becomes
+     * completely empty and isn't the last slab in its size class, the
+     * slab is destroyed.
+     *
+     * @param addr Pointer previously returned by slab::alloc().
+     */
     void free(void* addr) {
         Slab* slab = try_get_slab(addr);
 
