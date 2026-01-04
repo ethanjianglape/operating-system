@@ -153,9 +153,19 @@ namespace tty {
         }
     }
 
+    void page_up() {
+        console::scroll_up();
+    }
+
+    void page_down() {
+        console::scroll_down();
+    }
+
     const kstring& read_line(std::size_t prompt_start) {
         while (true) {
             while (keyboard::KeyEvent* event = keyboard::read()) {
+                console::enable_cursor();
+                
                 keyboard::ScanCode scancode = event->scancode;
                 keyboard::ExtendedScanCode extended = event->extended_scancode;
 
@@ -188,15 +198,19 @@ namespace tty {
                     buffer_history_up();
                 } else if (extended == ExtendedScanCode::DownArrow) {
                     buffer_history_down();
+                } else if (extended == ExtendedScanCode::PageUp) {
+                    page_up();
+                } else if (extended == ExtendedScanCode::PageDown) {
+                    page_down();
                 }
 
                 console::disable_cursor();
                 console::set_cursor_x(prompt_start);
                 console::put(buffer);
-                console::set_cursor_x(prompt_start + buffer.size());
                 console::clear_to_eol();
-                console::enable_cursor();
                 console::set_cursor_x(prompt_start + buffer_index);
+                console::enable_cursor();
+                console::redraw();
             }
         }
     }

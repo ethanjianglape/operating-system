@@ -177,13 +177,13 @@ namespace shell {
         while (true) {
             kstring ps1 = pwd + " >";
             std::size_t prompt_start = ps1.size();
-            
+
             console::disable_cursor();
             console::put(ps1);
             console::enable_cursor();
-            console::set_cursor_x(prompt_start);
+            console::redraw();
+            
             const kstring& line = tty::read_line(prompt_start);
-            console::disable_cursor();
             dispatch_command(line);
             tty::reset();
         }

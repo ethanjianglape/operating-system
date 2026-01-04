@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <cstdint>
 
 namespace x86_64::vmm {

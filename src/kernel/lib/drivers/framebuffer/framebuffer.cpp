@@ -3,16 +3,20 @@
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
 #include <arch.hpp>
+#include <crt/crt.h>
 
 #include <cstdint>
 
 namespace drivers::framebuffer {
     static std::uint64_t fb_width;
     static std::uint64_t fb_height;
+    static std::uint64_t fb_num_pixels;
     static std::uint64_t fb_pitch;
     static std::uint16_t fb_bpp;
 
     static std::uint8_t* vram = nullptr;
+    static std::uint8_t* vram_end = nullptr;
+    static std::uint64_t vram_size;
 
     std::uint32_t get_screen_width() {
         return fb_width;
@@ -28,14 +32,21 @@ namespace drivers::framebuffer {
 
     void init(const FrameBufferInfo& info) {
         log::init_start("Framebuffer");
-        log::info("Framebuffer: ", info.width, "x", info.height, " @ ", info.bpp, " bpp (pitch=", info.pitch, ")");
-        log::info("VRAM: ", fmt::hex{info.vram});
         
         fb_width = info.width;
         fb_height = info.height;
+        fb_num_pixels = fb_width * fb_height;
         fb_pitch = info.pitch;
         fb_bpp = info.bpp;
+        
+        vram_size = fb_num_pixels * (fb_bpp / 8);
         vram = info.vram;
+        vram_end = vram + vram_size;
+
+        log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
+        log::info("Framebuffer # pixels: ", fb_num_pixels);
+        log::info("VRAM: ", fmt::hex{vram});
+        log::info("VRAM Size: ", vram_size);
 
         log::init_end("Framebuffer");
     }
@@ -84,10 +95,12 @@ namespace drivers::framebuffer {
     }
 
     void clear(std::uint32_t color) {
-        for (std::uint32_t y = 0; y < fb_height; y++) {
-            for (std::uint32_t x = 0; x < fb_width; x++) {
-                draw_pixel(x, y, color);
-            }
+        auto* start = reinterpret_cast<std::uint32_t*>(vram);
+        auto* end = reinterpret_cast<std::uint32_t*>(vram_end);
+
+        while (start != end) {
+            *start = color;
+            start++;
         }
     }
 

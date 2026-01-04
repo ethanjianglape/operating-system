@@ -1,3 +1,4 @@
+#include "log/log.hpp"
 #include <cstdint>
 #include <timer/timer.hpp>
 
@@ -10,7 +11,7 @@ namespace timer {
     
     void tick() {
         ticks++;
-        
+
         if (handler) {
             handler(ticks);
         }

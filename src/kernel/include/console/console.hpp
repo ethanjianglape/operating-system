@@ -4,6 +4,13 @@
 #include <cstdint>
 
 namespace console {
+    struct ConsoleChar {
+        char c;
+        std::uint32_t fg;
+        std::uint32_t bg;
+        bool dirty;
+    };
+    
     enum class RgbColor : std::uint32_t {
         BLACK   = 0x00000000,
         WHITE   = 0x00FFFFFF,
@@ -23,7 +30,6 @@ namespace console {
     void move_cursor(std::int32_t dx, std::int32_t dy);
 
     void draw_cursor();
-    void clear_cursor();
 
     void clear_to_eol();
 
@@ -34,6 +40,10 @@ namespace console {
     void hide_cursor();
     void toggle_cursor();
 
+    void scroll_up();
+    void scroll_down();
+    void scroll_into_view();
+    
     void scroll();
     void newline();
     
@@ -45,6 +55,9 @@ namespace console {
     std::uint32_t get_current_bg();
 
     void clear();
+
+    void redraw(bool draw_clean = false);
+    void draw_character_buffer();
 
     void backspace();
 
