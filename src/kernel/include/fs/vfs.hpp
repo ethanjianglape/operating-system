@@ -58,6 +58,22 @@ namespace fs {
 
     constexpr Inode NULL_INODE = {};
 
+    struct File;
+
+    using fileops_read_fn = std::size_t (*)(File* file, char* buffer, std::size_t len);
+    using fileops_write_fn = std::size_t (*)(File* file, const char* buffer, std::size_t len);
+    using fileops_close_fn = int (*)(File*);
+
+    struct FileOps {
+        fileops_read_fn read;
+        fileops_write_fn write;
+        fileops_close_fn close;
+    };
+
+    struct File {
+        FileOps* ops;
+    };
+
     int open(const char* path, int flags);
     int close(int fd);
     int read(int fd, void* buffer, std::size_t count);

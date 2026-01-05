@@ -184,6 +184,7 @@ namespace shell {
             console::redraw();
             
             const kstring& line = tty::read_line(prompt_start);
+            console::disable_cursor();
             dispatch_command(line);
             tty::reset();
         }
