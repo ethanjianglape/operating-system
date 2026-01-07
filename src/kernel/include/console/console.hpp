@@ -24,6 +24,8 @@ namespace console {
 
     void init();
 
+    std::size_t get_cursor_x();
+
     void set_cursor(std::uint32_t x, std::uint32_t y);
     void set_cursor_x(std::uint32_t x);
     void set_cursor_y(std::uint32_t y);

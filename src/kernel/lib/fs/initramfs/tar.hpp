@@ -2,9 +2,11 @@
 
 #include "containers/kstring.hpp"
 #include "containers/kvector.hpp"
-#include "fs/vfs.hpp"
+#include <fs/fs.hpp>
+
 #include <cstddef>
 #include <cstdint>
+
 namespace fs::initramfs::tar {
     struct TarHeader {
         char filename[100];   // null-terminated

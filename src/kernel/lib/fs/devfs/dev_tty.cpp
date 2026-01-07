@@ -1,27 +1,29 @@
-#include "containers/kvector.hpp"
-#include <arch.hpp>
+#include "log/log.hpp"
+#include <fs/devfs/dev_tty.hpp>
 #include <console/console.hpp>
+#include <containers/kvector.hpp>
 #include <containers/kstring.hpp>
-#include <log/log.hpp>
-#include <tty/tty.hpp>
+#include <crt/crt.h>
+#include <arch.hpp>
 
-#include <cstddef>
-#include <cstdint>
-
-namespace tty {
+namespace fs::devfs::tty {
     namespace keyboard = arch::drivers::keyboard;
     
     using ScanCode = keyboard::ScanCode;
     using ExtendedScanCode = keyboard::ExtendedScanCode;
-
-    //constexpr std::size_t BUFFER_LEN = 512;
-    //static char buffer[BUFFER_LEN] = {'\0'};
 
     static kstring buffer{};
     static kvector<kstring> history{};
 
     static std::size_t buffer_index = 0;
     static std::size_t history_index = 0;
+    
+    static FileOps tty_ops = {
+        .read = read,
+        .write = write,
+        .stat = nullptr,
+        .close = close
+    };
 
     // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
     // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -162,7 +164,9 @@ namespace tty {
         console::scroll_down();
     }
 
-    const kstring& read_line(std::size_t prompt_start) {
+    FileOps* get_tty_ops() { return &tty_ops; }
+    
+    std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
         while (true) {
             while (keyboard::KeyEvent* event = keyboard::read()) {
                 console::enable_cursor();
@@ -187,8 +191,14 @@ namespace tty {
                     delete_back();
                 } else if (scancode == ScanCode::Enter) {
                     add_buffer_history();
+
+                    int len = buffer.size();
+                    memcpy(buff, buffer.data(), len);
+                    console::newline();
+                    buffer = "";
+                    buffer_index = 0;
                     
-                    return buffer;
+                    return len;
                 } else if (extended == ExtendedScanCode::LeftArrow) {
                     move_left();
                 } else if (extended == ExtendedScanCode::RightArrow) {
@@ -205,25 +215,39 @@ namespace tty {
                     page_down();
                 }
 
+                int len = buffer.size();
+
+                log::debug("buffer len = ", len);
+
                 console::disable_cursor();
-                console::set_cursor_x(prompt_start);
+
+                if (len > 0) {
+                    console::move_cursor(-len + 1, 0);
+                }
+
                 console::put(buffer);
                 console::clear_to_eol();
-                console::set_cursor_x(prompt_start + buffer_index);
                 console::enable_cursor();
                 console::redraw();
             }
         }
     }
 
-    void reset() {
-        buffer = "";
-        buffer_index = 0;
+    std::intmax_t write(FileDescriptor* desc, const void* buffer, std::size_t count) {
+
+        
+        const auto* cbuffer = reinterpret_cast<const char*>(buffer);
+        kstring str(cbuffer, count);
+
+        log::debug("tty write: ", str);
+
+        console::put(str);
+        console::redraw();
+
+        return str.size();
     }
 
-    void init() {
-        console::init();
-
-        reset();
+    std::intmax_t close(FileDescriptor* desc) {
+        return 0;
     }
 }

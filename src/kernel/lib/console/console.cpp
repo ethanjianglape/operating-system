@@ -1,4 +1,5 @@
 #include "containers/kvector.hpp"
+#include "fmt/fmt.hpp"
 #include <containers/kstring.hpp>
 #include <cstddef>
 #include <log/log.hpp>
@@ -61,10 +62,6 @@ namespace console {
         screen_rows = fb::get_screen_height() / fonts::FONT_HEIGHT;
 
         cursor_enabled = true;
-
-        for (std::size_t row = 0; row < screen_rows; row++) {
-            //dirty.push_back(kvector<bool>(screen_cols, false));
-        }
         
         log::info("Console size: ", screen_cols, "x", screen_rows, " characters");
         log::info("Console font: ", fonts::FONT_WIDTH, "x", fonts::FONT_HEIGHT, " pixels");
@@ -98,6 +95,8 @@ namespace console {
             buffer[cursor_row][col].dirty = true;
         }
     }
+
+    std::size_t get_cursor_x() { return cursor_col; }
 
     void set_cursor_x(std::uint32_t x) {
         set_cursor(x, cursor_row);
@@ -242,6 +241,59 @@ namespace console {
         return 1;
     }
 
+    void parse_escape(kstring::const_iterator& iter, kstring::const_iterator& str_end) {
+        if (*iter != '\033' || *(iter + 1) != '[') {
+            return;
+        }
+
+        iter += 2;
+
+        char func = '\0';
+        int params[8];
+        std::size_t pi = 0;
+
+        while (iter != str_end) {
+            char c = *iter;
+
+            if (c == ';') {
+                continue;
+            }
+
+            if (fmt::is_numeric(c)) {
+                params[pi++] = fmt::parse_int(c);
+            } else if (fmt::is_alpha(c)) {
+                func = c;
+                break;
+            }
+            
+            ++iter;
+        }
+
+        if (func == '\0') {
+            log::warn("Invalid ANSI function");
+            return;
+        }
+    }
+
+    int put(const kstring& str) {
+        auto begin = str.begin();
+        auto end = str.end();
+
+        while (begin != end) {
+            char c = *begin;
+
+            if (c == '\033') {
+                parse_escape(begin, end);
+            } else {
+                put(c);
+            }
+
+            ++begin;
+        }
+        
+        return 0;
+    }
+
     int put(const char* str) {
         int written = 0;
         
@@ -305,12 +357,6 @@ namespace console {
    }
 
     void redraw(bool draw_clean) {
-        log::debug("*** redrawing console ***");
-        log::debug("* cursor at row=", cursor_row, " col=", cursor_col);
-        log::debug("* viewport offset=", viewport_offset);
-        log::debug("* num lines=", buffer.size());
-        log::debug("*************************");
-
         if (draw_clean) {
             fb::clear(current_bg);
         }

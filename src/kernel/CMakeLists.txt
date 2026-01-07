@@ -56,11 +56,14 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/drivers/acpi/acpi.cpp
   ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
-  ${LIB_DIR}/fs/vfs.cpp
+  ${LIB_DIR}/fs/vfs/vfs.cpp
   ${LIB_DIR}/fs/initramfs/initramfs.cpp
   ${LIB_DIR}/fs/initramfs/tar.cpp
+  ${LIB_DIR}/fs/devfs/devfs.cpp
+  ${LIB_DIR}/fs/devfs/dev_tty.cpp
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
+  ${LIB_DIR}/syscall/fd/syscall_fd.cpp
 )
 
 # Test sources (compiled when KERNEL_TESTS is defined)

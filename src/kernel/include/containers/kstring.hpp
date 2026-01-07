@@ -72,6 +72,16 @@ class kstring final {
         const_iterator(const char* ptr) : _ptr{ptr} {}
         const char& operator*() const { return *_ptr; }
         const char* operator->() const { return _ptr; }
+        const_iterator operator+(int n) {
+            auto result = *this;
+            result._ptr += n;
+            return result;
+        }
+        const_iterator operator-(int n) {
+            auto result = *this;
+            result._ptr -= n;
+            return result;
+        }
         const_iterator& operator++() {
             _ptr++;
             return *this;

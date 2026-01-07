@@ -1,15 +1,13 @@
 #include <algo/algo.hpp>
 
 namespace algo {
-    kvector<kstring> split(const kstring& str, char delim) {
+    kvector<kstring> split(kstring::const_iterator begin, kstring::const_iterator end, char delim) {
         kvector<kstring> result{};
         kstring part = "";
-        
-        if (str.empty()) {
-            return result;
-        }
 
-        for (char c : str) {
+        while (begin != end) {
+            char c = *begin;
+
             if (c == delim) {
                 if (!part.empty()) {
                     result.push_back(part);
@@ -18,13 +16,19 @@ namespace algo {
             } else {
                 part += c;
             }
+
+            ++begin;
         }
 
         if (!part.empty()) {
             result.push_back(part);
         }
-        
+
         return result;
+    }
+    
+    kvector<kstring> split(const kstring& str, char delim) {
+        return split(str.begin(), str.end(), delim);
     }
 
     kstring join(const kvector<kstring>& parts, char delim) {
