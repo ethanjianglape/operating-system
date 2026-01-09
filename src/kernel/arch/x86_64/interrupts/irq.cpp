@@ -196,9 +196,11 @@ namespace x86_64::irq {
         }
     }
 
-    static void handle_irq(const std::uint64_t vector) {
+    static void handle_irq(InterruptFrame* frame) {
+        const auto vector = frame->vector;
+        
         if (irq_handlers[vector]) {
-            irq_handlers[vector](vector);
+            irq_handlers[vector](frame);
         } else {
             log::debug("Unhandled IRQ: vector ", vector, " (", fmt::hex{vector} ,")");
         }
@@ -224,6 +226,6 @@ void interrupt_handler(x86_64::irq::InterruptFrame* frame) {
     if (vector <= x86_64::irq::EXC_MAX) {
         x86_64::irq::handle_exception(frame);
     } else {
-        x86_64::irq::handle_irq(vector);
+        x86_64::irq::handle_irq(frame);
     }
 }

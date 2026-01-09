@@ -100,7 +100,7 @@ namespace x86_64::drivers::keyboard {
         }
     }
     
-    void keyboard_interrupt_handler(std::uint32_t vector) {
+    void keyboard_interrupt_handler(irq::InterruptFrame* frame) {
         std::uint8_t byte = cpu::inb(0x60);
 
         if (byte == EXTENDED_PREFIX) {

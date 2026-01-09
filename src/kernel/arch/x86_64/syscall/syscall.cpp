@@ -6,6 +6,11 @@
 
 #include <cstdint>
 
+extern constexpr std::size_t PER_CPU_SELF_OFFSET       = offsetof(x86_64::syscall::PerCPU, self);
+extern constexpr std::size_t PER_CPU_KERNEL_RSP_OFFSET = offsetof(x86_64::syscall::PerCPU, kernel_rsp);
+extern constexpr std::size_t PER_CPU_USER_RSP_OFFSET   = offsetof(x86_64::syscall::PerCPU, user_rsp);
+extern constexpr std::size_t PER_CPU_PROCESS_OFFSET    = offsetof(x86_64::syscall::PerCPU, process);
+
 static int sys_write(int fd, const char* buff, std::size_t count) {
     kstring str{buff, (int)count};
 
@@ -81,23 +86,33 @@ namespace x86_64::syscall {
         std::uint64_t star   = (0x10UL << 48) | (0x08UL << 32);
         std::uint64_t lstar  = reinterpret_cast<std::uint64_t>(syscall_entry);
         std::uint64_t sfmask = SFMASK_DF | SFMASK_IF | SFMASK_TF;
-        std::uint64_t efer = cpu::rdmsr(MSR_EFER) | EFER_SCE;
+        std::uint64_t efer   = cpu::rdmsr(MSR_EFER) | EFER_SCE;
 
+        per_cpu_data.self = &per_cpu_data;
         per_cpu_data.kernel_rsp = reinterpret_cast<std::uint64_t>(syscall_stack) + sizeof(syscall_stack);
         per_cpu_data.user_rsp = 0;
+        per_cpu_data.process = nullptr;
 
         cpu::wrmsr(MSR_STAR, star);
         cpu::wrmsr(MSR_LSTAR, lstar);
         cpu::wrmsr(MSR_SFMASK, sfmask);
         cpu::wrmsr(MSR_EFER, efer);
-        cpu::wrmsr(MSR_GS_BASE, 0);
-        cpu::wrmsr(MSR_KERNEL_GS_BASE, reinterpret_cast<std::uint64_t>(&per_cpu_data));
+        cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uint64_t>(&per_cpu_data));
+        cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
 
         log::info("STAR   = ", fmt::hex{star});
         log::info("LSTAR  = ", fmt::hex{lstar});
         log::info("SFMASK = ", fmt::hex{sfmask});
         log::info("EFER   = ", fmt::hex{efer});
         log::info("Per CPU: kernel stack = ", fmt::hex{per_cpu_data.kernel_rsp}, ", user stack = ", fmt::hex{per_cpu_data.user_rsp});
+    }
+
+    PerCPU* get_per_cpu() {
+        PerCPU* ptr;
+        
+        asm volatile("mov %%gs:%c1, %0" : "=r"(ptr) : "i"(PER_CPU_SELF_OFFSET) : "memory");
+        
+        return ptr;
     }
 
     void init() {

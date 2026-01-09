@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include <process/process.hpp>
+
 namespace x86_64::syscall {
     constexpr std::uint32_t SYSCALL_IRQ_VECTOR = 0x80;
     constexpr std::uint32_t SYSCALL_SYS_WRITE = 4;
@@ -36,9 +38,13 @@ namespace x86_64::syscall {
     };
 
     struct [[gnu::packed]] PerCPU {
+        PerCPU* self;
         std::uint64_t kernel_rsp;
         std::uint64_t user_rsp;
+        ::process::Process* process;
     };
 
     void init();
+
+    PerCPU* get_per_cpu();
 }

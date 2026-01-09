@@ -1,5 +1,6 @@
 #pragma once
 
+#include <containers/kstring.hpp>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -198,6 +199,10 @@ namespace fmt {
         }
 
         return result;
+    }
+
+    inline std::uintmax_t parse_uint(const kstring& str, NumberFormat format = NumberFormat::DEC) {
+        return parse_uint(str.c_str(), str.size(), format);
     }
 
     inline int parse_int(char c) {

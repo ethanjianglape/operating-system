@@ -406,8 +406,8 @@ namespace x86_64::drivers::apic {
      *
      * @warning Must call send_eoi() or no further timer interrupts will occur.
      */
-    void apic_timer_handler(std::uint32_t vector) {
-        timer::tick();
+    void apic_timer_handler(irq::InterruptFrame* frame) {
+        timer::tick(frame);
         send_eoi();
     }
 

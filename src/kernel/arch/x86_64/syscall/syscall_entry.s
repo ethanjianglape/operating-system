@@ -1,15 +1,17 @@
 .code64
 
 .extern syscall_dispatcher
+.extern PER_CPU_KERNEL_RSP_OFFSET
+.extern PER_CPU_USER_RSP_OFFSET
 
-.set KERNEL_RSP_OFFSET, 0
-.set USER_RSP_OFFSET, 8
+#.set PER_CPU_KERNEL_RSP_OFFSET, 0
+#.set PER_CPU_USER_RSP_OFFSET, 8
 
 .global syscall_entry
 syscall_entry:
     swapgs
-    mov %rsp, %gs:USER_RSP_OFFSET
-    mov %gs:KERNEL_RSP_OFFSET, %rsp
+    mov %rsp, %gs:PER_CPU_USER_RSP_OFFSET
+    mov %gs:PER_CPU_KERNEL_RSP_OFFSET, %rsp
 
     push %rax
     push %rbx
@@ -50,7 +52,7 @@ syscall_entry:
     # add 8 to the stack to skip it
     #add $8, %rsp
 
-    mov %gs:USER_RSP_OFFSET, %rsp
+    mov %gs:PER_CPU_USER_RSP_OFFSET, %rsp
     swapgs
     sysretq
 

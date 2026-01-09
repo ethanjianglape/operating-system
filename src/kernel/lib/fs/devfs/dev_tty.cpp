@@ -1,3 +1,4 @@
+#include "fmt/fmt.hpp"
 #include "log/log.hpp"
 #include <fs/devfs/dev_tty.hpp>
 #include <console/console.hpp>
@@ -65,6 +66,17 @@ namespace fs::devfs::tty {
     void insert_char(char c) {
         buffer.insert(buffer_index, c);
         buffer_index++;
+
+        console::erase_in_line(console::get_cursor_x(), console::get_screen_cols());
+        console::put(c);
+
+        for (std::size_t i = buffer_index; i < buffer.size(); i++) {
+            console::put(buffer[i]);
+        }
+
+        int len = buffer.size() - buffer_index;
+
+        console::move_cursor(-len, 0);
     }
 
     void delete_back() {
@@ -74,6 +86,17 @@ namespace fs::devfs::tty {
 
         buffer.erase(buffer_index - 1);
         buffer_index--;
+
+        console::move_cursor(-1, 0);
+        console::erase_in_line(console::get_cursor_x(), console::get_screen_cols());
+
+        for (std::size_t i = buffer_index; i < buffer.size(); i++) {
+            console::put(buffer[i]);
+        }
+
+        int len = buffer.size() - buffer_index;
+
+        console::move_cursor(-len, 0);
     }
 
     void delete_forward() {
@@ -82,30 +105,55 @@ namespace fs::devfs::tty {
         }
 
         buffer.erase(buffer_index);
+
+        console::erase_in_line(console::get_cursor_x(), console::get_screen_cols());
+
+        for (std::size_t i = buffer_index; i < buffer.size(); i++) {
+            console::put(buffer[i]);
+        }
+
+        int len = buffer.size() - buffer_index;
+
+        console::move_cursor(-len, 0);
     }
 
     void move_left() {
         if (buffer_index > 0) {
             buffer_index--;
+            console::move_cursor(-1, 0);
         }
     }
 
     void move_right() {
         if (buffer_index < buffer.size()) {
             buffer_index++;
+            console::move_cursor(1, 0);
         }
     }
 
     void move_to_start() {
+        if (buffer_index == 0) {
+            return;
+        }
+
+        console::move_cursor(-buffer_index, 0);
         buffer_index = 0;
     }
 
     void move_to_end() {
+        if (buffer_index == buffer.size()) {
+            return;
+        }
+
+        std::size_t len = buffer.size() - buffer_index;
+        console::move_cursor(len, 0);
+        
         buffer_index = buffer.size();
     }
 
     void delete_to_end() {
         buffer.truncate(buffer_index);
+        console::erase_in_line(console::get_cursor_x(), console::get_screen_cols());
     }
 
     void add_buffer_history() {
@@ -124,12 +172,20 @@ namespace fs::devfs::tty {
 
     void buffer_history_up() {
         if (!history.empty() && history_index > 0) {
+            move_to_start();
+            delete_to_end();
+            
             buffer = history[--history_index];
             buffer_index = buffer.size();
+
+            console::put(buffer);
         }
     }
 
     void buffer_history_down() {
+        move_to_start();
+        delete_to_end();
+        
         if (history_index + 1 < history.size()) {
             buffer = history[++history_index];
             buffer_index = buffer.size();
@@ -138,6 +194,8 @@ namespace fs::devfs::tty {
             buffer_index = buffer.size();
             history_index = history.size();
         }
+
+        console::put(buffer);
     }
 
     void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode extended) {
@@ -169,8 +227,6 @@ namespace fs::devfs::tty {
     std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
         while (true) {
             while (keyboard::KeyEvent* event = keyboard::read()) {
-                console::enable_cursor();
-                
                 keyboard::ScanCode scancode = event->scancode;
                 keyboard::ExtendedScanCode extended = event->extended_scancode;
 
@@ -215,27 +271,12 @@ namespace fs::devfs::tty {
                     page_down();
                 }
 
-                int len = buffer.size();
-
-                log::debug("buffer len = ", len);
-
-                console::disable_cursor();
-
-                if (len > 0) {
-                    console::move_cursor(-len + 1, 0);
-                }
-
-                console::put(buffer);
-                console::clear_to_eol();
-                console::enable_cursor();
                 console::redraw();
             }
         }
     }
 
     std::intmax_t write(FileDescriptor* desc, const void* buffer, std::size_t count) {
-
-        
         const auto* cbuffer = reinterpret_cast<const char*>(buffer);
         kstring str(cbuffer, count);
 

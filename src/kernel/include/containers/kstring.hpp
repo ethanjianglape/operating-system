@@ -1,6 +1,7 @@
 #pragma once
 
 #include <crt/crt.h>
+#include <cstdint>
 #include <memory/memory.hpp>
 
 #include <cstddef>
@@ -81,6 +82,12 @@ class kstring final {
             auto result = *this;
             result._ptr -= n;
             return result;
+        }
+        std::ptrdiff_t operator-(const const_iterator& other) {
+            auto a = reinterpret_cast<std::uintptr_t>(this->_ptr);
+            auto b = reinterpret_cast<std::uintptr_t>(other._ptr);
+
+            return a - b;
         }
         const_iterator& operator++() {
             _ptr++;

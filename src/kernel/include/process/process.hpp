@@ -1,6 +1,7 @@
 #pragma once
 
 #include "containers/kvector.hpp"
+#include "fs/fs.hpp"
 #include <arch.hpp>
 
 #include <cstddef>
@@ -30,10 +31,17 @@ namespace process {
         // VMM page info
         kvector<ProcessAllocation> allocations;
 
+        // File Descriptors
+        kvector<fs::FileDescriptor> fd_table;
+
         // Save CPU state
         std::uintptr_t rip;
         std::uintptr_t rsp;
         std::uintptr_t rflags;
+
+        std::uint64_t cs, ss;
+        std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+        std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
     };
     
     void load(std::uint8_t* buffer, std::size_t size);

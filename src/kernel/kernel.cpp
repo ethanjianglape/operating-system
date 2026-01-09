@@ -1,5 +1,10 @@
-#include "fs/devfs/devfs.hpp"
+#include "fs/fs.hpp"
+#include "fs/initramfs/initramfs.hpp"
+#include "fs/vfs/vfs.hpp"
+#include "process/process.hpp"
+#include "scheduler/scheduler.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
+#include <cstdint>
 #include <shell/shell.hpp>
 #include <arch/x86_64/syscall/syscall.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
@@ -45,7 +50,18 @@ void kernel_main() {
     test::run_all();
 #endif
 
-    shell::init();
+    console::init();
+    scheduler::init();
+
+    std::uint8_t buff[1024];
+
+    fs::Inode inode = fs::vfs::lookup("/bin/hello", fs::O_RDONLY);
+
+    fs::initramfs::read(&inode, buff, inode.size, 0);
+
+    process::load(buff, inode.size);
+
+    //shell::init();
 
     while (true) {
         x86_64::cpu::hlt();

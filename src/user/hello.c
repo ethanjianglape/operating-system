@@ -13,6 +13,11 @@ void write(int fd, const char* str, int size) {
 void _start(void) {
     // Loop forever for now - no way to exit without syscalls
 
+    asm volatile("cli");
+
+    while (1) {};
+
+    /*
     char* str = "\nhello from userspace!\n";
     char* len = str;
 
@@ -23,4 +28,5 @@ void _start(void) {
     while (1) {
         // TODO: syscall to exit
     }
+    */
 }

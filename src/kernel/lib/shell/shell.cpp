@@ -178,7 +178,7 @@ namespace shell {
 
         const char* prompt = "> $";
         char buffer[512];
-        
+
         while (true) {
             syscall::fd::sys_write(fd, prompt, 3);
 
@@ -188,6 +188,10 @@ namespace shell {
                 buffer[n] = '\0';
 
                 kstring line{buffer};
+
+                syscall::fd::sys_write(fd, "command: ", 10);
+                syscall::fd::sys_write(fd, buffer, n);
+                syscall::fd::sys_write(fd, "\n", 1);
 
                 log::debug("console read: ", line);
             }

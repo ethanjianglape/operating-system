@@ -7,10 +7,12 @@
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <arch/x86_64/process/process.hpp>
 
+
 // Allows kernel library code to indirectly access the current CPU architecture
 namespace arch {
     namespace vmm = ::x86_64::vmm;
     namespace cpu = ::x86_64::cpu;
+    namespace irq = ::x86_64::irq;
     namespace drivers = ::x86_64::drivers;
     namespace process = ::x86_64::process;
 }

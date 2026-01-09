@@ -1,23 +1,24 @@
-#include "log/log.hpp"
-#include <cstdint>
 #include <timer/timer.hpp>
+#include <containers/kvector.hpp>
+#include <cstdint>
 
 namespace timer {
-    static TickHandler handler = nullptr;
-
+    static kvector<TickHandler> handlers;
     static std::uintmax_t ticks = 0;
 
     std::uintmax_t get_ticks() { return ticks; }
     
-    void tick() {
+    void tick(arch::irq::InterruptFrame* frame) {
         ticks++;
 
-        if (handler) {
-            handler(ticks);
+        for (auto&& handler : handlers) {
+            if (handler) {
+                handler(ticks, frame);
+            }
         }
     }
 
     void register_handler(TickHandler h) {
-        handler = h;
+        handlers.push_back(h);
     }
 }

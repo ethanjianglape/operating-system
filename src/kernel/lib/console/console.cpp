@@ -1,3 +1,4 @@
+#include "console/ansi.hpp"
 #include "containers/kvector.hpp"
 #include "fmt/fmt.hpp"
 #include <containers/kstring.hpp>
@@ -96,7 +97,15 @@ namespace console {
         }
     }
 
+    void erase_in_line(std::size_t from, std::size_t to) {
+        for (std::size_t col = from; col < to; col++){
+            buffer[cursor_row][col].c = ' ';
+            buffer[cursor_row][col].dirty = true;
+        }
+    }
+
     std::size_t get_cursor_x() { return cursor_col; }
+    std::size_t get_screen_cols() { return screen_cols; }
 
     void set_cursor_x(std::uint32_t x) {
         set_cursor(x, cursor_row);
@@ -129,8 +138,13 @@ namespace console {
         }
 
         ensure_valid_cursor_buffer_pos(row, col);
+
+        draw_cursor();
+        
         cursor_col = col;
         cursor_row = row;
+
+        draw_cursor();
 
         if (cursor_col >= screen_cols) {
             newline();
@@ -241,40 +255,6 @@ namespace console {
         return 1;
     }
 
-    void parse_escape(kstring::const_iterator& iter, kstring::const_iterator& str_end) {
-        if (*iter != '\033' || *(iter + 1) != '[') {
-            return;
-        }
-
-        iter += 2;
-
-        char func = '\0';
-        int params[8];
-        std::size_t pi = 0;
-
-        while (iter != str_end) {
-            char c = *iter;
-
-            if (c == ';') {
-                continue;
-            }
-
-            if (fmt::is_numeric(c)) {
-                params[pi++] = fmt::parse_int(c);
-            } else if (fmt::is_alpha(c)) {
-                func = c;
-                break;
-            }
-            
-            ++iter;
-        }
-
-        if (func == '\0') {
-            log::warn("Invalid ANSI function");
-            return;
-        }
-    }
-
     int put(const kstring& str) {
         auto begin = str.begin();
         auto end = str.end();
@@ -283,45 +263,14 @@ namespace console {
             char c = *begin;
 
             if (c == '\033') {
-                parse_escape(begin, end);
+                begin += ansi::parse_ansi_escape(begin, end);
             } else {
                 put(c);
+                ++begin;
             }
-
-            ++begin;
         }
         
         return 0;
-    }
-
-    int put(const char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
-    int put(const unsigned char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
-    int put(const kstring& str) {
-        int written = 0;
-
-        for (char c : str) {
-            written += put(c);
-        }
-
-        return written;
     }
 
     void set_color(std::uint32_t fg, std::uint32_t bg) {
@@ -359,6 +308,10 @@ namespace console {
     void redraw(bool draw_clean) {
         if (draw_clean) {
             fb::clear(current_bg);
+        }
+
+        if (cursor_enabled && cursor_within_viewport()) {
+            draw_cursor();
         }
 
         for (std::size_t row = viewport_offset; row < buffer.size(); row++) {
