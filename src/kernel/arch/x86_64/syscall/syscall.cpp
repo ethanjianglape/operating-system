@@ -1,4 +1,5 @@
 #include "syscall.hpp"
+#include "syscall/fd/syscall_fd.hpp"
 
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
@@ -63,10 +64,14 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     log::debug("arg6 = ", arg6, " (", fmt::hex{arg6}, ")");
     log::debug("RCX  = ", fmt::hex{frame->rcx});
     log::debug("R11  = ", fmt::hex{frame->r11});
+    log::debug("CS   = ", fmt::hex{frame->cs});
+    log::debug("SS   = ", fmt::hex{frame->ss});
 
     switch (frame->rax) {
     case SYS_WRITE:
-        return sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
+        return ::syscall::fd::sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
+    case SYS_READ:
+        return ::syscall::fd::sys_read(arg1, reinterpret_cast<char*>(arg2), arg3);
     default:
         log::error("Unsupported syscall: ", frame->rax);
         return ENOSYS;
@@ -74,37 +79,38 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
 }
 
 namespace x86_64::syscall {
-    static PerCPU per_cpu_data;
-
-    static std::uint8_t syscall_stack[4096 * 8];
-    
     void init_msr() {
         // STAR[63:48] = 0x10 (sysret base: +8=user data, +16=user code)
         // STAR[47:32] = 0x08 (syscall: CS=kernel code, SS=+8=kernel data)
         // STAR[31:0]  = 0x00 (reserved)
+
+        PerCPU* per_cpu_data = new PerCPU{};
 
         std::uint64_t star   = (0x10UL << 48) | (0x08UL << 32);
         std::uint64_t lstar  = reinterpret_cast<std::uint64_t>(syscall_entry);
         std::uint64_t sfmask = SFMASK_DF | SFMASK_IF | SFMASK_TF;
         std::uint64_t efer   = cpu::rdmsr(MSR_EFER) | EFER_SCE;
 
-        per_cpu_data.self = &per_cpu_data;
-        per_cpu_data.kernel_rsp = reinterpret_cast<std::uint64_t>(syscall_stack) + sizeof(syscall_stack);
-        per_cpu_data.user_rsp = 0;
-        per_cpu_data.process = nullptr;
+        std::uintptr_t gs_base        = reinterpret_cast<std::uintptr_t>(per_cpu_data);
+        std::uintptr_t kernel_gs_base = 0;
+
+        per_cpu_data->self = per_cpu_data;
+        per_cpu_data->kernel_rsp = 0;
+        per_cpu_data->user_rsp = 0;
+        per_cpu_data->process = nullptr;
 
         cpu::wrmsr(MSR_STAR, star);
         cpu::wrmsr(MSR_LSTAR, lstar);
         cpu::wrmsr(MSR_SFMASK, sfmask);
         cpu::wrmsr(MSR_EFER, efer);
-        cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uint64_t>(&per_cpu_data));
-        cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
+        cpu::wrmsr(MSR_GS_BASE, gs_base);
+        cpu::wrmsr(MSR_KERNEL_GS_BASE, kernel_gs_base);
 
         log::info("STAR   = ", fmt::hex{star});
         log::info("LSTAR  = ", fmt::hex{lstar});
         log::info("SFMASK = ", fmt::hex{sfmask});
         log::info("EFER   = ", fmt::hex{efer});
-        log::info("Per CPU: kernel stack = ", fmt::hex{per_cpu_data.kernel_rsp}, ", user stack = ", fmt::hex{per_cpu_data.user_rsp});
+        log::info("Per CPU: kernel stack = ", fmt::hex{per_cpu_data->kernel_rsp}, ", user stack = ", fmt::hex{per_cpu_data->user_rsp});
     }
 
     PerCPU* get_per_cpu() {

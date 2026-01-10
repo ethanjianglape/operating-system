@@ -18,8 +18,6 @@ namespace fs::devfs {
 
     Inode open(const kstring& path, int flags) {
         if (path == "/tty1") {
-            console::init();
-            
             return {
                 .type = FileType::CHAR_DEVICE,
                 .size = 0,

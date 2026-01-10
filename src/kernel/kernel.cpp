@@ -1,3 +1,5 @@
+#include "fs/devfs/dev_tty.hpp"
+#include "fs/devfs/devfs.hpp"
 #include "fs/fs.hpp"
 #include "fs/initramfs/initramfs.hpp"
 #include "fs/vfs/vfs.hpp"
@@ -51,17 +53,8 @@ void kernel_main() {
 #endif
 
     console::init();
+    fs::devfs::tty::init();
     scheduler::init();
-
-    std::uint8_t buff[1024];
-
-    fs::Inode inode = fs::vfs::lookup("/bin/hello", fs::O_RDONLY);
-
-    fs::initramfs::read(&inode, buff, inode.size, 0);
-
-    process::load(buff, inode.size);
-
-    //shell::init();
 
     while (true) {
         x86_64::cpu::hlt();

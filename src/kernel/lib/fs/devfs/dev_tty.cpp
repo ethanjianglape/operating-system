@@ -1,5 +1,11 @@
+#include "arch/x86_64/syscall/syscall.hpp"
 #include "fmt/fmt.hpp"
+#include "fs/fs.hpp"
+#include "fs/initramfs/initramfs.hpp"
+#include "fs/vfs/vfs.hpp"
 #include "log/log.hpp"
+#include "process/process.hpp"
+#include "scheduler/scheduler.hpp"
 #include <fs/devfs/dev_tty.hpp>
 #include <console/console.hpp>
 #include <containers/kvector.hpp>
@@ -25,6 +31,10 @@ namespace fs::devfs::tty {
         .stat = nullptr,
         .close = close
     };
+
+    static process::Process* waiting_process;
+
+    process::Process* get_waiting_process() { return waiting_process; }
 
     // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
     // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -223,10 +233,38 @@ namespace fs::devfs::tty {
     }
 
     FileOps* get_tty_ops() { return &tty_ops; }
+
+    void init() {
+        log::init_start("/dev/tty");
+
+        Inode inode = vfs::lookup("/bin/hello", fs::O_RDONLY);
+        std::uint8_t* data = new std::uint8_t[inode.size];
+        initramfs::read(&inode, data, inode.size, 0);
+        process::Process* p = process::create_process(data, inode.size);
+
+        p->fd_table.push_back({});
+        p->fd_table.push_back({});
+        p->fd_table.push_back({});
+
+        p->fd_table[0].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stdin
+        p->fd_table[1].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stdout
+        p->fd_table[2].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stderr
+
+        scheduler::add_process(p);
+
+        log::init_end("/dev/tty");
+    }
     
     std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
+        auto* per_cpu = x86_64::syscall::get_per_cpu();
+        auto* process = per_cpu->process;
+
+        waiting_process = process;
+        buffer = "";
+        buffer_index = 0;
+
         while (true) {
-            while (keyboard::KeyEvent* event = keyboard::read()) {
+            while (keyboard::KeyEvent* event = keyboard::poll()) {
                 keyboard::ScanCode scancode = event->scancode;
                 keyboard::ExtendedScanCode extended = event->extended_scancode;
 
@@ -248,11 +286,11 @@ namespace fs::devfs::tty {
                 } else if (scancode == ScanCode::Enter) {
                     add_buffer_history();
 
-                    int len = buffer.size();
-                    memcpy(buff, buffer.data(), len);
+                    waiting_process = nullptr;
+                    std::size_t len = buffer.size();
+                    memcpy(buff, buffer.c_str(), len > count ? count : len);
                     console::newline();
-                    buffer = "";
-                    buffer_index = 0;
+                    log::debug("/dev/tty returning: ", buffer);
                     
                     return len;
                 } else if (extended == ExtendedScanCode::LeftArrow) {
@@ -273,6 +311,9 @@ namespace fs::devfs::tty {
 
                 console::redraw();
             }
+
+            log::debug("/dev/tty yielding");
+            scheduler::yield_blocked(waiting_process);
         }
     }
 

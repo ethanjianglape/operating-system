@@ -119,7 +119,7 @@ namespace shell {
 
                 syscall::fd::sys_read(fd, buffer, stat.size);
 
-                process::load(buffer, stat.size);
+                //process::load(buffer, stat.size);
 
                 syscall::fd::sys_close(fd);
                 kfree(buffer);

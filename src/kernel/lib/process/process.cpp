@@ -1,7 +1,6 @@
 #include "arch/x86_64/process/process.hpp"
 #include "arch/x86_64/memory/vmm.hpp"
 #include "containers/kvector.hpp"
-#include "scheduler/scheduler.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <process/process.hpp>
@@ -15,13 +14,15 @@ namespace process {
     constexpr std::size_t    USER_STACK_SIZE = 16 * 1024; // 16KiB
     constexpr std::uintptr_t USER_STACK_TOP  = USER_STACK_BASE + USER_STACK_SIZE;
 
+    constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024;
+
     static std::uint64_t g_pid = 1;
 
-    void load_elf(std::uint8_t* buffer, std::size_t size) {
+    Process* load_elf(std::uint8_t* buffer, std::size_t size) {
         elf::Elf64_File file = elf::parse_file(buffer, size);
 
         if (!file.is_valid_elf) {
-            return;
+            return nullptr;
         }
 
         arch::vmm::PageTableEntry* pml4 = arch::vmm::create_user_pml4();
@@ -34,6 +35,9 @@ namespace process {
         p->entry = file.entry;
         p->pml4 = pml4;
         p->fd_table = {};
+        p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+        p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
+        p->kernel_rsp_saved = p->kernel_rsp;
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;
@@ -91,15 +95,17 @@ namespace process {
 
         arch::vmm::switch_kernel_pml4();
 
-        scheduler::add_process(p);
+        return p;
     }
     
-    void load(std::uint8_t* buffer, std::size_t size) {
+    Process* create_process(std::uint8_t* buffer, std::size_t size) {
         if (buffer == nullptr) {
             log::error("Attempt to load program at NULL");
-            return;
+            return nullptr;
         }
         
-        load_elf(buffer, size);
+        Process* elf = load_elf(buffer, size);
+
+        return elf;
     }
 }

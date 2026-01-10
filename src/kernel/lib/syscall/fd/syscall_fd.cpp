@@ -49,7 +49,9 @@ namespace syscall::fd {
         process::Process* process = per_cpu->process;
         fs::FileDescriptor* desc = &process->fd_table[fd];
 
-        return desc->inode.ops->read(desc, buffer, count);
+        auto ret = desc->inode.ops->read(desc, buffer, count);
+
+        return ret;
     }
 
     int sys_write(int fd, const void* buffer, std::size_t count) {

@@ -28,6 +28,10 @@ namespace process {
         arch::vmm::PageTableEntry* pml4;
         std::uintptr_t entry;
 
+        std::uint8_t* kernel_stack;      // Base of kernel stack
+        std::uintptr_t kernel_rsp;       // Top of stack (initially)
+        std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
+
         // VMM page info
         kvector<ProcessAllocation> allocations;
 
@@ -44,5 +48,5 @@ namespace process {
         std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
     };
     
-    void load(std::uint8_t* buffer, std::size_t size);
+    Process* create_process(std::uint8_t* buffer, std::size_t size);
 }

@@ -1,12 +1,11 @@
-#include "arch/x86_64/memory/vmm.hpp"
-#include "arch/x86_64/syscall/syscall.hpp"
+#include "arch/x86_64/cpu/cpu.hpp"
 #include "fmt/fmt.hpp"
-
 #include <scheduler/scheduler.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
 #include <timer/timer.hpp>
 #include <arch.hpp>
+#include <arch/x86_64/syscall/syscall.hpp>
 
 #include <cstdint>
 
@@ -19,14 +18,21 @@ namespace scheduler {
         process::Process* current = per_cpu->process;
 
         if (current != nullptr) {
-            current->state = process::ProcessState::READY;
+            if (frame->cs == 0x08) {
+                return;
+            }
+            
+            per_cpu->process = nullptr;
+
+            if (current->state == process::ProcessState::RUNNING) {
+                current->state = process::ProcessState::READY;                
+            }
 
             // Save CPU state from interrupt frame
             current->rip = frame->rip;
             current->rsp = frame->rsp;
             current->rflags = frame->rflags;
             current->cs = frame->cs;
-            current->ss = frame->ss;
 
             // General purpose registers
             current->rax = frame->rax;
@@ -49,25 +55,12 @@ namespace scheduler {
 
         for (auto* p : processes) {
             if (p->state == process::ProcessState::READY) {
-                if (false) {
-                    log::debug("ready process found, pid=", p->pid);
-                    log::debug("p->rip    = ", fmt::hex{p->rip});
-                    log::debug("p->rsp    = ", fmt::hex{p->rsp});
-                    log::debug("p->rflags = ", fmt::hex{p->rflags});
-                    log::debug("p->cs     = ", fmt::hex{p->cs});
-                    log::debug("p->ss     = ", fmt::hex{p->ss});
-                    log::debug("p->rax    = ", fmt::hex{p->rax});
-                    log::debug("p->rbx    = ", fmt::hex{p->rbx});
-                    log::debug("p->rcx    = ", fmt::hex{p->rcx});
-                    log::debug("p->rdx    = ", fmt::hex{p->rdx});
-                    log::debug("p->rsi    = ", fmt::hex{p->rsi});
-                    log::debug("p->rdi    = ", fmt::hex{p->rdi});
-                    log::debug("p->rbp    = ", fmt::hex{p->rbp});
-                    log::debug("p->pml4   = ", fmt::hex{p->pml4});
-                }
-
                 p->state = process::ProcessState::RUNNING;
+                
                 per_cpu->process = p;
+                per_cpu->kernel_rsp = p->kernel_rsp;
+
+                arch::vmm::switch_pml4(p->pml4);
 
                 // Restore CPU state to interrupt frame
                 frame->rip = p->rip;
@@ -94,10 +87,27 @@ namespace scheduler {
                 frame->r14 = p->r14;
                 frame->r15 = p->r15;
 
-                arch::vmm::switch_pml4(p->pml4);
-
                 return;
             }
+        }
+    }
+
+    void yield_blocked(process::Process* process) {
+        //auto* per_cpu = x86_64::syscall::get_per_cpu();
+        //auto* process = per_cpu->process;
+
+        log::debug("yield process = ", fmt::hex{process});
+
+        if (process == nullptr) {
+            log::warn("per_cpu->process is null, nothing to yield");
+            return;
+        }
+
+        process->state = process::ProcessState::BLOCKED;
+
+        while (process->state == process::ProcessState::BLOCKED) {
+            arch::cpu::sti();
+            arch::cpu::hlt();
         }
     }
 

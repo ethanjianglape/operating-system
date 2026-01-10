@@ -25,7 +25,7 @@ namespace x86_64::syscall {
 
     constexpr std::uint64_t SYS_READ  = 0;
     constexpr std::uint64_t SYS_WRITE = 1;
-    constexpr std::uint64_t SYS_EXIT  = 60;    
+    constexpr std::uint64_t SYS_EXIT  = 60;
 
     enum class syscall_number : std::uint32_t {
         SYS_WRITE = 4,
@@ -33,7 +33,7 @@ namespace x86_64::syscall {
     };
 
     struct [[gnu::packed]] SyscallFrame {
-        std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+        std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;
         std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
     };
 

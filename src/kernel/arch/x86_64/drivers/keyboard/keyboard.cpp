@@ -1,4 +1,7 @@
 #include "keyboard.hpp"
+#include "fmt/fmt.hpp"
+#include "fs/devfs/dev_tty.hpp"
+#include "process/process.hpp"
 #include "scancodes.hpp"
 
 #include <arch/x86_64/drivers/apic/apic.hpp>
@@ -117,6 +120,13 @@ namespace x86_64::drivers::keyboard {
             handle_extended_key(scancode, released);
         } else {
             handle_standard_key(scancode, released);
+        }
+
+        // wake tty process that is waiting for keyboard, if any
+        auto* process = fs::devfs::tty::get_waiting_process();
+
+        if (process != nullptr && process->state == ::process::ProcessState::BLOCKED) {
+            process->state = ::process::ProcessState::READY;
         }
 
         apic::send_eoi();
