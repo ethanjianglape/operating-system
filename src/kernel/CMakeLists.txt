@@ -28,7 +28,7 @@ set(ARCH_KERNEL_SOURCES
   ${ARCH_DIR}/syscall/syscall_entry.s
   ${ARCH_DIR}/syscall/int80_entry.s
   ${ARCH_DIR}/memory/vmm.cpp
-  ${ARCH_DIR}/process/process.cpp
+  ${ARCH_DIR}/context/context_switch.s
 )
 
 set(ARCH_DRIVER_KERNEL_SOURCES
@@ -65,6 +65,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
   ${LIB_DIR}/syscall/fd/syscall_fd.cpp
+  ${LIB_DIR}/syscall/sys_sleep.cpp
   ${LIB_DIR}/scheduler/scheduler.cpp
 )
 

@@ -446,7 +446,7 @@ namespace x86_64::drivers::apic {
      */
     void timer_init() {
         constexpr std::uint32_t initial_count = 0xFFFFFFFF;  // Max value
-        constexpr std::uint32_t calibration_ms = 10;         // Calibrate over 10ms
+        constexpr std::uint32_t calibration_ms = 1;         // Calibrate over 1ms
 
         // Step 1: Configure divider and start counting
         //

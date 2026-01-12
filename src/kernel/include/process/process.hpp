@@ -1,5 +1,6 @@
 #pragma once
 
+#include "arch/x86_64/context/context.hpp"
 #include "containers/kvector.hpp"
 #include "fs/fs.hpp"
 #include <arch.hpp>
@@ -9,9 +10,10 @@
 
 namespace process {
     enum class ProcessState : std::uint8_t {
-        RUNNING = 1,
-        READY   = 2,
-        BLOCKED = 3
+        RUNNING  = 1,
+        READY    = 2,
+        BLOCKED  = 3,
+        SLEEPING = 4,
     };
     
     struct ProcessAllocation {
@@ -31,12 +33,16 @@ namespace process {
         std::uint8_t* kernel_stack;      // Base of kernel stack
         std::uintptr_t kernel_rsp;       // Top of stack (initially)
         std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
+        arch::context::ContextFrame* context_frame;
 
         // VMM page info
         kvector<ProcessAllocation> allocations;
 
         // File Descriptors
         kvector<fs::FileDescriptor> fd_table;
+
+        // Sleep
+        std::uint64_t wake_time_ms;
 
         // Save CPU state
         std::uintptr_t rip;

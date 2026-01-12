@@ -1,4 +1,3 @@
-#define SYS_READ  0
 #define SYS_WRITE 1
 #define SYS_SLEEP 35
 
@@ -31,44 +30,13 @@ ssize_t write(int fd, const char* buf, size_t count) {
     return syscall3(SYS_WRITE, fd, (unsigned long)buf, count);
 }
 
-ssize_t read(int fd, char* buf, size_t count) {
-    return syscall3(SYS_READ, fd, (unsigned long)buf, count);
-}
-
 ssize_t sleep_ms(unsigned long ms) {
     return syscall1(SYS_SLEEP, ms);
 }
 
-size_t strlen(const char* s) {
-    size_t len = 0;
-    while (*s++) len++;
-    return len;
-}
-
-void print(const char* s) {
-    write(1, s, strlen(s));
-}
-
 void _start(void) {
-    print("Hello from userspace!\n");
-
     while (1) {
-        print("/ >");
-        
-        char buf[128];
-        ssize_t n = read(0, buf, sizeof(buf) - 1);
-
-        if (n > 0) {
-            buf[n] = '\0';
-            print("You typed: ");
-            write(1, buf, n);
-            print("\n");
-        }
-
-        print("sleeping...\n");
-        sleep_ms(5000);
+        write(1, "B", 1);
+        sleep_ms(300);
     }
-
-
-    while (1) {}
 }

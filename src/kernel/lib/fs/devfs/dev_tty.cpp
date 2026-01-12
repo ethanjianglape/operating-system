@@ -234,10 +234,8 @@ namespace fs::devfs::tty {
 
     FileOps* get_tty_ops() { return &tty_ops; }
 
-    void init() {
-        log::init_start("/dev/tty");
-
-        Inode inode = vfs::lookup("/bin/hello", fs::O_RDONLY);
+    void run_tty_program(const kstring& name) {
+        Inode inode = vfs::lookup(name.c_str(), fs::O_RDONLY);
         std::uint8_t* data = new std::uint8_t[inode.size];
         initramfs::read(&inode, data, inode.size, 0);
         process::Process* p = process::create_process(data, inode.size);
@@ -251,6 +249,14 @@ namespace fs::devfs::tty {
         p->fd_table[2].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stderr
 
         scheduler::add_process(p);
+    }
+
+    void init() {
+        log::init_start("/dev/tty");
+
+        //run_tty_program("/bin/hello");
+        run_tty_program("/bin/a");
+        run_tty_program("/bin/b");
 
         log::init_end("/dev/tty");
     }

@@ -192,4 +192,95 @@ Anything else indicates corruption.
 
 ---
 
+## Context Switching (Kernel-to-Kernel)
+
+### Why yield_blocked() needs the same setup as schedule()
+
+When implementing `context_switch()` for blocking syscalls, you might think it's just about swapping stack pointers. But `yield_blocked()` needs to do everything `schedule()` does before switching:
+
+```cpp
+void yield_blocked(Process* process) {
+    Process* ready = find_ready_process();
+    if (ready != nullptr) {
+        // REQUIRED: Same setup as schedule()
+        per_cpu->process = ready;
+        per_cpu->kernel_rsp = ready->kernel_rsp;
+        switch_pml4(ready->pml4);
+        ready->state = RUNNING;
+
+        context_switch(&process->kernel_rsp_saved, ready->kernel_rsp_saved);
+    }
+}
+```
+
+**Why per_cpu->kernel_rsp matters**: When the new process eventually makes a syscall, `syscall_entry` loads RSP from `per_cpu->kernel_rsp`. If this points to the old process's stack, the new process's syscall will corrupt the old process's kernel stack.
+
+**Why switch_pml4 matters**: The new process has its own page tables. User addresses won't resolve correctly without switching.
+
+---
+
+### Why the userspace entry trampoline needs swapgs
+
+When a new process is first scheduled via `context_switch()`, it "returns" to a trampoline that does `iretq` to userspace. This trampoline **must** do `swapgs` before `iretq`:
+
+```asm
+userspace_entry_trampoline:
+    swapgs          # CRITICAL: Restore user GS before returning
+    push $0x1B      # SS
+    push %r14       # RSP
+    pushfq          # RFLAGS
+    push $0x23      # CS
+    push %r15       # RIP
+    iretq
+```
+
+**The bug without swapgs**:
+1. Process A makes syscall → `syscall_entry` does `swapgs` (now GS=kernel, KERNEL_GS=user)
+2. Process A blocks, `context_switch` to process B's trampoline
+3. Trampoline does `iretq` to process B's userspace (GS still = kernel!)
+4. Process B makes syscall → `swapgs` swaps wrong way (GS=user, KERNEL_GS=kernel)
+5. `mov %rsp, %gs:0x10` tries to write to user GS + 0x10 → page fault at ~0x10
+
+**The symptom**: Page fault at address 0x00000010 during syscall entry, with crash at `mov %rsp, %gs:0x10`.
+
+---
+
+### ContextFrame as a "launch packet" for new processes
+
+A new process has never called `context_switch()`, so its kernel stack has no saved context. We create a fake `ContextFrame` that `context_switch` will "restore":
+
+```cpp
+struct ContextFrame {
+    uint64_t r15, r14, r13, r12;  // Callee-saved registers
+    uint64_t rbx, rbp;
+    uint64_t rip;                  // Return address for 'ret'
+};
+
+// Setup for new process:
+frame->r15 = user_entry_point;     // Passed to trampoline
+frame->r14 = user_stack_top;       // Passed to trampoline
+frame->r13 = 0;                    // Unused
+frame->r12 = 0;                    // Unused
+frame->rbx = 0;
+frame->rbp = 0;
+frame->rip = trampoline_address;   // Where 'ret' jumps to
+```
+
+**The elegance**: `context_switch` doesn't know this is a new process. It pops registers, does `ret`, and "returns" to the trampoline with r14/r15 pre-loaded with the user entry point and stack. The trampoline builds an iretq frame and jumps to userspace.
+
+After the process runs and blocks, `context_switch` saves its *real* kernel context, overwriting the fake frame. From then on, it's a normal process.
+
+---
+
+### Two scheduling mechanisms, two return paths
+
+| Mechanism | Trigger | How it switches | Returns via |
+|-----------|---------|-----------------|-------------|
+| `schedule()` | Timer interrupt | Modifies interrupt frame | `iretq` (from ISR) |
+| `yield_blocked()` | Blocking syscall | `context_switch()` | `ret` → trampoline → `iretq` (new) or `ret` → back to yield_blocked (existing) |
+
+**Key insight**: `schedule()` "borrows" the timer's iretq to switch processes. `yield_blocked()` can't do this (there's no interrupt frame), so it needs `context_switch()` which saves/restores kernel context and uses `ret` to resume execution.
+
+---
+
 *Add new insights as you discover them. Future you (and other developers) will thank you.*

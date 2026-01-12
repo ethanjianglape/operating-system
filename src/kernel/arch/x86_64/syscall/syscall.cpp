@@ -1,5 +1,6 @@
 #include "syscall.hpp"
 #include "syscall/fd/syscall_fd.hpp"
+#include "syscall/sys_sleep.hpp"
 
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
@@ -46,7 +47,12 @@ void syscall_entry();
 extern "C"
 std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     using namespace x86_64::syscall;
-    
+
+    auto* per_cpu = get_per_cpu();
+    log::debug("SYSCALL from pid=", per_cpu->process ? per_cpu->process->pid : 0,
+               " per_cpu->kernel_rsp=", fmt::hex{per_cpu->kernel_rsp},
+               " actual RSP ~", fmt::hex{(uint64_t)frame});
+
     std::uint64_t syscall_num = frame->rax;
     std::uint64_t arg1 = frame->rdi;
     std::uint64_t arg2 = frame->rsi;
@@ -72,6 +78,8 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
         return ::syscall::fd::sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
     case SYS_READ:
         return ::syscall::fd::sys_read(arg1, reinterpret_cast<char*>(arg2), arg3);
+    case SYS_SLEEP_MS:
+        return ::syscall::sys_sleep_ms(arg1);
     default:
         log::error("Unsupported syscall: ", frame->rax);
         return ENOSYS;

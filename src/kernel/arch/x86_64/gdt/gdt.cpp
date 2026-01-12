@@ -220,6 +220,10 @@ namespace x86_64::gdt {
 
         tss.rsp0 = reinterpret_cast<std::uint64_t>(kernel_stack) + sizeof(kernel_stack);
         tss.iopb_offset = sizeof(TssEntry);
+
+        log::debug("TSS kernel_stack @ ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack)});
+        log::debug("TSS kernel_stack top = ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack + sizeof(kernel_stack))});
+        
     }
 
     /**

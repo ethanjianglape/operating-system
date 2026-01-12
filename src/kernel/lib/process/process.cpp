@@ -1,6 +1,6 @@
-#include "arch/x86_64/process/process.hpp"
-#include "arch/x86_64/memory/vmm.hpp"
+#include "arch/x86_64/context/context.hpp"
 #include "containers/kvector.hpp"
+#include "fmt/fmt.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <process/process.hpp>
@@ -17,6 +17,8 @@ namespace process {
     constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024;
 
     static std::uint64_t g_pid = 1;
+
+    extern "C" void userspace_entry_trampoline();
 
     Process* load_elf(std::uint8_t* buffer, std::size_t size) {
         elf::Elf64_File file = elf::parse_file(buffer, size);
@@ -37,7 +39,7 @@ namespace process {
         p->fd_table = {};
         p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
         p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
-        p->kernel_rsp_saved = p->kernel_rsp;
+        p->wake_time_ms = 0;
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;
@@ -93,7 +95,27 @@ namespace process {
         p->r14 = 0;
         p->r15 = 0;
 
+        p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
+        p->context_frame->r15 = p->rip;
+        p->context_frame->r14 = p->rsp;
+        p->context_frame->r13 = 0xDEADBEEF;//p->cs;
+        p->context_frame->r12 = 0xABABABAB;
+        p->context_frame->rbp = 0x77777777;
+        p->context_frame->rbx = 0x12345678;
+        p->context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
+        p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+
         arch::vmm::switch_kernel_pml4();
+
+        log::debug("Created process ", p->pid);
+        log::debug("  kernel_stack @ ", fmt::hex{p->kernel_stack});
+        log::debug("  kernel_rsp = ", fmt::hex{p->kernel_rsp});
+        log::debug("  context_frame @ ", fmt::hex{p->context_frame});
+        log::debug("  context_frame->r15 = ", fmt::hex{p->context_frame->r15});
+
+        log::debug("p2 context_frame virt = ", fmt::hex{(uint64_t)p->context_frame});
+        log::debug("p2 context_frame phys = ", fmt::hex{arch::vmm::hhdm_virt_to_phys(p->context_frame)});
+
 
         return p;
     }

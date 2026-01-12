@@ -7,7 +7,7 @@ namespace timer {
     static std::uintmax_t ticks = 0;
 
     std::uintmax_t get_ticks() { return ticks; }
-    
+   
     void tick(arch::irq::InterruptFrame* frame) {
         ticks++;
 

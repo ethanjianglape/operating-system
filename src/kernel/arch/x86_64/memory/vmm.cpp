@@ -45,16 +45,6 @@ namespace x86_64::vmm {
 
     std::uintptr_t get_hhdm_offset() { return hhdm_offset; }
 
-    template <typename T>
-    std::uintptr_t hhdm_virt_to_phys(T addr) {
-        return reinterpret_cast<std::uintptr_t>(addr) - get_hhdm_offset();
-    }
-
-    template <typename T>
-    T phys_to_virt(std::unsigned_integral auto phys) {
-        return reinterpret_cast<T>(phys + get_hhdm_offset());
-    }
-
     /**
      * @brief Walks the page table hierarchy to find the PTE for a virtual address.
      * @param virt The virtual address to look up.
