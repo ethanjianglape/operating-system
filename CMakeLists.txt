@@ -33,6 +33,8 @@ add_compile_options(
     $<$<COMPILE_LANGUAGE:C,CXX>:-mno-mmx>
     $<$<COMPILE_LANGUAGE:C,CXX>:-mno-sse>
     $<$<COMPILE_LANGUAGE:C,CXX>:-mno-sse2>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-g>
+    $<$<COMPILE_LANGUAGE:C,CXX>:-O1>
 )
 
 # C++ specific flags

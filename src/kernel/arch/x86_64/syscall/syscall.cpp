@@ -49,9 +49,16 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     using namespace x86_64::syscall;
 
     auto* per_cpu = get_per_cpu();
+    auto* process = per_cpu->process;
+
+    process->has_kernel_context = true;
+    process->has_user_context = false;
+    
+    /*
     log::debug("SYSCALL from pid=", per_cpu->process ? per_cpu->process->pid : 0,
                " per_cpu->kernel_rsp=", fmt::hex{per_cpu->kernel_rsp},
                " actual RSP ~", fmt::hex{(uint64_t)frame});
+     */
 
     std::uint64_t syscall_num = frame->rax;
     std::uint64_t arg1 = frame->rdi;
@@ -61,6 +68,7 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     std::uint64_t arg5 = frame->r8;
     std::uint64_t arg6 = frame->r9;
 
+    /*
     log::debug("SYSCALL ", syscall_num);
     log::debug("arg1 = ", arg1, " (", fmt::hex{arg1}, ")");
     log::debug("arg2 = ", arg2, " (", fmt::hex{arg2}, ")");
@@ -72,6 +80,7 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     log::debug("R11  = ", fmt::hex{frame->r11});
     log::debug("CS   = ", fmt::hex{frame->cs});
     log::debug("SS   = ", fmt::hex{frame->ss});
+    */
 
     switch (frame->rax) {
     case SYS_WRITE:

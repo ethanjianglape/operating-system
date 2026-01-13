@@ -40,6 +40,8 @@ namespace process {
         p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
         p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
         p->wake_time_ms = 0;
+        p->has_kernel_context = true;
+        p->has_user_context = true;
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;

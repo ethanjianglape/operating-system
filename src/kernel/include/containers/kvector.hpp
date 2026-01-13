@@ -295,6 +295,18 @@ template <kvector_storable T> class kvector final {
         _size = 0;
     }
 
+    void erase(std::size_t pos) {
+        if (pos >= _size) {
+            return;
+        }
+
+        for (std::size_t i = pos; i < _size; i++) {
+            _data[i] = _data[i + 1];
+        }
+
+        _size--;
+    }
+
     void move_to_end(std::size_t pos) {
         for (std::size_t i = pos; i < _size - 1; i++) {
             T temp = _data[i];

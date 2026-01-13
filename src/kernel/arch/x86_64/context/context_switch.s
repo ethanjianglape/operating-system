@@ -27,12 +27,13 @@ context_switch:
 userspace_entry_trampoline:
     # Swap GS back to user mode before returning to userspace
     # (syscall_entry did swapgs to get kernel GS, we need to undo it)
+    cli
     swapgs
 
     # Build iretq frame: SS, RSP, RFLAGS, CS, RIP
     push $0x1B          # SS = user data
     push %r14           # RSP = user stack (from ContextFrame)
-    pushfq              # RFLAGS
+    push $0x202         # RFLAGS (IF=1)
     push $0x23          # CS = user code
     push %r15           # RIP = user entry point (from ContextFrame)
 

@@ -11,7 +11,7 @@ namespace timer {
     void tick(arch::irq::InterruptFrame* frame) {
         ticks++;
 
-        for (auto&& handler : handlers) {
+        for (const auto& handler : handlers) {
             if (handler) {
                 handler(ticks, frame);
             }

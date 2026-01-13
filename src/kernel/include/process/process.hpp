@@ -34,6 +34,8 @@ namespace process {
         std::uintptr_t kernel_rsp;       // Top of stack (initially)
         std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
         arch::context::ContextFrame* context_frame;
+        bool has_kernel_context;  // Can be resumed via context_switch
+        bool has_user_context;    // Can be resumed via schedule/iretq
 
         // VMM page info
         kvector<ProcessAllocation> allocations;

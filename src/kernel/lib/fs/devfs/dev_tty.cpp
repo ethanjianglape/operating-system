@@ -257,6 +257,7 @@ namespace fs::devfs::tty {
         //run_tty_program("/bin/hello");
         run_tty_program("/bin/a");
         run_tty_program("/bin/b");
+        run_tty_program("/bin/c");
 
         log::init_end("/dev/tty");
     }
@@ -326,8 +327,6 @@ namespace fs::devfs::tty {
     std::intmax_t write(FileDescriptor* desc, const void* buffer, std::size_t count) {
         const auto* cbuffer = reinterpret_cast<const char*>(buffer);
         kstring str(cbuffer, count);
-
-        log::debug("tty write: ", str);
 
         console::put(str);
         console::redraw();

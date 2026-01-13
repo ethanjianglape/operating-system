@@ -1,4 +1,5 @@
 #include "arch/x86_64/cpu/cpu.hpp"
+#include "arch/x86_64/memory/vmm.hpp"
 #include "fmt/fmt.hpp"
 #include <scheduler/scheduler.hpp>
 #include <log/log.hpp>
@@ -14,7 +15,7 @@ namespace scheduler {
 
     extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
-    void wake_sleeping_processes(std::uintmax_t ticks) {
+    void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFrame* frame) {
         for (std::size_t i = 0; i < processes.size(); i++) {
             if (processes[i]->state == process::ProcessState::BLOCKED && processes[i]->wake_time_ms > 0 && ticks > processes[i]->wake_time_ms) {
                 processes[i]->state = process::ProcessState::READY;
@@ -23,12 +24,24 @@ namespace scheduler {
         }
     }
 
-    process::Process* find_ready_process() {
+    process::Process* find_ready_kernel_process() {
         for (std::size_t i = 0; i < processes.size(); i++) {
-            if (processes[i]->state == process::ProcessState::READY){
-                processes.move_to_end(i);
-                
-                return processes.back();
+            auto* p = processes[i];
+            if (p->state == process::ProcessState::READY && p->has_kernel_context) {
+
+                return p;
+            }
+        }
+
+        return nullptr;
+    };
+
+    process::Process* find_ready_user_process() {
+        for (std::size_t i = 0; i < processes.size(); i++) {
+            auto* p = processes[i];
+            if (p->state == process::ProcessState::READY && p->has_user_context) {
+
+                return p;
             }
         }
 
@@ -37,9 +50,6 @@ namespace scheduler {
 
     void schedule(std::uintmax_t ticks, arch::irq::InterruptFrame* frame) {
         auto* per_cpu = x86_64::syscall::get_per_cpu();
-
-        wake_sleeping_processes(ticks);
-
         process::Process* current = per_cpu->process;
 
         if (current != nullptr) {
@@ -52,6 +62,9 @@ namespace scheduler {
             if (current->state == process::ProcessState::RUNNING) {
                 current->state = process::ProcessState::READY;                
             }
+
+            current->has_kernel_context = false;
+            current->has_user_context = true;
 
             // Save CPU state from interrupt frame
             current->rip = frame->rip;
@@ -77,15 +90,17 @@ namespace scheduler {
             current->r15 = frame->r15;
         }
 
-        process::Process* p = find_ready_process();
+        process::Process* p = find_ready_user_process();
 
         if (p != nullptr) {
             p->state = process::ProcessState::RUNNING;
+            p->has_kernel_context = false;
+            p->has_user_context = true;
 
             per_cpu->process = p;
             per_cpu->kernel_rsp = p->kernel_rsp;
 
-            log::debug("PICKED pid=", p->pid, " setting kernel_rsp=", fmt::hex{p->kernel_rsp});
+            log::debug("Preemptive: pid=", p->pid, " setting kernel_rsp=", fmt::hex{p->kernel_rsp});
 
             arch::vmm::switch_pml4(p->pml4);
 
@@ -117,8 +132,6 @@ namespace scheduler {
     }
 
     void yield_blocked(process::Process* process) {
-        log::debug("yield process = ", fmt::hex{process});
-
         if (process == nullptr) {
             log::warn("per_cpu->process is null, nothing to yield");
             return;
@@ -127,20 +140,26 @@ namespace scheduler {
         process->state = process::ProcessState::BLOCKED;
 
         while (process->state == process::ProcessState::BLOCKED) {
-            process::Process* ready = find_ready_process();
+            process::Process* ready = find_ready_kernel_process();
             
             if (ready != nullptr) {
-                log::debug("context switch: from pid=", process->pid, " to pid=", ready->pid);
+                log::debug("Cooperative: context switch: from pid=", process->pid, " to pid=", ready->pid);
 
                 // Switch to the target process's page tables and set up per_cpu
                 auto* per_cpu = x86_64::syscall::get_per_cpu();
                 per_cpu->process = ready;
                 per_cpu->kernel_rsp = ready->kernel_rsp;
+                
                 arch::vmm::switch_pml4(ready->pml4);
 
                 ready->state = process::ProcessState::RUNNING;
-
+                
                 context_switch(&process->kernel_rsp_saved, ready->kernel_rsp_saved);
+
+                per_cpu->process = process;
+                per_cpu->kernel_rsp = process->kernel_rsp;
+
+                arch::vmm::switch_pml4(process->pml4);
             } else {
                 arch::cpu::sti();
                 arch::cpu::hlt();
@@ -155,6 +174,7 @@ namespace scheduler {
     void init() {
         log::init_start("Scheduler");
 
+        timer::register_handler(wake_sleeping_processes);
         timer::register_handler(schedule);
 
         log::init_end("Scheduler");

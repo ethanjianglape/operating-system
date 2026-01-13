@@ -37,6 +37,6 @@ ssize_t sleep_ms(unsigned long ms) {
 void _start(void) {
     while (1) {
         write(1, "A", 1);
-        sleep_ms(1000);
+        sleep_ms(25);
     }
 }
