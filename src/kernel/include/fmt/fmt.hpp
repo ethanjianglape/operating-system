@@ -145,6 +145,7 @@ namespace fmt {
     }
 
     inline const char* to_string(std::intmax_t num, NumberFormat format = NumberFormat::DEC) {
+        index = 0;
         std::uintmax_t unum;
 
         if (num < 0) {
@@ -154,7 +155,50 @@ namespace fmt {
             unum = num;
         }
 
-        return to_string(unum, format);
+        if (unum == 0) {
+            buffer[index++] = '0';
+            buffer[index++] = '\0';
+            return buffer;
+        }
+
+        if (format == NumberFormat::HEX) {
+            buffer[index++] = '0';
+            buffer[index++] = 'x';
+        } else if (format == NumberFormat::BIN) {
+            buffer[index++] = '0';
+            buffer[index++] = 'b';
+        } else if (format == NumberFormat::OCT) {
+            buffer[index++] = '0';
+        }
+        
+        const auto divisor = number_format_divisor(format);
+        int ri = 0;
+        char reverse[64];
+
+        while (unum > 0) {
+            const auto index = unum % divisor;
+            const auto c = number_format_char(index, format);
+
+            reverse[ri++] = c;
+            unum /= divisor;
+        }
+
+        while (ri > 0) {
+            buffer[index++] = reverse[--ri];
+        }
+
+        // Pad hex and bin formats with 0 so they fit within 8/16/32/64 bits
+        // ex: 0x1234 -> 0x00001234, 0b1101 -> 0b0000101
+        if (format == NumberFormat::HEX || format == NumberFormat::BIN) {
+            std::size_t len = index - 2;
+            std::size_t zeros = (8 - len) & 7;
+
+            insert(2, zeros, '0');
+        }
+
+        buffer[index] = '\0';
+
+        return buffer;
     }
 
     inline const char* to_string(std::signed_integral auto num, NumberFormat format = NumberFormat::DEC) {

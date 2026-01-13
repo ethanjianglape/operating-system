@@ -100,7 +100,7 @@ namespace scheduler {
             per_cpu->process = p;
             per_cpu->kernel_rsp = p->kernel_rsp;
 
-            log::debug("Preemptive: pid=", p->pid, " setting kernel_rsp=", fmt::hex{p->kernel_rsp});
+            //log::debug("Preemptive: pid=", p->pid, " setting kernel_rsp=", fmt::hex{p->kernel_rsp});
 
             arch::vmm::switch_pml4(p->pml4);
 
@@ -143,7 +143,7 @@ namespace scheduler {
             process::Process* ready = find_ready_kernel_process();
             
             if (ready != nullptr) {
-                log::debug("Cooperative: context switch: from pid=", process->pid, " to pid=", ready->pid);
+                //log::debug("Cooperative: context switch: from pid=", process->pid, " to pid=", ready->pid);
 
                 // Switch to the target process's page tables and set up per_cpu
                 auto* per_cpu = x86_64::syscall::get_per_cpu();

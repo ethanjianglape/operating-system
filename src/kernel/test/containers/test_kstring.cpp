@@ -269,6 +269,79 @@ namespace test_kstring {
         test::assert_eq(copy.length(), 1999ul, "copy of large string has correct length");
     }
 
+    void test_size() {
+        kstring s("hello");
+        test::assert_eq(s.size(), 5ul, "size() returns correct value");
+        test::assert_eq(s.size(), s.length(), "size() equals length()");
+    }
+
+    void test_size_empty() {
+        kstring s;
+        test::assert_eq(s.size(), 0ul, "size() on empty string returns 0");
+    }
+
+    void test_reserve() {
+        kstring s;
+        s.reserve(1000);
+        // After reserve, pushing chars shouldn't cause reallocation
+        for (int i = 0; i < 100; i++) {
+            s.push_back('x');
+        }
+        test::assert_eq(s.length(), 100ul, "reserve() allows push_back without issue");
+    }
+
+    void test_data() {
+        kstring s("hello");
+        char* ptr = s.data();
+        test::assert_eq(ptr[0], 'h', "data() returns pointer to first char");
+        test::assert_eq(ptr[4], 'o', "data() allows access to chars");
+        ptr[0] = 'j';
+        test::assert_true(s == "jello", "data() allows modification");
+    }
+
+    void test_const_data() {
+        const kstring s("world");
+        const char* ptr = s.data();
+        test::assert_eq(ptr[0], 'w', "const data() returns pointer");
+        test::assert_eq(ptr[4], 'd', "const data() allows read access");
+    }
+
+    void test_free_function_plus_operator() {
+        kstring s("world");
+        kstring result = "hello " + s;
+        test::assert_true(result == "hello world", "const char* + kstring concatenates");
+    }
+
+    void test_npos() {
+        test::assert_eq(kstring::npos, static_cast<std::size_t>(-1), "npos is -1 cast to size_t");
+    }
+
+    void test_const_iterator() {
+        const kstring s("abc");
+        int sum = 0;
+        for (auto it = s.begin(); it != s.end(); ++it) {
+            sum += *it;
+        }
+        test::assert_eq(sum, 'a' + 'b' + 'c', "const_iterator works for iteration");
+    }
+
+    void test_const_iterator_arithmetic() {
+        const kstring s("hello");
+        auto it = s.begin();
+        auto it2 = it + 2;
+        test::assert_eq(*it2, 'l', "const_iterator + n works");
+        auto it3 = it2 - 1;
+        test::assert_eq(*it3, 'e', "const_iterator - n works");
+    }
+
+    void test_const_iterator_difference() {
+        const kstring s("hello");
+        auto begin = s.begin();
+        auto end = s.end();
+        auto diff = end - begin;
+        test::assert_eq(diff, static_cast<std::ptrdiff_t>(5), "const_iterator difference works");
+    }
+
     void run() {
         log::info("Running kstring tests...");
 
@@ -311,6 +384,16 @@ namespace test_kstring {
         test_substr_len_exceeds_string();
         test_substr_empty_string();
         test_large_string_uses_vmm();
+        test_size();
+        test_size_empty();
+        test_reserve();
+        test_data();
+        test_const_data();
+        test_free_function_plus_operator();
+        test_npos();
+        test_const_iterator();
+        test_const_iterator_arithmetic();
+        test_const_iterator_difference();
     }
 }
 

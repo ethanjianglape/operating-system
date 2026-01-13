@@ -153,6 +153,82 @@ namespace test_kvector {
         test::assert_eq(v[3].data[511], (std::uint8_t)6, "large struct vector stores last element");
     }
 
+    void test_erase() {
+        kvector<int> v = {1, 2, 3, 4, 5};
+        v.erase(2);
+        test::assert_eq(v.size(), 4ul, "erase() decreases size");
+        test::assert_eq(v[0], 1, "erase() keeps elements before");
+        test::assert_eq(v[1], 2, "erase() keeps element before position");
+        test::assert_eq(v[2], 4, "erase() shifts elements after position");
+        test::assert_eq(v[3], 5, "erase() shifts last element");
+    }
+
+    void test_erase_first() {
+        kvector<int> v = {10, 20, 30};
+        v.erase(0);
+        test::assert_eq(v.size(), 2ul, "erase(0) decreases size");
+        test::assert_eq(v[0], 20, "erase(0) shifts first element");
+        test::assert_eq(v[1], 30, "erase(0) shifts second element");
+    }
+
+    void test_erase_last() {
+        kvector<int> v = {10, 20, 30};
+        v.erase(2);
+        test::assert_eq(v.size(), 2ul, "erase(last) decreases size");
+        test::assert_eq(v[0], 10, "erase(last) keeps first");
+        test::assert_eq(v[1], 20, "erase(last) keeps second");
+    }
+
+    void test_erase_out_of_bounds() {
+        kvector<int> v = {1, 2, 3};
+        v.erase(10);
+        test::assert_eq(v.size(), 3ul, "erase() out of bounds does nothing");
+    }
+
+    void test_move_to_end() {
+        kvector<int> v = {1, 2, 3, 4, 5};
+        v.move_to_end(1);
+        test::assert_eq(v.size(), 5ul, "move_to_end() keeps size");
+        test::assert_eq(v[0], 1, "move_to_end() keeps first");
+        test::assert_eq(v[1], 3, "move_to_end() shifts element");
+        test::assert_eq(v[2], 4, "move_to_end() shifts element");
+        test::assert_eq(v[3], 5, "move_to_end() shifts element");
+        test::assert_eq(v[4], 2, "move_to_end() moves element to end");
+    }
+
+    void test_move_to_end_first() {
+        kvector<int> v = {10, 20, 30};
+        v.move_to_end(0);
+        test::assert_eq(v[0], 20, "move_to_end(0) shifts first");
+        test::assert_eq(v[1], 30, "move_to_end(0) shifts second");
+        test::assert_eq(v[2], 10, "move_to_end(0) moves to end");
+    }
+
+    void test_data() {
+        kvector<int> v = {1, 2, 3};
+        int* ptr = v.data();
+        test::assert_eq(ptr[0], 1, "data() returns pointer to first element");
+        test::assert_eq(ptr[2], 3, "data() allows access to elements");
+        ptr[1] = 100;
+        test::assert_eq(v[1], 100, "data() allows modification");
+    }
+
+    void test_const_data() {
+        const kvector<int> v = {5, 10, 15};
+        const int* ptr = v.data();
+        test::assert_eq(ptr[0], 5, "const data() returns pointer");
+        test::assert_eq(ptr[2], 15, "const data() allows read access");
+    }
+
+    void test_const_iterator() {
+        const kvector<int> v = {1, 2, 3};
+        int sum = 0;
+        for (auto it = v.begin(); it != v.end(); ++it) {
+            sum += *it;
+        }
+        test::assert_eq(sum, 6, "const_iterator works for range iteration");
+    }
+
     void run() {
         log::info("Running kvector tests...");
 
@@ -174,6 +250,15 @@ namespace test_kvector {
         test_reserve_and_grow();
         test_initializer_list_assignment();
         test_large_allocation_uses_vmm();
+        test_erase();
+        test_erase_first();
+        test_erase_last();
+        test_erase_out_of_bounds();
+        test_move_to_end();
+        test_move_to_end_first();
+        test_data();
+        test_const_data();
+        test_const_iterator();
     }
 }
 

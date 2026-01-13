@@ -1,0 +1,202 @@
+#ifdef KERNEL_TESTS
+
+#include <test/test.hpp>
+#include <fmt/fmt.hpp>
+#include <log/log.hpp>
+#include <crt/crt.h>
+
+namespace test_fmt {
+    void test_is_numeric_digits() {
+        test::assert_true(fmt::is_numeric('0'), "is_numeric('0') returns true");
+        test::assert_true(fmt::is_numeric('5'), "is_numeric('5') returns true");
+        test::assert_true(fmt::is_numeric('9'), "is_numeric('9') returns true");
+    }
+
+    void test_is_numeric_non_digits() {
+        test::assert_true(!fmt::is_numeric('a'), "is_numeric('a') returns false");
+        test::assert_true(!fmt::is_numeric('Z'), "is_numeric('Z') returns false");
+        test::assert_true(!fmt::is_numeric(' '), "is_numeric(' ') returns false");
+        test::assert_true(!fmt::is_numeric('/'), "is_numeric('/') returns false");
+        test::assert_true(!fmt::is_numeric(':'), "is_numeric(':') returns false");
+    }
+
+    void test_is_alpha_lowercase() {
+        test::assert_true(fmt::is_alpha('a'), "is_alpha('a') returns true");
+        test::assert_true(fmt::is_alpha('m'), "is_alpha('m') returns true");
+        test::assert_true(fmt::is_alpha('z'), "is_alpha('z') returns true");
+    }
+
+    void test_is_alpha_uppercase() {
+        test::assert_true(fmt::is_alpha('A'), "is_alpha('A') returns true");
+        test::assert_true(fmt::is_alpha('M'), "is_alpha('M') returns true");
+        test::assert_true(fmt::is_alpha('Z'), "is_alpha('Z') returns true");
+    }
+
+    void test_is_alpha_non_alpha() {
+        test::assert_true(!fmt::is_alpha('0'), "is_alpha('0') returns false");
+        test::assert_true(!fmt::is_alpha('9'), "is_alpha('9') returns false");
+        test::assert_true(!fmt::is_alpha(' '), "is_alpha(' ') returns false");
+        test::assert_true(!fmt::is_alpha('@'), "is_alpha('@') returns false");
+        test::assert_true(!fmt::is_alpha('['), "is_alpha('[') returns false");
+    }
+
+    void test_to_string_decimal_zero() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(0));
+        test::assert_true(strcmp(result, "0") == 0, "to_string(0) returns \"0\"");
+    }
+
+    void test_to_string_decimal_positive() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(12345));
+        test::assert_true(strcmp(result, "12345") == 0, "to_string(12345) returns \"12345\"");
+    }
+
+    void test_to_string_decimal_large() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(4294967295));
+        test::assert_true(strcmp(result, "4294967295") == 0, "to_string(UINT32_MAX) correct");
+    }
+
+    void test_to_string_signed_positive() {
+        const char* result = fmt::to_string(static_cast<std::intmax_t>(42));
+        test::assert_true(strcmp(result, "42") == 0, "to_string(42) returns \"42\"");
+    }
+
+    void test_to_string_signed_negative() {
+        const char* result = fmt::to_string(static_cast<std::intmax_t>(-123));
+        log::debug("to_string test = ", result);
+        test::assert_true(strcmp(result, "-123") == 0, "to_string(-123) returns \"-123\"");
+    }
+
+    void test_to_string_hex_zero() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), fmt::NumberFormat::HEX);
+        test::assert_true(strcmp(result, "0") == 0, "to_string(0, HEX) returns \"0\"");
+    }
+
+    void test_to_string_hex_value() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(255), fmt::NumberFormat::HEX);
+        test::assert_true(strcmp(result, "0x000000FF") == 0, "to_string(255, HEX) returns \"0x000000FF\"");
+    }
+
+    void test_to_string_hex_large() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(0xDEADBEEF), fmt::NumberFormat::HEX);
+        test::assert_true(strcmp(result, "0xDEADBEEF") == 0, "to_string(0xDEADBEEF, HEX) correct");
+    }
+
+    void test_to_string_hex_wrapper() {
+        const char* result = fmt::to_string(fmt::hex{0xABCD});
+        test::assert_true(strcmp(result, "0x0000ABCD") == 0, "to_string(hex{0xABCD}) correct");
+    }
+
+    void test_to_string_bin_zero() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), fmt::NumberFormat::BIN);
+        test::assert_true(strcmp(result, "0") == 0, "to_string(0, BIN) returns \"0\"");
+    }
+
+    void test_to_string_bin_value() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(5), fmt::NumberFormat::BIN);
+        test::assert_true(strcmp(result, "0b00000101") == 0, "to_string(5, BIN) returns \"0b00000101\"");
+    }
+
+    void test_to_string_bin_wrapper() {
+        const char* result = fmt::to_string(fmt::bin{0b11110000});
+        test::assert_true(strcmp(result, "0b11110000") == 0, "to_string(bin{0b11110000}) correct");
+    }
+
+    void test_to_string_oct_zero() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), fmt::NumberFormat::OCT);
+        test::assert_true(strcmp(result, "0") == 0, "to_string(0, OCT) returns \"0\"");
+    }
+
+    void test_to_string_oct_value() {
+        const char* result = fmt::to_string(static_cast<std::uintmax_t>(64), fmt::NumberFormat::OCT);
+        test::assert_true(strcmp(result, "0100") == 0, "to_string(64, OCT) returns \"0100\"");
+    }
+
+    void test_to_string_oct_wrapper() {
+        const char* result = fmt::to_string(fmt::oct{511});
+        test::assert_true(strcmp(result, "0777") == 0, "to_string(oct{511}) returns \"0777\"");
+    }
+
+    void test_to_string_pointer() {
+        int x = 42;
+        int* ptr = &x;
+        const char* result = fmt::to_string(ptr);
+        // Should start with "0x" and be a hex address
+        test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(ptr) has hex prefix");
+    }
+
+    void test_to_string_hex_pointer_wrapper() {
+        int x = 42;
+        int* ptr = &x;
+        const char* result = fmt::to_string(fmt::hex{ptr});
+        test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(hex{ptr}) has hex prefix");
+    }
+
+    void test_parse_uint_decimal() {
+        std::uintmax_t result = fmt::parse_uint("12345", 5);
+        test::assert_eq(result, static_cast<std::uintmax_t>(12345), "parse_uint(\"12345\") returns 12345");
+    }
+
+    void test_parse_uint_decimal_partial() {
+        std::uintmax_t result = fmt::parse_uint("12345", 3);
+        test::assert_eq(result, static_cast<std::uintmax_t>(123), "parse_uint(\"12345\", 3) returns 123");
+    }
+
+    void test_parse_uint_zero() {
+        std::uintmax_t result = fmt::parse_uint("0", 1);
+        test::assert_eq(result, static_cast<std::uintmax_t>(0), "parse_uint(\"0\") returns 0");
+    }
+
+    void test_parse_uint_kstring() {
+        kstring s("9876");
+        std::uintmax_t result = fmt::parse_uint(s);
+        test::assert_eq(result, static_cast<std::uintmax_t>(9876), "parse_uint(kstring) works");
+    }
+
+    void test_parse_int_char() {
+        test::assert_eq(fmt::parse_int('0'), 0, "parse_int('0') returns 0");
+        test::assert_eq(fmt::parse_int('5'), 5, "parse_int('5') returns 5");
+        test::assert_eq(fmt::parse_int('9'), 9, "parse_int('9') returns 9");
+    }
+
+    void test_number_format_divisor() {
+        test::assert_eq(fmt::number_format_divisor(fmt::NumberFormat::DEC), 10, "DEC divisor is 10");
+        test::assert_eq(fmt::number_format_divisor(fmt::NumberFormat::HEX), 16, "HEX divisor is 16");
+        test::assert_eq(fmt::number_format_divisor(fmt::NumberFormat::BIN), 2, "BIN divisor is 2");
+        test::assert_eq(fmt::number_format_divisor(fmt::NumberFormat::OCT), 8, "OCT divisor is 8");
+    }
+
+    void run() {
+        log::info("Running fmt tests...");
+
+        test_is_numeric_digits();
+        test_is_numeric_non_digits();
+        test_is_alpha_lowercase();
+        test_is_alpha_uppercase();
+        test_is_alpha_non_alpha();
+        test_to_string_decimal_zero();
+        test_to_string_decimal_positive();
+        test_to_string_decimal_large();
+        test_to_string_signed_positive();
+        test_to_string_signed_negative();
+        test_to_string_hex_zero();
+        test_to_string_hex_value();
+        test_to_string_hex_large();
+        test_to_string_hex_wrapper();
+        test_to_string_bin_zero();
+        test_to_string_bin_value();
+        test_to_string_bin_wrapper();
+        test_to_string_oct_zero();
+        test_to_string_oct_value();
+        test_to_string_oct_wrapper();
+        test_to_string_pointer();
+        test_to_string_hex_pointer_wrapper();
+        test_parse_uint_decimal();
+        test_parse_uint_decimal_partial();
+        test_parse_uint_zero();
+        test_parse_uint_kstring();
+        test_parse_int_char();
+        test_number_format_divisor();
+    }
+}
+
+#endif // KERNEL_TESTS
