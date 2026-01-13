@@ -193,8 +193,6 @@ namespace x86_64::cpu {
 
         // Flags
         log_rflags(read_rflags());
-
-        log::debug("========================================");
     }
 
     // =========================================================================
@@ -235,8 +233,6 @@ namespace x86_64::cpu {
 
         // Interrupt info
         log::debug("Vector: ", frame->vector, "  Error Code: ", fmt::hex{frame->err});
-
-        log::debug("=========================================================");
     }
 
 }

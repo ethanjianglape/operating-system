@@ -10,6 +10,7 @@
 
 namespace tty {
     namespace keyboard = arch::drivers::keyboard;
+    
     using ScanCode = keyboard::ScanCode;
     using ExtendedScanCode = keyboard::ExtendedScanCode;
 

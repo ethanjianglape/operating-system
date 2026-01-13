@@ -28,8 +28,7 @@ set(ARCH_KERNEL_SOURCES
   ${ARCH_DIR}/syscall/syscall_entry.s
   ${ARCH_DIR}/syscall/int80_entry.s
   ${ARCH_DIR}/memory/vmm.cpp
-  ${ARCH_DIR}/process/process.cpp
-  #${ARCH_DIR}/process/process.s
+  ${ARCH_DIR}/context/context_switch.s
 )
 
 set(ARCH_DRIVER_KERNEL_SOURCES
@@ -51,16 +50,23 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/memory/memory.cpp
   ${LIB_DIR}/memory/pmm.cpp
   ${LIB_DIR}/memory/slab.cpp
+  ${LIB_DIR}/memory/new.cpp
   ${LIB_DIR}/console/console.cpp
+  ${LIB_DIR}/console/ansi.cpp
   ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
   ${LIB_DIR}/drivers/acpi/acpi.cpp
   ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
-  ${LIB_DIR}/fs/vfs.cpp
+  ${LIB_DIR}/fs/vfs/vfs.cpp
   ${LIB_DIR}/fs/initramfs/initramfs.cpp
   ${LIB_DIR}/fs/initramfs/tar.cpp
+  ${LIB_DIR}/fs/devfs/devfs.cpp
+  ${LIB_DIR}/fs/devfs/dev_tty.cpp
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
+  ${LIB_DIR}/syscall/fd/syscall_fd.cpp
+  ${LIB_DIR}/syscall/sys_sleep.cpp
+  ${LIB_DIR}/scheduler/scheduler.cpp
 )
 
 # Test sources (compiled when KERNEL_TESTS is defined)

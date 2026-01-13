@@ -1,27 +1,17 @@
 #include "containers/kstring.hpp"
 #include "containers/kvector.hpp"
-#include "fs/vfs.hpp"
 #include "log/log.hpp"
 #include "tar.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <fs/initramfs/initramfs.hpp>
-
+#include <fs/fs.hpp>
+#include <fs/vfs/vfs.hpp>
 
 namespace fs::initramfs {
     static std::uint8_t* fs_addr = nullptr;
     static std::size_t fs_size;
-
-    std::size_t read(Inode* inode, void* buffer, std::size_t count, std::size_t offset) {
-        if (inode == nullptr || buffer == nullptr) {
-            return -1;
-        }
-
-        tar::TarMeta* meta = reinterpret_cast<tar::TarMeta*>(inode->metadata);
-
-        return tar::read(meta, buffer, count, offset);
-    }
 
     static FileSystem initramfs_fs = {
         .name = "initramfs",
@@ -35,16 +25,26 @@ namespace fs::initramfs {
         fs_size = size;
 
         tar::init(addr);
-        fs::mount("/", &initramfs_fs);
+        vfs::mount("/", &initramfs_fs);
     }
 
-    Inode open(const char* path, int flags) {
+    std::intmax_t read(Inode* inode, void* buffer, std::size_t count, std::size_t offset) {
+        if (inode == nullptr || buffer == nullptr) {
+            return -1;
+        }
+
+        tar::TarMeta* meta = reinterpret_cast<tar::TarMeta*>(inode->metadata);
+
+        return tar::read(meta, buffer, count, offset);
+    }
+
+    Inode open(const kstring& path, int flags) {
         log::debug("initramfs::open = ", path);
         
         tar::TarMeta* meta = tar::find(path);
 
         if (meta == nullptr) {
-            return NULL_INODE;
+            return vfs::NULL_INODE;
         }
 
         FileType type = meta->header->typeflag == tar::TYPEFLAG_DIR ? FileType::DIRECTORY : FileType::FILE;
@@ -56,7 +56,8 @@ namespace fs::initramfs {
             .type = type,
             .size = size,
             .metadata = meta,
-            .fs = &initramfs_fs
+            .fs = &initramfs_fs,
+            .ops = vfs::get_vfs_file_ops()
         };
     }
 

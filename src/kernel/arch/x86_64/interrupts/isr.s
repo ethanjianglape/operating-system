@@ -137,6 +137,13 @@ isr_stub_\num:
     jmp isr_common
 .endm
 
+.macro swapgs_if_necessary
+	cmp $0x08, 24(%rsp)
+	je 1f
+	swapgs
+1:
+.endm
+
 # =============================================================================
 # Common Interrupt Handler
 # =============================================================================
@@ -145,6 +152,12 @@ isr_stub_\num:
 # restore registers, and return from interrupt.
 
 isr_common:
+    cmp $0x08, 24(%rsp)
+    je skip_swapgs_entry
+    swapgs
+
+skip_swapgs_entry:
+
     # Save all general-purpose registers (in reverse order of InterruptFrame)
     push %rax
     push %rbx
@@ -162,7 +175,7 @@ isr_common:
     push %r14
     push %r15
 
-    # RSP now points to our complete InterruptFrame struct
+     # RSP now points to our complete InterruptFrame struct
     # Pass it as first argument to interrupt_handler (System V ABI: RDI = arg1)
     mov %rsp, %rdi
     call interrupt_handler
@@ -186,6 +199,12 @@ isr_common:
 
     # Remove vector number and error code from stack (we pushed 16 bytes)
     add $16, %rsp
+
+    cmp $0x08, 8(%rsp)
+    je skip_swapgs_exit
+    swapgs
+
+skip_swapgs_exit:
 
     # Return from interrupt - pops RIP, CS, RFLAGS, RSP, SS and resumes
     iretq

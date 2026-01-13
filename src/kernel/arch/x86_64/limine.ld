@@ -1,4 +1,4 @@
-/* Linker script for limine higher-half x86_64 kernel */
+/* Linker script for limine direct map higher-half (hhdm) x86_64 kernel */
 
 OUTPUT_FORMAT(elf64-x86-64)
 

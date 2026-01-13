@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
 
 namespace x86_64::vmm {
@@ -32,6 +33,14 @@ namespace x86_64::vmm {
     static_assert(sizeof(PageTableEntry) == 8, "PTE must be 32 bits");
 
     std::uintptr_t get_hhdm_offset();
+
+    template <typename T> std::uintptr_t hhdm_virt_to_phys(T addr) {
+        return reinterpret_cast<std::uintptr_t>(addr) - get_hhdm_offset();
+    }
+
+    template <typename T> T phys_to_virt(std::unsigned_integral auto phys) {
+        return reinterpret_cast<T>(phys + get_hhdm_offset());
+    }
 
     void init(std::uintptr_t hhdm_offset);
 

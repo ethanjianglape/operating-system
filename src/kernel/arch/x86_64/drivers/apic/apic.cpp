@@ -406,8 +406,8 @@ namespace x86_64::drivers::apic {
      *
      * @warning Must call send_eoi() or no further timer interrupts will occur.
      */
-    void apic_timer_handler(std::uint32_t vector) {
-        timer::tick();
+    void apic_timer_handler(irq::InterruptFrame* frame) {
+        timer::tick(frame);
         send_eoi();
     }
 
@@ -446,7 +446,7 @@ namespace x86_64::drivers::apic {
      */
     void timer_init() {
         constexpr std::uint32_t initial_count = 0xFFFFFFFF;  // Max value
-        constexpr std::uint32_t calibration_ms = 10;         // Calibrate over 10ms
+        constexpr std::uint32_t calibration_ms = 1;         // Calibrate over 1ms
 
         // Step 1: Configure divider and start counting
         //

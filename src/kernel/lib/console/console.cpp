@@ -1,4 +1,6 @@
+#include "console/ansi.hpp"
 #include "containers/kvector.hpp"
+#include "fmt/fmt.hpp"
 #include <containers/kstring.hpp>
 #include <cstddef>
 #include <log/log.hpp>
@@ -61,10 +63,6 @@ namespace console {
         screen_rows = fb::get_screen_height() / fonts::FONT_HEIGHT;
 
         cursor_enabled = true;
-
-        for (std::size_t row = 0; row < screen_rows; row++) {
-            //dirty.push_back(kvector<bool>(screen_cols, false));
-        }
         
         log::info("Console size: ", screen_cols, "x", screen_rows, " characters");
         log::info("Console font: ", fonts::FONT_WIDTH, "x", fonts::FONT_HEIGHT, " pixels");
@@ -99,6 +97,16 @@ namespace console {
         }
     }
 
+    void erase_in_line(std::size_t from, std::size_t to) {
+        for (std::size_t col = from; col < to; col++){
+            buffer[cursor_row][col].c = ' ';
+            buffer[cursor_row][col].dirty = true;
+        }
+    }
+
+    std::size_t get_cursor_x() { return cursor_col; }
+    std::size_t get_screen_cols() { return screen_cols; }
+
     void set_cursor_x(std::uint32_t x) {
         set_cursor(x, cursor_row);
     }
@@ -130,8 +138,13 @@ namespace console {
         }
 
         ensure_valid_cursor_buffer_pos(row, col);
+
+        draw_cursor();
+        
         cursor_col = col;
         cursor_row = row;
+
+        draw_cursor();
 
         if (cursor_col >= screen_cols) {
             newline();
@@ -242,34 +255,22 @@ namespace console {
         return 1;
     }
 
-    int put(const char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
-    int put(const unsigned char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += put(*str++);
-        }
-
-        return written;
-    }
-
     int put(const kstring& str) {
-        int written = 0;
+        auto begin = str.begin();
+        auto end = str.end();
 
-        for (char c : str) {
-            written += put(c);
+        while (begin != end) {
+            char c = *begin;
+
+            if (c == '\033') {
+                begin += ansi::parse_ansi_escape(begin, end);
+            } else {
+                put(c);
+                ++begin;
+            }
         }
-
-        return written;
+        
+        return 0;
     }
 
     void set_color(std::uint32_t fg, std::uint32_t bg) {
@@ -305,14 +306,12 @@ namespace console {
    }
 
     void redraw(bool draw_clean) {
-        log::debug("*** redrawing console ***");
-        log::debug("* cursor at row=", cursor_row, " col=", cursor_col);
-        log::debug("* viewport offset=", viewport_offset);
-        log::debug("* num lines=", buffer.size());
-        log::debug("*************************");
-
         if (draw_clean) {
             fb::clear(current_bg);
+        }
+
+        if (cursor_enabled && cursor_within_viewport()) {
+            draw_cursor();
         }
 
         for (std::size_t row = viewport_offset; row < buffer.size(); row++) {

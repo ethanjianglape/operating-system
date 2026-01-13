@@ -70,8 +70,6 @@ namespace x86_64::irq {
     constexpr std::uint8_t IRQ_PRIMARY_ATA          = 0x2E;  // IRQ 14 - Primary ATA
     constexpr std::uint8_t IRQ_SECONDARY_ATA        = 0x2F;  // IRQ 15 - Secondary ATA
 
-    using irq_handler_fn = void (*)(std::uint32_t vector);
-
     struct [[gnu::packed]] InterruptFrame {
         // Pushed by isr_common (reverse order)
         std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
@@ -84,6 +82,8 @@ namespace x86_64::irq {
     };
 
     static_assert(sizeof(InterruptFrame) == 176, "InterruptFrame must match isr.s stack layout");
+
+    using irq_handler_fn = void (*)(InterruptFrame* frame);
 
     void register_irq_handler(const std::uint32_t vector, irq_handler_fn handler);
 }

@@ -6,6 +6,7 @@
 #include <drivers/framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>
 #include <fs/initramfs/initramfs.hpp>
+#include <fs/devfs/devfs.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
 #include <panic/panic.hpp>
@@ -184,6 +185,8 @@ void init_modules() {
         // For now, we assume all modules are TAR archives for initramfs
         fs::initramfs::init(addr, size);
     }
+
+    fs::devfs::init();
 }
 
 namespace boot {

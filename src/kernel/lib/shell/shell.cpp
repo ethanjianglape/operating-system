@@ -1,14 +1,16 @@
 #include "containers/kvector.hpp"
 #include "fmt/fmt.hpp"
-#include "fs/vfs.hpp"
+#include "fs/fs.hpp"
 #include "log/log.hpp"
 #include "memory/memory.hpp"
+#include "syscall/fd/syscall_fd.hpp"
 #include <algo/algo.hpp>
 #include <tty/tty.hpp>
 #include <cstddef>
 #include <shell/shell.hpp>
 #include <console/console.hpp>
 #include <process/process.hpp>
+#include <fs/vfs/vfs.hpp>
 
 namespace shell {
     using RgbColor = console::RgbColor;
@@ -47,7 +49,7 @@ namespace shell {
         if (command == "ls") {
             auto filename = split.size() > 1 ? split[1] : pwd;
             
-            kvector<fs::DirEntry> entries = fs::readdir(filename.c_str());
+            kvector<fs::DirEntry> entries = {};//fs::readdir(filename.c_str());
 
             for (const auto& entry : entries) {
                 if (entry.type == fs::FileType::DIRECTORY) {
@@ -79,8 +81,11 @@ namespace shell {
             if (filename.front() != '/') {
                 filename = pwd + "/" + filename;
             }
-            
-            fs::Stat stat = fs::stat(filename.c_str());
+
+            int fd = syscall::fd::sys_open(filename.c_str(), fs::O_RDONLY);
+            fs::Stat stat;
+
+            syscall::fd::sys_fstat(fd, &stat);
 
             if (stat.type == fs::FileType::DIRECTORY) {
                 pwd = stat.path;
@@ -104,17 +109,19 @@ namespace shell {
                 filename = pwd + "/" + filename;
             }
 
-            int fd = fs::open(filename.c_str(), fs::O_RDONLY);
+            int fd = syscall::fd::sys_open(filename.c_str(), fs::O_RDONLY);
 
             if (fd >= 0) {
-                fs::Stat stat = fs::stat(filename.c_str());
+                fs::Stat stat;
+                syscall::fd::sys_fstat(fd, &stat);
+
                 auto* buffer = kalloc<std::uint8_t>(stat.size);
 
-                fs::read(fd, buffer, stat.size);
+                syscall::fd::sys_read(fd, buffer, stat.size);
 
-                process::load(buffer, stat.size);
+                //process::load(buffer, stat.size);
 
-                fs::close(fd);
+                syscall::fd::sys_close(fd);
                 kfree(buffer);
             }
 
@@ -129,11 +136,11 @@ namespace shell {
                 filename = pwd + "/" + filename;
             }
 
-            int fd = fs::open(filename.c_str(), fs::O_RDONLY);
+            int fd = syscall::fd::sys_open(filename.c_str(), fs::O_RDONLY);
 
             if (fd >= 0) {
                 char buffer[512];
-                int read = fs::read(fd, buffer, 512);
+                int read = syscall::fd::sys_read(fd, buffer, 512);
 
                 log::debug("read = ", read);
                 
@@ -145,7 +152,7 @@ namespace shell {
                 console::put(file);
                 console::newline();
 
-                fs::close(fd);
+                syscall::fd::sys_close(fd);
             } else {
                 console::set_color(RgbColor::RED, RgbColor::BLACK);
                 console::newline();
@@ -167,6 +174,30 @@ namespace shell {
     }
     
     void init() {
+        int fd = syscall::fd::sys_open("/dev/tty1", fs::O_RDONLY);
+
+        const char* prompt = "> $";
+        char buffer[512];
+
+        while (true) {
+            syscall::fd::sys_write(fd, prompt, 3);
+
+            int n = syscall::fd::sys_read(fd, buffer, sizeof(buffer) - 1);
+
+            if (n > 0) {
+                buffer[n] = '\0';
+
+                kstring line{buffer};
+
+                syscall::fd::sys_write(fd, "command: ", 10);
+                syscall::fd::sys_write(fd, buffer, n);
+                syscall::fd::sys_write(fd, "\n", 1);
+
+                log::debug("console read: ", line);
+            }
+        }
+        
+        /*
         tty::init();
 
         pwd = "/";
@@ -188,5 +219,6 @@ namespace shell {
             dispatch_command(line);
             tty::reset();
         }
+        */
     }
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <bit>
+#include <containers/kstring.hpp>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -32,6 +32,14 @@ namespace fmt {
     static char buffer[128] = {'\0'};
 
     static std::size_t index = 0;
+
+    inline bool is_numeric(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    inline bool is_alpha(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+    }
 
     inline int number_format_divisor(NumberFormat format) {
         switch (format) {
@@ -191,5 +199,13 @@ namespace fmt {
         }
 
         return result;
+    }
+
+    inline std::uintmax_t parse_uint(const kstring& str, NumberFormat format = NumberFormat::DEC) {
+        return parse_uint(str.c_str(), str.size(), format);
+    }
+
+    inline int parse_int(char c) {
+        return c - '0';
     }
 }
