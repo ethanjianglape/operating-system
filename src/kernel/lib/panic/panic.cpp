@@ -20,20 +20,6 @@ void panic(const char* str) {
 void panicf(const char* format, ...) {
     arch::cpu::cli();
 
-    /*
-    std::va_list args;
-    va_start(args, format);
-
-    log::error("*** KERNEL PANIC ***");
-
-    kvprintf(format, args);
-    kprintf("\n");
-
-    log::error("System will now halt.");
-
-    va_end(args);
-    */
-
     while (true) {
         arch::cpu::hlt();
     }
