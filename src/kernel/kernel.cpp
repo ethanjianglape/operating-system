@@ -2,7 +2,7 @@
 #include "fs/devfs/devfs.hpp"
 #include "fs/fs.hpp"
 #include "fs/initramfs/initramfs.hpp"
-#include "fs/vfs/vfs.hpp"
+#include "fs/vfs.hpp"
 #include "process/process.hpp"
 #include "scheduler/scheduler.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>

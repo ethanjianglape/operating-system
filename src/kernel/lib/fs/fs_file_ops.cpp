@@ -1,0 +1,52 @@
+#include <fs/fs_file_ops.hpp>
+#include <fs/fs.hpp>
+#include <crt/crt.h>
+
+namespace fs {
+    static std::intmax_t fs_file_read(FileDescriptor* fd, void* buf, std::size_t count) {
+        if (!fd || !fd->inode || !buf) {
+            return -1;
+        }
+
+        if (fd->inode->type == FileType::DIRECTORY) {
+            return -1;
+        }
+
+        if (fd->offset >= fd->inode->size) {
+            return 0;  // EOF
+        }
+
+        std::size_t remaining = fd->inode->size - fd->offset;
+        std::size_t to_read = count < remaining ? count : remaining;
+
+        auto* meta = static_cast<FsFileMeta*>(fd->inode->private_data);
+        memcpy(buf, meta->data + fd->offset, to_read);
+
+        fd->offset += to_read;
+        return static_cast<std::intmax_t>(to_read);
+    }
+
+    static std::intmax_t fs_file_write(FileDescriptor*, const void*, std::size_t) {
+        // Read-only for now
+        return -1;
+    }
+
+    static std::intmax_t fs_file_close(FileDescriptor* fd) {
+        if (fd && fd->inode) {
+            delete static_cast<FsFileMeta*>(fd->inode->private_data);
+            delete fd->inode;
+            fd->inode = nullptr;
+        }
+        return 0;
+    }
+
+    static const FileOps fs_file_ops = {
+        .read = fs_file_read,
+        .write = fs_file_write,
+        .close = fs_file_close,
+    };
+
+    const FileOps* get_fs_file_ops() {
+        return &fs_file_ops;
+    }
+}

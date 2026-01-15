@@ -9,14 +9,13 @@
 #include <arch/x86_64/entry/entry.hpp>
 #include <arch/x86_64/percpu/percpu.hpp>
 
-
 // Allows kernel library code to indirectly access the current CPU architecture
 namespace arch {
-    namespace vmm = ::x86_64::vmm;
-    namespace cpu = ::x86_64::cpu;
-    namespace irq = ::x86_64::irq;
+    namespace vmm     = ::x86_64::vmm;
+    namespace cpu     = ::x86_64::cpu;
+    namespace irq     = ::x86_64::irq;
     namespace drivers = ::x86_64::drivers;
     namespace context = ::x86_64::context;
-    namespace entry = ::x86_64::entry;
-    namespace percpu = ::x86_64::percpu;
+    namespace entry   = ::x86_64::entry;
+    namespace percpu  = ::x86_64::percpu;
 }
