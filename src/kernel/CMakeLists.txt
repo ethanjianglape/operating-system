@@ -56,7 +56,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/drivers/acpi/acpi.cpp
   ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
-  ${LIB_DIR}/fs/vfs.cpp
+  ${LIB_DIR}/fs/fs.cpp
   ${LIB_DIR}/fs/fs_file_ops.cpp
   ${LIB_DIR}/fs/initramfs/initramfs.cpp
   ${LIB_DIR}/fs/initramfs/tar.cpp

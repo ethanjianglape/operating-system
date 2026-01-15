@@ -1,6 +1,5 @@
 #include <arch.hpp>
 #include <fs/fs.hpp>
-#include <fs/vfs.hpp>
 #include <fs/fs_file_ops.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <console/console.hpp>

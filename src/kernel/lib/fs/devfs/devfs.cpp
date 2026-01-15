@@ -1,7 +1,6 @@
 #include <fs/devfs/devfs.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/fs.hpp>
-#include <fs/vfs.hpp>
 
 namespace fs::devfs {
     static Inode* devfs_open(FileSystem* self, const kstring& path, int flags);

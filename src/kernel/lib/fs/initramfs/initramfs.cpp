@@ -2,7 +2,6 @@
 
 #include <fs/initramfs/initramfs.hpp>
 #include <fs/fs.hpp>
-#include <fs/vfs.hpp>
 #include <fs/fs_file_ops.hpp>
 #include <memory/memory.hpp>
 #include <log/log.hpp>

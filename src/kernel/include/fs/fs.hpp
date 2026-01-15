@@ -85,4 +85,22 @@ namespace fs {
         int (*stat)(FileSystem* self, const kstring& path, Stat* out);
         int (*readdir)(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
     };
+
+    // ============================================================================
+    // MountPoint - a filesystem mounted at a path
+    // ============================================================================
+
+    struct MountPoint {
+        kstring root;
+        FileSystem* filesystem;
+    };
+
+    // ============================================================================
+    // VFS operations - global path-based file access
+    // ============================================================================
+
+    void mount(const kstring& path, FileSystem* fs);
+    Inode* open(const kstring& path, int flags);
+    int stat(const kstring& path, Stat* out);
+    int readdir(const kstring& path, kvector<DirEntry>& out);
 }

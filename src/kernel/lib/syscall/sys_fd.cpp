@@ -3,7 +3,6 @@
 #include <log/log.hpp>
 #include <syscall/sys_fd.hpp>
 #include <fs/fs.hpp>
-#include <fs/vfs.hpp>
 
 #include <cerrno>
 
