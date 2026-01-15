@@ -1,4 +1,4 @@
-#include "syscall.hpp"
+#include "entry.hpp"
 #include "syscall/fd/syscall_fd.hpp"
 #include "syscall/sys_sleep.hpp"
 
@@ -8,52 +8,24 @@
 
 #include <cstdint>
 
-extern constexpr std::size_t PER_CPU_SELF_OFFSET       = offsetof(x86_64::syscall::PerCPU, self);
-extern constexpr std::size_t PER_CPU_KERNEL_RSP_OFFSET = offsetof(x86_64::syscall::PerCPU, kernel_rsp);
-extern constexpr std::size_t PER_CPU_USER_RSP_OFFSET   = offsetof(x86_64::syscall::PerCPU, user_rsp);
-extern constexpr std::size_t PER_CPU_PROCESS_OFFSET    = offsetof(x86_64::syscall::PerCPU, process);
-
-static int sys_write(int fd, const char* buff, std::size_t count) {
-    kstring str{buff, (int)count};
-
-    if (fd == 1) {
-        // fd=1 hard coded to print directly to console for now
-        console::put(str);
-    } else {
-        log::info("sys_write:", str);
-    }
-    
-    return count;
-}
-
-extern "C"
-std::uint64_t int80_dispatcher(x86_64::syscall::SyscallFrame* frame) {
-    std::uint32_t syscall_num = frame->rax & 0xFFFFFFFF;
-    std::uint32_t arg1        = frame->rbx & 0xFFFFFFFF;
-    std::uint32_t arg2        = frame->rcx & 0xFFFFFFFF;
-    std::uint32_t arg3        = frame->rdx & 0xFFFFFFFF;
-
-    switch (syscall_num) {
-    case x86_64::syscall::SYSCALL_SYS_WRITE:
-        return sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
-    }
-
-    return 0;
-}
+extern constexpr std::size_t PER_CPU_SELF_OFFSET       = offsetof(x86_64::entry::PerCPU, self);
+extern constexpr std::size_t PER_CPU_KERNEL_RSP_OFFSET = offsetof(x86_64::entry::PerCPU, kernel_rsp);
+extern constexpr std::size_t PER_CPU_USER_RSP_OFFSET   = offsetof(x86_64::entry::PerCPU, user_rsp);
+extern constexpr std::size_t PER_CPU_PROCESS_OFFSET    = offsetof(x86_64::entry::PerCPU, process);
 
 extern "C"
 void syscall_entry();
 
 extern "C"
-std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
-    using namespace x86_64::syscall;
+std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
+    using namespace x86_64::entry;
 
     auto* per_cpu = get_per_cpu();
     auto* process = per_cpu->process;
 
     process->has_kernel_context = true;
     process->has_user_context = false;
-    
+
     /*
     log::debug("SYSCALL from pid=", per_cpu->process ? per_cpu->process->pid : 0,
                " per_cpu->kernel_rsp=", fmt::hex{per_cpu->kernel_rsp},
@@ -95,7 +67,7 @@ std::uint64_t syscall_dispatcher(x86_64::syscall::SyscallFrame* frame) {
     }
 }
 
-namespace x86_64::syscall {
+namespace x86_64::entry {
     void init_msr() {
         // STAR[63:48] = 0x10 (sysret base: +8=user data, +16=user code)
         // STAR[47:32] = 0x08 (syscall: CS=kernel code, SS=+8=kernel data)
@@ -132,9 +104,9 @@ namespace x86_64::syscall {
 
     PerCPU* get_per_cpu() {
         PerCPU* ptr;
-        
+
         asm volatile("mov %%gs:%c1, %0" : "=r"(ptr) : "i"(PER_CPU_SELF_OFFSET) : "memory");
-        
+
         return ptr;
     }
 
@@ -142,7 +114,7 @@ namespace x86_64::syscall {
         log::init_start("Syscall");
 
         init_msr();
-        
+
         log::init_end("Syscall");
     }
 }

@@ -4,10 +4,7 @@
 
 #include <process/process.hpp>
 
-namespace x86_64::syscall {
-    constexpr std::uint32_t SYSCALL_IRQ_VECTOR = 0x80;
-    constexpr std::uint32_t SYSCALL_SYS_WRITE = 4;
-
+namespace x86_64::entry {
     constexpr std::uint32_t MSR_EFER           = 0xC0000080;
     constexpr std::uint32_t MSR_STAR           = 0xC0000081;
     constexpr std::uint32_t MSR_LSTAR          = 0xC0000082;
@@ -27,11 +24,6 @@ namespace x86_64::syscall {
     constexpr std::uint64_t SYS_WRITE    = 1;
     constexpr std::uint64_t SYS_SLEEP_MS = 35;
     constexpr std::uint64_t SYS_EXIT  = 60;
-
-    enum class syscall_number : std::uint32_t {
-        SYS_WRITE = 4,
-        TEST = 42
-    };
 
     struct [[gnu::packed]] SyscallFrame {
         std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;

@@ -1,4 +1,4 @@
-#include "arch/x86_64/syscall/syscall.hpp"
+#include "arch/x86_64/entry/entry.hpp"
 #include "process/process.hpp"
 #include <log/log.hpp>
 #include <syscall/fd/syscall_fd.hpp>
@@ -26,7 +26,7 @@ namespace syscall::fd {
     int sys_open(const char* path, int flags) {
         log::debug("sys_open: ", path);
 
-        x86_64::syscall::PerCPU* per_cpu = x86_64::syscall::get_per_cpu();
+        x86_64::entry::PerCPU* per_cpu = x86_64::entry::get_per_cpu();
         process::Process* process = per_cpu->process;
         
         fs::Inode inode = fs::vfs::lookup(path, flags);
@@ -45,7 +45,7 @@ namespace syscall::fd {
     }
 
     int sys_read(int fd, void* buffer, std::size_t count) {
-        x86_64::syscall::PerCPU* per_cpu = x86_64::syscall::get_per_cpu();
+        x86_64::entry::PerCPU* per_cpu = x86_64::entry::get_per_cpu();
         process::Process* process = per_cpu->process;
         fs::FileDescriptor* desc = &process->fd_table[fd];
 
@@ -55,7 +55,7 @@ namespace syscall::fd {
     }
 
     int sys_write(int fd, const void* buffer, std::size_t count) {
-        x86_64::syscall::PerCPU* per_cpu = x86_64::syscall::get_per_cpu();
+        x86_64::entry::PerCPU* per_cpu = x86_64::entry::get_per_cpu();
         process::Process* process = per_cpu->process;
         fs::FileDescriptor* desc = &process->fd_table[fd];
 
@@ -63,7 +63,7 @@ namespace syscall::fd {
     }
 
     int sys_close(int fd) {
-        x86_64::syscall::PerCPU* per_cpu = x86_64::syscall::get_per_cpu();
+        x86_64::entry::PerCPU* per_cpu = x86_64::entry::get_per_cpu();
         process::Process* process = per_cpu->process;
         fs::FileDescriptor* desc = &process->fd_table[fd];
 
@@ -75,7 +75,7 @@ namespace syscall::fd {
     }
 
     int sys_fstat(int fd, fs::Stat* stat) {
-        x86_64::syscall::PerCPU* per_cpu = x86_64::syscall::get_per_cpu();
+        x86_64::entry::PerCPU* per_cpu = x86_64::entry::get_per_cpu();
         process::Process* process = per_cpu->process;
         fs::FileDescriptor* desc = &process->fd_table[fd];
 

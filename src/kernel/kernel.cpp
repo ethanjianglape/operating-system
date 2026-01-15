@@ -8,7 +8,7 @@
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <cstdint>
 #include <shell/shell.hpp>
-#include <arch/x86_64/syscall/syscall.hpp>
+#include <arch/x86_64/entry/entry.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/drivers/apic/apic.hpp>
 #include <arch/x86_64/gdt/gdt.hpp>
@@ -38,7 +38,7 @@ void kernel_main() {
     
     x86_64::gdt::init();
     x86_64::idt::init();
-    x86_64::syscall::init();
+    x86_64::entry::init();
 
     x86_64::drivers::pic::init();
     x86_64::drivers::apic::init();

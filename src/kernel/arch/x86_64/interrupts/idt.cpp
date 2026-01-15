@@ -10,8 +10,7 @@
  *       page faults, general protection faults, etc.
  *     - Hardware IRQs (vectors 32+): External devices signaling the CPU
  *       (timer tick, keyboard press, disk I/O complete, etc.)
- *     - Software interrupts: Triggered by the INT instruction (e.g., int 0x80
- *       for syscalls)
+ *     - Software interrupts: Triggered by the INT instruction
  *
  *   Each interrupt has a "vector number" (0-255). The IDT is an array of 256
  *   entries, one per vector, each pointing to a handler function (ISR).
@@ -80,9 +79,7 @@
  *   │  0x1F      │  Reserved                                                │
  *   ├────────────┼──────────────────────────────────────────────────────────┤
  *   │  0x20-0x2F │  Hardware IRQs (remapped PIC or APIC)                    │
- *   │  0x30-0x7F │  Available for other hardware/software                   │
- *   │  0x80      │  Syscall (legacy Linux convention, DPL=3)                │
- *   │  0x81-0xFF │  Available for other uses                                │
+ *   │  0x30-0xFF │  Available for other hardware/software                   │
  *   └────────────┴──────────────────────────────────────────────────────────┘
  *
  * How Does This Actually Work?
@@ -149,8 +146,8 @@ namespace x86_64::idt {
     /**
      * @brief Initializes all 256 IDT entries and loads the IDT into the CPU.
      *
-     * All vectors default to kernel-only (DPL=0) except vector 0x80 (syscall)
-     * which is set to DPL=3 so userspace can trigger it via INT 0x80.
+     * All vectors default to kernel-only (DPL=0). Userspace uses the SYSCALL
+     * instruction (via LSTAR) rather than software interrupts.
      */
     void init() {
         log::init_start("IDT");
@@ -161,14 +158,8 @@ namespace x86_64::idt {
         idtr.limit = sizeof(IdtEntry) * IDT_MAX_DESCRIPTORS - 1;
 
         for (std::size_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
-            // By default, all interrupt vectors will only be callable by kernel code
             std::uint8_t flags = IDT_KERNEL_INT;
             std::uint8_t ist = 0x0;
-
-            // However, int 0x80 (syscall) needs to be callable from userspace
-            if (vector == IDT_VECTOR_SYSCALL) {
-                flags = IDT_USER_INT;
-            }
 
             set_descriptor(vector, isr_stub_table[vector], ist, flags);
         }

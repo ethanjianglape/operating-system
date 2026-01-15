@@ -1,4 +1,4 @@
-#include "arch/x86_64/syscall/syscall.hpp"
+#include "arch/x86_64/entry/entry.hpp"
 #include "fmt/fmt.hpp"
 #include "fs/fs.hpp"
 #include "fs/initramfs/initramfs.hpp"
@@ -263,7 +263,7 @@ namespace fs::devfs::tty {
     }
     
     std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
-        auto* per_cpu = x86_64::syscall::get_per_cpu();
+        auto* per_cpu = x86_64::entry::get_per_cpu();
         auto* process = per_cpu->process;
 
         waiting_process = process;
