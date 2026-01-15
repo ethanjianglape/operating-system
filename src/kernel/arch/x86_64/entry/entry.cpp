@@ -2,6 +2,7 @@
 #include "syscall/fd/syscall_fd.hpp"
 #include "syscall/sys_sleep.hpp"
 
+#include <process/process.hpp>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>

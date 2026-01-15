@@ -2,7 +2,9 @@
 
 #include <cstdint>
 
-#include <process/process.hpp>
+namespace process {
+    struct Process;
+}
 
 namespace x86_64::entry {
     constexpr std::uint32_t MSR_EFER           = 0xC0000080;
@@ -34,7 +36,7 @@ namespace x86_64::entry {
         PerCPU* self;
         std::uint64_t kernel_rsp;
         std::uint64_t user_rsp;
-        ::process::Process* process;
+        process::Process* process;
     };
 
     void init();
