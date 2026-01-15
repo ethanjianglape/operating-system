@@ -66,6 +66,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/process/process.cpp
   ${LIB_DIR}/syscall/sys_fd.cpp
   ${LIB_DIR}/syscall/sys_sleep.cpp
+  ${LIB_DIR}/syscall/sys_proc.cpp
   ${LIB_DIR}/scheduler/scheduler.cpp
 )
 

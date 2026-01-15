@@ -1,4 +1,5 @@
 #include <arch.hpp>
+#include <cerrno>
 #include <fs/fs.hpp>
 #include <fs/fs_file_ops.hpp>
 #include <fs/devfs/dev_tty.hpp>
@@ -25,11 +26,13 @@ namespace fs::devfs::tty {
     static std::intmax_t tty_read(FileDescriptor* fd, void* buf, std::size_t count);
     static std::intmax_t tty_write(FileDescriptor* fd, const void* buf, std::size_t count);
     static std::intmax_t tty_close(FileDescriptor* fd);
+    static std::intmax_t tty_lseek(FileDescriptor*, std::intmax_t, int);
 
     static const FileOps tty_ops = {
         .read = tty_read,
         .write = tty_write,
         .close = tty_close,
+        .lseek = tty_lseek
     };
 
     static Inode tty_inode = {
@@ -350,5 +353,9 @@ namespace fs::devfs::tty {
     static std::intmax_t tty_close(FileDescriptor*) {
         // TTY inode is static, nothing to free
         return 0;
+    }
+
+    static std::intmax_t tty_lseek(FileDescriptor*, std::intmax_t, int){
+        return -ESPIPE;
     }
 }

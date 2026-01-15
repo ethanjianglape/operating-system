@@ -14,10 +14,15 @@ namespace fs::devfs::null {
         return 0;
     }
 
+    static std::intmax_t null_lseek(FileDescriptor*, std::intmax_t, int) {
+        return 0;
+    }
+
     static const FileOps null_ops = {
         .read = null_read,
         .write = null_write,
         .close = null_close,
+        .lseek = null_lseek,
     };
 
     static Inode null_inode = {

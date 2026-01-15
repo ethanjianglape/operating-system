@@ -1,5 +1,6 @@
 #include "entry.hpp"
 #include "syscall/sys_fd.hpp"
+#include "syscall/sys_proc.hpp"
 #include "syscall/sys_sleep.hpp"
 
 #include <arch/x86_64/percpu/percpu.hpp>
@@ -9,6 +10,7 @@
 #include <log/log.hpp>
 
 #include <cstdint>
+#include <cerrno>
 
 extern "C"
 void syscall_entry();
@@ -33,9 +35,13 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
         return syscall::sys_read(arg1, reinterpret_cast<char*>(arg2), arg3);
     case SYS_SLEEP_MS:
         return syscall::sys_sleep_ms(arg1);
+    case SYS_LSEEK:
+        return syscall::sys_lseek(arg1, arg2, arg3);
+    case SYS_GETPID:
+        return syscall::sys_getpid();
     default:
         log::error("Unsupported syscall: ", frame->rax);
-        return ENOSYS;
+        return -ENOSYS;
     }
 }
 

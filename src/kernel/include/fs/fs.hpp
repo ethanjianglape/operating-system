@@ -16,6 +16,10 @@ namespace fs {
 
     constexpr int O_RDONLY = 0x01;
 
+    constexpr int SEEK_SET = 0;
+    constexpr int SEEK_CUR = 1;
+    constexpr int SEEK_END = 2;
+
     struct Inode;
     struct FileDescriptor;
     struct FileSystem;
@@ -30,6 +34,7 @@ namespace fs {
         std::intmax_t (*read)(FileDescriptor* fd, void* buf, std::size_t count);
         std::intmax_t (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
         std::intmax_t (*close)(FileDescriptor* fd);
+        std::intmax_t (*lseek)(FileDescriptor* fd, std::intmax_t offset, int whence);
     };
 
     // ============================================================================
