@@ -45,7 +45,7 @@ namespace scheduler {
     };
 
     void schedule(std::uintmax_t ticks, arch::irq::InterruptFrame* frame) {
-        auto* per_cpu = arch::entry::get_per_cpu();
+        auto* per_cpu = arch::percpu::get();
         process::Process* current = per_cpu->process;
 
         if (current != nullptr) {
@@ -142,7 +142,7 @@ namespace scheduler {
                 //log::debug("Cooperative: context switch: from pid=", process->pid, " to pid=", ready->pid);
 
                 // Switch to the target process's page tables and set up per_cpu
-                auto* per_cpu = arch::entry::get_per_cpu();
+                auto* per_cpu = arch::percpu::get();
                 per_cpu->process = ready;
                 per_cpu->kernel_rsp = ready->kernel_rsp;
                 

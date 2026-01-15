@@ -261,8 +261,7 @@ namespace fs::devfs::tty {
     }
     
     std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
-        auto* per_cpu = arch::entry::get_per_cpu();
-        auto* process = per_cpu->process;
+        auto* process = arch::percpu::current_process();
 
         waiting_process = process;
         buffer = "";

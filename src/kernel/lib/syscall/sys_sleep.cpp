@@ -6,8 +6,7 @@
 
 namespace syscall {
     int sys_sleep_ms(std::uint64_t ms) {
-        arch::entry::PerCPU* per_cpu = arch::entry::get_per_cpu();
-        process::Process* process = per_cpu->process;
+        process::Process* process = arch::percpu::current_process();
 
         process->wake_time_ms = timer::get_ticks() + ms;
 

@@ -2,17 +2,11 @@
 
 #include <cstdint>
 
-namespace process {
-    struct Process;
-}
-
 namespace x86_64::entry {
-    constexpr std::uint32_t MSR_EFER           = 0xC0000080;
-    constexpr std::uint32_t MSR_STAR           = 0xC0000081;
-    constexpr std::uint32_t MSR_LSTAR          = 0xC0000082;
-    constexpr std::uint32_t MSR_SFMASK         = 0xC0000084;
-    constexpr std::uint32_t MSR_GS_BASE        = 0xC0000101;
-    constexpr std::uint32_t MSR_KERNEL_GS_BASE = 0xC0000102;
+    constexpr std::uint32_t MSR_EFER   = 0xC0000080;
+    constexpr std::uint32_t MSR_STAR   = 0xC0000081;
+    constexpr std::uint32_t MSR_LSTAR  = 0xC0000082;
+    constexpr std::uint32_t MSR_SFMASK = 0xC0000084;
 
     constexpr std::uint32_t EFER_SCE = (1 << 0);
 
@@ -25,21 +19,12 @@ namespace x86_64::entry {
     constexpr std::uint64_t SYS_READ     = 0;
     constexpr std::uint64_t SYS_WRITE    = 1;
     constexpr std::uint64_t SYS_SLEEP_MS = 35;
-    constexpr std::uint64_t SYS_EXIT  = 60;
+    constexpr std::uint64_t SYS_EXIT     = 60;
 
     struct [[gnu::packed]] SyscallFrame {
         std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;
         std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
     };
 
-    struct [[gnu::packed]] PerCPU {
-        PerCPU* self;
-        std::uint64_t kernel_rsp;
-        std::uint64_t user_rsp;
-        process::Process* process;
-    };
-
     void init();
-
-    PerCPU* get_per_cpu();
 }

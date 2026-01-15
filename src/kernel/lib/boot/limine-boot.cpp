@@ -9,7 +9,7 @@
 #include <fs/devfs/devfs.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
-#include <panic/panic.hpp>
+#include <kpanic/kpanic.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -87,19 +87,19 @@ const char* memmap_type_to_string(std::uint64_t type) {
 
 void validate_limine_responses() {
     if (framebuffer_request.response == nullptr) {
-        panic("Limine framebuffer response is null");
+        kpanic("Limine framebuffer response is null");
     }
     
     if (memmap_request.response == nullptr) {
-        panic("Limine memory map response is null");
+        kpanic("Limine memory map response is null");
     }
     
     if (hhdm_request.response == nullptr) {
-        panic("Limine HHDM response is null");
+        kpanic("Limine HHDM response is null");
     }
     
     if (rsdp_request.response == nullptr) {
-        panic("Limine RSDP response is null");
+        kpanic("Limine RSDP response is null");
     }
 
     log::info("All required Limine responses present");
@@ -109,7 +109,7 @@ void init_framebuffer() {
     limine_framebuffer* fb = framebuffer_request.response->framebuffers[0];
 
     if (fb == nullptr) {
-        panic("No framebuffer available from Limine");
+        kpanic("No framebuffer available from Limine");
     }
 
     auto fb_info = drivers::framebuffer::FrameBufferInfo {

@@ -103,7 +103,7 @@
 #include <log/log.hpp>
 
 #include <arch/x86_64/drivers/pit/pit.hpp>
-#include <panic/panic.hpp>
+#include <kpanic/kpanic.hpp>
 #include <cstdint>
 
 namespace x86_64::drivers::apic {
@@ -347,11 +347,11 @@ namespace x86_64::drivers::apic {
         log::init_start("APIC");
 
         if (!check_support()) {
-            panic("APIC not supported - required for this kernel");
+            kpanic("APIC not supported - required for this kernel");
         }
 
         if (ioapic_virt_base == nullptr || lapic_virt_base == nullptr) {
-            panic("IOAPIC/LAPIC physical addresses have not been mapped yet!");
+            kpanic("IOAPIC/LAPIC physical addresses have not been mapped yet!");
         }
 
         // Step 1: Enable the APIC globally via the MSR
