@@ -16,7 +16,7 @@
  */
 
 #include <memory/pmm.hpp>
-#include <panic/panic.hpp>
+#include <kpanic/kpanic.hpp>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
 #include <arch.hpp>
@@ -164,7 +164,7 @@ namespace pmm {
             frame++;
         }
 
-        panic("PMM: Out of physical memory");
+        kpanic("PMM: Out of physical memory");
 
         return nullptr;
     }
@@ -204,6 +204,6 @@ namespace pmm {
             }
         }
 
-        panic("PMM: Out of physical memory");
+        kpanic("PMM: Out of physical memory");
     }
 }

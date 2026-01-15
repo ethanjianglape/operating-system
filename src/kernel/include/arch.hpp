@@ -6,6 +6,8 @@
 #include <arch/x86_64/drivers/apic/apic.hpp>
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <arch/x86_64/context/context.hpp>
+#include <arch/x86_64/entry/entry.hpp>
+#include <arch/x86_64/percpu/percpu.hpp>
 
 
 // Allows kernel library code to indirectly access the current CPU architecture
@@ -15,4 +17,6 @@ namespace arch {
     namespace irq = ::x86_64::irq;
     namespace drivers = ::x86_64::drivers;
     namespace context = ::x86_64::context;
+    namespace entry = ::x86_64::entry;
+    namespace percpu = ::x86_64::percpu;
 }

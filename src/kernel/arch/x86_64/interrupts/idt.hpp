@@ -19,8 +19,6 @@ namespace x86_64::idt {
     // Kernel code segment selector (must match GDT layout)
     constexpr std::uint16_t KERNEL_CODE_SEL = 0x08;
 
-    constexpr std::size_t IDT_VECTOR_SYSCALL = 0x80;
-    
     struct [[gnu::packed]] IdtEntry {
         std::uint16_t offset_low;  // ISR address low
         std::uint16_t selector;

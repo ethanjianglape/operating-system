@@ -110,7 +110,6 @@
 .global isr_stub_table
 
 .extern interrupt_handler
-.extern int80_entry
 
 # =============================================================================
 # Stub Macros
@@ -261,7 +260,6 @@ isr_no_err_stub 0x1f
 # =============================================================================
 #
 # Hardware IRQs and software interrupts. None of these have CPU error codes.
-# Vector 0x80 is special - it uses int80_entry for syscalls (see stub table).
 
 isr_no_err_stub 0x20
 isr_no_err_stub 0x21
@@ -359,7 +357,7 @@ isr_no_err_stub 0x7c
 isr_no_err_stub 0x7d
 isr_no_err_stub 0x7e
 isr_no_err_stub 0x7f
-# 0x80: Syscall - uses int80_entry instead (see stub table below)
+isr_no_err_stub 0x80
 isr_no_err_stub 0x81
 isr_no_err_stub 0x82
 isr_no_err_stub 0x83
@@ -494,9 +492,6 @@ isr_no_err_stub 0xff
 #
 # Array of 256 pointers to our stub functions. idt.cpp reads this table to
 # populate the IDT entries. Each entry is a 64-bit address (.quad).
-#
-# Note: Vector 0x80 points to int80_entry (defined in syscall/int80_entry.s) 
-# instead of an isr_stub_0x80 stub, because syscalls need special handling.
 
 isr_stub_table:
     .quad isr_stub_0x00
@@ -627,7 +622,7 @@ isr_stub_table:
     .quad isr_stub_0x7d
     .quad isr_stub_0x7e
     .quad isr_stub_0x7f
-    .quad int80_entry
+    .quad isr_stub_0x80
     .quad isr_stub_0x81
     .quad isr_stub_0x82
     .quad isr_stub_0x83

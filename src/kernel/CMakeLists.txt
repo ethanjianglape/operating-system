@@ -24,9 +24,9 @@ set(ARCH_KERNEL_SOURCES
   ${ARCH_DIR}/interrupts/idt.cpp
   ${ARCH_DIR}/interrupts/irq.cpp
   ${ARCH_DIR}/interrupts/isr.s
-  ${ARCH_DIR}/syscall/syscall.cpp
-  ${ARCH_DIR}/syscall/syscall_entry.s
-  ${ARCH_DIR}/syscall/int80_entry.s
+  ${ARCH_DIR}/entry/entry.cpp
+  ${ARCH_DIR}/entry/syscall_entry.s
+  ${ARCH_DIR}/percpu/percpu.cpp
   ${ARCH_DIR}/memory/vmm.cpp
   ${ARCH_DIR}/context/context_switch.s
 )
@@ -44,9 +44,8 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/boot/limine-boot.cpp
   ${LIB_DIR}/tty/tty.cpp
-  ${LIB_DIR}/shell/shell.cpp
   ${LIB_DIR}/timer/timer.cpp
-  ${LIB_DIR}/panic/panic.cpp
+  ${LIB_DIR}/kpanic/kpanic.cpp
   ${LIB_DIR}/memory/memory.cpp
   ${LIB_DIR}/memory/pmm.cpp
   ${LIB_DIR}/memory/slab.cpp
@@ -64,7 +63,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/fs/devfs/dev_tty.cpp
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
-  ${LIB_DIR}/syscall/fd/syscall_fd.cpp
+  ${LIB_DIR}/syscall/sys_fd.cpp
   ${LIB_DIR}/syscall/sys_sleep.cpp
   ${LIB_DIR}/scheduler/scheduler.cpp
 )

@@ -1,5 +1,4 @@
-#include "arch/x86_64/syscall/syscall.hpp"
-#include "fmt/fmt.hpp"
+#include <arch.hpp>
 #include "fs/fs.hpp"
 #include "fs/initramfs/initramfs.hpp"
 #include "fs/vfs/vfs.hpp"
@@ -11,7 +10,6 @@
 #include <containers/kvector.hpp>
 #include <containers/kstring.hpp>
 #include <crt/crt.h>
-#include <arch.hpp>
 
 namespace fs::devfs::tty {
     namespace keyboard = arch::drivers::keyboard;
@@ -263,8 +261,7 @@ namespace fs::devfs::tty {
     }
     
     std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
-        auto* per_cpu = x86_64::syscall::get_per_cpu();
-        auto* process = per_cpu->process;
+        auto* process = arch::percpu::current_process();
 
         waiting_process = process;
         buffer = "";

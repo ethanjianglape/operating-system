@@ -23,11 +23,6 @@ if [ ! -d "sysroot" ]; then
     mkdir sysroot
 fi
 
-if [ -d "initramfs" ]; then
-    echo "Creating initramfs.tar..."
-    tar -cvf ./sysroot/boot/initramfs.tar -C ./initramfs .
-fi
-
 cd build
 
 # Configure with CMake
@@ -42,6 +37,12 @@ make -j$(nproc)
 if [ ! -f "../sysroot/boot/kernel.elf" ]; then
     echo -e "${RED}Build failed!${NC}"
     exit 1
+fi
+
+
+if [ -d "initramfs" ]; then
+    echo "Creating initramfs.tar..."
+    tar -cvf ./sysroot/boot/initramfs.tar -C ./initramfs .
 fi
 
 echo -e "${GREEN}Build successful!${NC}"

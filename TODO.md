@@ -8,12 +8,12 @@
 - [x] [Unit Testing Framework](#unit-testing-framework)
 - [~] [VFS and Initramfs](#vfs-and-initramfs)
 - [x] [Userspace Program Loading](#userspace-program-loading)
-- [ ] [Process Scheduling](#process-scheduling)
+- [x] [Basic Process Scheduling](#basic-process-scheduling)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
 - [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
-- [ ] [Arch Namespace Collisions](#arch-namespace-collisions)
+- [x] [Arch Namespace Collisions](#arch-namespace-collisions)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -209,20 +209,28 @@ User/Shell: vfs::open(), vfs::read(), vfs::readdir()
 
 ---
 
-## Process Scheduling
+## Basic Process Scheduling
 
-**Status:** Not started
+**Status:** Complete
 
-**Prerequisite:** Userspace program loading (complete), timer interrupts (working)
-
-**Goal:** Run multiple processes concurrently with preemptive multitasking.
+**Implemented:**
+- Preemptive scheduling via APIC timer interrupts
+- Cooperative scheduling via `sys_yield` for voluntary context switches
+- Process states: RUNNING, READY, BLOCKED, DEAD
+- Context save/restore (all registers + rip, rsp, rflags)
+- CR3 switching for per-process address spaces
+- `sys_exit` for process termination
+- `sys_sleep_ms` for timed blocking
+- Round-robin ready queue
 
 **Architecture:**
 ```
-Timer interrupt fires
+Timer interrupt fires (preemptive)
+   — or —
+Process calls sys_yield (cooperative)
         │
         ▼
-Save current process state (rip, rsp, registers)
+Save current process state
         │
         ▼
 Scheduler picks next READY process
@@ -234,37 +242,14 @@ Switch CR3 to next process's PML4
 Restore next process state
         │
         ▼
-iretq → process resumes where it left off
+iretq → process resumes
 ```
 
-**Process states:**
-- `RUNNING` - currently executing (only one at a time, single CPU)
-- `READY` - can run, waiting for CPU time
-- `BLOCKED` - waiting for I/O or event
-- `DEAD` - terminated, awaiting cleanup
-
-**Implementation required:**
-- Context save/restore (all callee-saved registers + rip, rsp, rflags)
-- `schedule()` function to pick next READY process
-- Timer interrupt handler calls `schedule()` for preemption
-- `sys_exit` marks process DEAD, calls `schedule()`
-- Process cleanup (free allocations, remove from list)
-- Idle loop or idle process when nothing is READY
-
-**Syscalls enabled by scheduler:**
-- `exit` - terminate process, scheduler picks next
-- `read` (blocking) - mark BLOCKED, scheduler picks next, wake on I/O ready
-- `wait` - parent waits for child to exit
-
-**Future enhancements:**
+**Future enhancements (separate task):**
 - Priority levels
-- Sleep/wake primitives
 - Multi-CPU support (per-CPU run queues)
-
-**Note on APIC timer:** Currently calibrated using PIT to fire at ~10ms intervals. Consider improving calibration accuracy with a better time source:
-- HPET (High Precision Event Timer) - more accurate than PIT
-- TSC (Time Stamp Counter) with `cpuid` to get frequency on modern CPUs
-- ACPI PM timer - consistent 3.579545 MHz across systems
+- Wait/waitpid for parent-child synchronization
+- Improved timer calibration (HPET, TSC frequency via CPUID)
 
 ---
 
@@ -366,24 +351,31 @@ See `src/kernel/CONVENTIONS.md` for full details.
 
 ## Arch Namespace Collisions
 
-**Status:** Not started
+**Status:** Complete
 
-**Problem:** Architecture-specific namespaces mirror generic namespace names, causing confusion and requiring explicit qualification:
+**Problem:** Architecture-specific namespaces mirrored generic namespace names, causing confusion and requiring explicit qualification:
 - `x86_64::syscall` vs `::syscall`
-- `x86_64::process` vs `::process`
 
-**Solution:** Rename arch-specific namespaces to reflect what they actually do rather than mirroring generic names:
+**Changes made:**
 
-| Current | Proposed | Purpose |
-|---------|----------|---------|
-| `x86_64::syscall` | `x86_64::entry` | Syscall entry/exit, swapgs, PerCPU |
-| `x86_64::process` | `x86_64::context` | Context switching mechanics |
+| Before | After | Purpose |
+|--------|-------|---------|
+| `x86_64::syscall` | `x86_64::entry` | Syscall entry mechanism (LSTAR, SYSRET, SyscallFrame) |
+| (in entry) | `x86_64::percpu` | Per-CPU data structures (GS segment, kernel RSP) |
+| `syscall::fd` | `syscall::` | Flattened syscall namespace |
+| `panic()` | `kpanic()` | Variadic template, matches kmalloc naming |
 
-**Benefits:**
-- No name collisions requiring explicit `::` qualification
-- Names accurately describe the code's purpose
-- Generic namespaces (`syscall::`, `process::`) remain for platform-independent code
-- Arch namespaces describe the *mechanism*, generic namespaces describe the *interface*
+**Additional cleanup:**
+- Removed legacy int 0x80 support (adds complexity without value)
+- Removed kernel shell code (now handled in userspace)
+- Added `arch::percpu::current_process()` helper for common access pattern
+
+**Final structure:**
+- `x86_64::entry` - syscall entry/exit, LSTAR/STAR/SFMASK MSR setup
+- `x86_64::percpu` - per-CPU data, GS segment management
+- `x86_64::context` - context switching mechanics
+- `syscall::` - flat namespace for syscall implementations (sys_read, sys_write, etc.)
+- `arch::` aliases all x86_64 namespaces for portable kernel code
 
 ---
 

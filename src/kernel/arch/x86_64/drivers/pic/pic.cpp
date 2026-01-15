@@ -55,7 +55,7 @@
 
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <log/log.hpp>
-#include <panic/panic.hpp>
+#include <kpanic/kpanic.hpp>
 
 namespace x86_64::drivers::pic {
     /**
@@ -79,7 +79,7 @@ namespace x86_64::drivers::pic {
         const auto success = master == 0xFF && slave == 0xFF;
 
         if (!success) {
-            panic("Failed to disable legacy PIC");
+            kpanic("Failed to disable legacy PIC");
         }
 
         log::info("Legacy PIC has been disabled");
