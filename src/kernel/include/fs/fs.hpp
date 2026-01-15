@@ -8,61 +8,99 @@
 
 namespace fs {
     enum class FileType : std::uint8_t {
-        NOT_FOUND = 0,
-        FILE = 1,
+        NONE = 0,
+        REGULAR = 1,
         DIRECTORY = 2,
-        CHAR_DEVICE = 3
+        CHAR_DEVICE = 3,
     };
 
-    constexpr int EOF = 0;
     constexpr int O_RDONLY = 0x01;
+
+    struct Inode;
+    struct FileDescriptor;
+    struct FileSystem;
+
+    // ============================================================================
+    // FileOps - operations on an OPEN file (fd-level)
+    // ============================================================================
+    // Each file type (regular, char device, etc.) provides its own implementation.
+    // The implementation decides how to handle offset (use it, ignore it, etc.)
+
+    struct FileOps {
+        std::intmax_t (*read)(FileDescriptor* fd, void* buf, std::size_t count);
+        std::intmax_t (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
+        std::intmax_t (*close)(FileDescriptor* fd);
+    };
+
+    // ============================================================================
+    // Inode - a file or directory in the filesystem
+    // ============================================================================
+    // Created by FileSystem::open(), freed by FileOps::close()
 
     struct Inode {
         FileType type;
         std::size_t size;
-        void* metadata;
-        struct FileSystem* fs;
-        struct FileOps* ops;
+        const FileOps* ops;
+        void* private_data;
     };
 
+    // ============================================================================
+    // FileDescriptor - an open file handle (per-process)
+    // ============================================================================
+
     struct FileDescriptor {
-        Inode inode;
+        Inode* inode;
         std::size_t offset;
         int flags;
     };
 
-    struct DirEntry {
-        FileType type;
-        std::size_t size;
-        kstring name;
-    };
+    // ============================================================================
+    // Stat - file metadata (for stat() without opening)
+    // ============================================================================
 
     struct Stat {
         FileType type;
         std::size_t size;
-        kstring path;
     };
 
-    using filesystem_read_fn = std::intmax_t (*)(Inode* inode, void* buffer, std::size_t count, std::size_t offset);
-    using filesystem_open_fn = Inode (*)(const kstring& path, int flags);
-    using filesystem_readdir_fn = kvector<DirEntry> (*)(const kstring& cpath);
-    
-    struct FileSystem {
+    // ============================================================================
+    // DirEntry - directory listing entry
+    // ============================================================================
+
+    struct DirEntry {
         kstring name;
-        filesystem_read_fn read;
-        filesystem_open_fn open;
-        filesystem_readdir_fn readdir;
+        FileType type;
     };
 
-    using fileops_read_fn  = std::intmax_t (*)(FileDescriptor* desc, void* buffer, std::size_t count);
-    using fileops_write_fn = std::intmax_t (*)(FileDescriptor* desc, const void* buffer, std::size_t count);
-    using fileops_stat_fn  = std::intmax_t (*)(FileDescriptor* desc, Stat* stat);
-    using fileops_close_fn = std::intmax_t (*)(FileDescriptor* desc);
+    // ============================================================================
+    // FileSystem - a mounted filesystem (path-based operations)
+    // ============================================================================
+    // Handles path resolution and inode creation. Does NOT handle read/write.
 
-    struct FileOps {
-        fileops_read_fn read;
-        fileops_write_fn write;
-        fileops_stat_fn stat;
-        fileops_close_fn close;
+    struct FileSystem {
+        const char* name;
+        void* private_data;
+
+        Inode* (*open)(FileSystem* self, const kstring& path, int flags);
+        int (*stat)(FileSystem* self, const kstring& path, Stat* out);
+        int (*readdir)(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
     };
+
+    // ============================================================================
+    // MountPoint - a filesystem mounted at a path
+    // ============================================================================
+
+    struct MountPoint {
+        kstring root;
+        FileSystem* filesystem;
+    };
+
+    // ============================================================================
+    // VFS operations - global path-based file access
+    // ============================================================================
+
+    void mount(const kstring& path, FileSystem* fs);
+    Inode* open(const kstring& path, int flags);
+    int stat(const kstring& path, Stat* out);
+    int readdir(const kstring& path, kvector<DirEntry>& out);
 }

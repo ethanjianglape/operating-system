@@ -6,7 +6,7 @@
 - [x] [Dynamic Collections (kvector/kstring)](#dynamic-collections)
 - [x] [Slab Allocator](#slab-allocator)
 - [x] [Unit Testing Framework](#unit-testing-framework)
-- [~] [VFS and Initramfs](#vfs-and-initramfs)
+- [x] [VFS and Initramfs](#vfs-and-initramfs)
 - [x] [Userspace Program Loading](#userspace-program-loading)
 - [x] [Basic Process Scheduling](#basic-process-scheduling)
 - [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
@@ -131,45 +131,76 @@ User path:    TTY → console → framebuffer (clean, user-facing)
 
 ## VFS and Initramfs
 
-**Status:** Partially complete
+**Status:** Complete
 
 **Prerequisite:** Dynamic collections (kvector/kstring)
 
-**Goal:** Enable shell commands like `ls` and `cat` to interact with files.
+**Goal:** Clean, Unix-like VFS with single dispatch for file operations.
 
 **Architecture:**
 ```
-User/Shell: vfs::open(), vfs::read(), vfs::readdir()
+Syscall Layer (sys_fd.cpp)
+  sys_open() → fs::open() → Inode*
+  sys_read() → fd->inode->ops->read()   ← single dispatch
                     │
                     ▼
-               VFS layer (path canonicalization, mount resolution)
+fs::open/stat/readdir (fs.cpp)
+  - Mount table lookup
+  - Path canonicalization
+  - Delegates to FileSystem
                     │
-        ┌───────────┼───────────┐
-        ▼           ▼           ▼
-    initramfs     FAT32      ISO9660
-    (memory)      (disk)       (CD)
+        ┌───────────┴───────────┐
+        ▼                       ▼
+    initramfs (/)           devfs (/dev)
+    - ops = fs_file_ops     - tty1: tty_ops
+    - FsFileMeta*           - null: null_ops
 ```
 
-**Completed:**
-- Initramfs loaded as Limine module
-- Tar parser with relative path handling (strips `./` prefix)
-- Initramfs mounted at `/` as root filesystem
-- VFS path canonicalization (resolves `.`, `..`, redundant slashes)
-- `vfs::stat()` for file type checking (FILE, DIRECTORY, NOT_FOUND)
-- `vfs::readdir()` for directory listing
-- Shell commands: `cd`, `ls`, `cat`, `pwd` (in prompt)
-- Relative and absolute path support
-- Current working directory tracking
+**Core types (fs.hpp):**
+- `Inode` - file identity: type, size, ops*, private_data
+- `FileDescriptor` - open handle: Inode* pointer, offset, flags
+- `FileOps` - fd operations: read, write, close
+- `FileSystem` - path operations: open, stat, readdir
+- `MountPoint` - filesystem mounted at path
 
-**Remaining cleanup:**
-- Error handling consistency
-- Code organization/cleanup
-- Additional VFS operations as needed
+**Key design decisions:**
+- Single dispatch: `fd->inode->ops->read()` (no double indirection)
+- `FileDescriptor` holds `Inode*` pointer (not embedded copy)
+- `FileSystem::open()` returns heap-allocated Inode, `FileOps::close()` frees it
+- Char devices use static inodes (singleton, close is no-op)
+- Offset handling is FileOps responsibility (fs_file_ops tracks, tty ignores)
+
+**File structure:**
+```
+include/fs/
+├── fs.hpp              # All types + VFS operations
+├── fs_file_ops.hpp     # FsFileMeta + get_fs_file_ops()
+├── initramfs/
+│   └── initramfs.hpp
+└── devfs/
+    ├── devfs.hpp
+    ├── dev_tty.hpp
+    └── dev_null.hpp
+
+lib/fs/
+├── fs.cpp              # Mount table + path routing
+├── fs_file_ops.cpp     # Shared read/write/close for fs files
+├── initramfs/
+│   ├── initramfs.cpp
+│   └── tar.cpp
+└── devfs/
+    ├── devfs.cpp
+    ├── dev_tty.cpp     # TTY: keyboard input, console output
+    └── dev_null.cpp    # Null: discard writes, EOF on read
+```
+
+**Devices:**
+- `/dev/tty1` - TTY with line editing, history, keyboard input
+- `/dev/null` - Discards writes, returns EOF on read
 
 **Future backends:**
 - FAT32 for USB drives / SD cards
 - ext2 for more Unix-like semantics
-- ISO9660 for CD-ROM images
 
 ---
 
@@ -329,7 +360,8 @@ iretq → process resumes
 
 **Final structure:**
 - Removed `kernel::` namespace entirely (redundant - we're in the kernel)
-- Flat subsystem namespaces: `pmm::`, `log::`, `tty::`, `console::`, `fs::`
+- Flat subsystem namespaces: `pmm::`, `log::`, `console::`, `fs::`
+- Nested fs namespaces: `fs::initramfs::`, `fs::devfs::`, `fs::devfs::tty::`
 - Global k-prefixed utilities: `kstring`, `kvector`, `kprint()`, `kprintln()`
 - Architecture code: `x86_64::vmm`, `x86_64::drivers::apic`, etc.
 - Architecture abstraction: `arch::` namespace aliases in `include/arch.hpp`

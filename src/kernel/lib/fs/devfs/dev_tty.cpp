@@ -1,14 +1,13 @@
 #include <arch.hpp>
-#include "fs/fs.hpp"
-#include "fs/initramfs/initramfs.hpp"
-#include "fs/vfs/vfs.hpp"
-#include "log/log.hpp"
-#include "process/process.hpp"
-#include "scheduler/scheduler.hpp"
+#include <fs/fs.hpp>
+#include <fs/fs_file_ops.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <console/console.hpp>
 #include <containers/kvector.hpp>
 #include <containers/kstring.hpp>
+#include <process/process.hpp>
+#include <scheduler/scheduler.hpp>
+#include <log/log.hpp>
 #include <crt/crt.h>
 
 namespace fs::devfs::tty {
@@ -23,12 +22,24 @@ namespace fs::devfs::tty {
     static std::size_t buffer_index = 0;
     static std::size_t history_index = 0;
     
-    static FileOps tty_ops = {
-        .read = read,
-        .write = write,
-        .stat = nullptr,
-        .close = close
+    static std::intmax_t tty_read(FileDescriptor* fd, void* buf, std::size_t count);
+    static std::intmax_t tty_write(FileDescriptor* fd, const void* buf, std::size_t count);
+    static std::intmax_t tty_close(FileDescriptor* fd);
+
+    static const FileOps tty_ops = {
+        .read = tty_read,
+        .write = tty_write,
+        .close = tty_close,
     };
+
+    static Inode tty_inode = {
+        .type = FileType::CHAR_DEVICE,
+        .size = 0,
+        .ops = &tty_ops,
+        .private_data = nullptr,
+    };
+
+    Inode* get_tty_inode() { return &tty_inode; }
 
     static process::Process* waiting_process;
 
@@ -230,21 +241,27 @@ namespace fs::devfs::tty {
         console::scroll_down();
     }
 
-    FileOps* get_tty_ops() { return &tty_ops; }
-
     void run_tty_program(const kstring& name) {
-        Inode inode = vfs::lookup(name.c_str(), fs::O_RDONLY);
-        std::uint8_t* data = new std::uint8_t[inode.size];
-        initramfs::read(&inode, data, inode.size, 0);
-        process::Process* p = process::create_process(data, inode.size);
+        Inode* inode = fs::open(name, fs::O_RDONLY);
+        
+        if (!inode) {
+            log::warn("run_tty_program: failed to open ", name);
+            return;
+        }
 
-        p->fd_table.push_back({});
-        p->fd_table.push_back({});
-        p->fd_table.push_back({});
+        std::size_t size = inode->size;
+        auto* data = new std::uint8_t[size];
+        FileDescriptor fd = {.inode = inode, .offset = 0, .flags = O_RDONLY};
+        inode->ops->read(&fd, data, size);
 
-        p->fd_table[0].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stdin
-        p->fd_table[1].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stdout
-        p->fd_table[2].inode = vfs::lookup("/dev/tty1", fs::O_RDONLY); // stderr
+        process::Process* p = process::create_process(data, size);
+        Inode* tty = get_tty_inode();
+        
+        p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stdin
+        p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stdout
+        p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stderr
+
+        inode->ops->close(&fd);
 
         scheduler::add_process(p);
     }
@@ -252,7 +269,6 @@ namespace fs::devfs::tty {
     void init() {
         log::init_start("/dev/tty");
 
-        //run_tty_program("/bin/hello");
         run_tty_program("/bin/a");
         run_tty_program("/bin/b");
         run_tty_program("/bin/c");
@@ -260,7 +276,7 @@ namespace fs::devfs::tty {
         log::init_end("/dev/tty");
     }
     
-    std::intmax_t read(FileDescriptor* desc, void* buff, std::size_t count) {
+    static std::intmax_t tty_read(FileDescriptor*, void* buff, std::size_t count) {
         auto* process = arch::percpu::current_process();
 
         waiting_process = process;
@@ -321,7 +337,7 @@ namespace fs::devfs::tty {
         }
     }
 
-    std::intmax_t write(FileDescriptor* desc, const void* buffer, std::size_t count) {
+    static std::intmax_t tty_write(FileDescriptor*, const void* buffer, std::size_t count) {
         const auto* cbuffer = reinterpret_cast<const char*>(buffer);
         kstring str(cbuffer, count);
 
@@ -331,7 +347,8 @@ namespace fs::devfs::tty {
         return str.size();
     }
 
-    std::intmax_t close(FileDescriptor* desc) {
+    static std::intmax_t tty_close(FileDescriptor*) {
+        // TTY inode is static, nothing to free
         return 0;
     }
 }

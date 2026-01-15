@@ -1,78 +1,81 @@
-#include "containers/kstring.hpp"
-#include "containers/kvector.hpp"
-#include "log/log.hpp"
 #include "tar.hpp"
 
-#include <cstddef>
-#include <cstdint>
 #include <fs/initramfs/initramfs.hpp>
 #include <fs/fs.hpp>
-#include <fs/vfs/vfs.hpp>
+#include <fs/fs_file_ops.hpp>
+#include <memory/memory.hpp>
+#include <log/log.hpp>
 
 namespace fs::initramfs {
-    static std::uint8_t* fs_addr = nullptr;
-    static std::size_t fs_size;
+    static Inode* initramfs_open(FileSystem* self, const kstring& path, int flags);
+    static int initramfs_stat(FileSystem* self, const kstring& path, Stat* out);
+    static int initramfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
 
     static FileSystem initramfs_fs = {
         .name = "initramfs",
-        .read = read,
-        .open = open,
-        .readdir = readdir
+        .private_data = nullptr,
+        .open = initramfs_open,
+        .stat = initramfs_stat,
+        .readdir = initramfs_readdir,
     };
-    
-    void init(std::uint8_t* addr, std::size_t size) {
-        fs_addr = addr;
-        fs_size = size;
 
+    void init(std::uint8_t* addr, std::size_t) {
         tar::init(addr);
-        vfs::mount("/", &initramfs_fs);
+        fs::mount("/", &initramfs_fs);
     }
 
-    std::intmax_t read(Inode* inode, void* buffer, std::size_t count, std::size_t offset) {
-        if (inode == nullptr || buffer == nullptr) {
+    static Inode* initramfs_open(FileSystem*, const kstring& path, int) {
+        log::debug("initramfs::open ", path);
+
+        tar::TarMeta* meta = tar::find(path);
+        if (!meta) {
+            return nullptr;
+        }
+
+        FileType type = meta->header->typeflag == tar::TYPEFLAG_DIR
+            ? FileType::DIRECTORY
+            : FileType::REGULAR;
+
+        auto* inode = new Inode{};
+        inode->type = type;
+        inode->size = meta->size_bytes;
+        inode->ops = get_fs_file_ops();
+
+        auto* file_meta = new FsFileMeta{};
+        file_meta->data = meta->data;
+        file_meta->size = meta->size_bytes;
+        inode->private_data = file_meta;
+
+        log::debug("initramfs::open success, size=", inode->size);
+        return inode;
+    }
+
+    static int initramfs_stat(FileSystem*, const kstring& path, Stat* out) {
+        tar::TarMeta* meta = tar::find(path);
+        if (!meta) {
             return -1;
         }
 
-        tar::TarMeta* meta = reinterpret_cast<tar::TarMeta*>(inode->metadata);
-
-        return tar::read(meta, buffer, count, offset);
-    }
-
-    Inode open(const kstring& path, int flags) {
-        log::debug("initramfs::open = ", path);
+        out->type = meta->header->typeflag == tar::TYPEFLAG_DIR
+            ? FileType::DIRECTORY
+            : FileType::REGULAR;
+        out->size = meta->size_bytes;
         
-        tar::TarMeta* meta = tar::find(path);
-
-        if (meta == nullptr) {
-            return vfs::NULL_INODE;
-        }
-
-        FileType type = meta->header->typeflag == tar::TYPEFLAG_DIR ? FileType::DIRECTORY : FileType::FILE;
-        std::size_t size = meta->size_bytes;
-
-        log::debug("size = ", size);
-
-        return {
-            .type = type,
-            .size = size,
-            .metadata = meta,
-            .fs = &initramfs_fs,
-            .ops = vfs::get_vfs_file_ops()
-        };
+        return 0;
     }
 
-    kvector<DirEntry> readdir(const kstring& path) {
-        kvector<DirEntry> entries;
+    static int initramfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>& out) {
         kvector<tar::TarMeta*> metas = tar::list(path);
 
         for (tar::TarMeta* meta : metas) {
-            entries.push_back(DirEntry{
-                .type = meta->header->typeflag == tar::TYPEFLAG_DIR ? FileType::DIRECTORY : FileType::FILE,
-                .size = meta->size_bytes,
-                .name = meta->filename_str
+            out.push_back(DirEntry{
+                .name = meta->filename_str,
+                .type = meta->header->typeflag == tar::TYPEFLAG_DIR
+                    ? FileType::DIRECTORY
+                    : FileType::REGULAR,
             });
         }
-        
-        return entries;
+
+        return 0;
     }
 }

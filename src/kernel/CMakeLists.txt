@@ -43,7 +43,6 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/boot/limine-boot.cpp
-  ${LIB_DIR}/tty/tty.cpp
   ${LIB_DIR}/timer/timer.cpp
   ${LIB_DIR}/kpanic/kpanic.cpp
   ${LIB_DIR}/memory/memory.cpp
@@ -56,11 +55,13 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/drivers/acpi/acpi.cpp
   ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
-  ${LIB_DIR}/fs/vfs/vfs.cpp
+  ${LIB_DIR}/fs/fs.cpp
+  ${LIB_DIR}/fs/fs_file_ops.cpp
   ${LIB_DIR}/fs/initramfs/initramfs.cpp
   ${LIB_DIR}/fs/initramfs/tar.cpp
   ${LIB_DIR}/fs/devfs/devfs.cpp
   ${LIB_DIR}/fs/devfs/dev_tty.cpp
+  ${LIB_DIR}/fs/devfs/dev_null.cpp
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
   ${LIB_DIR}/syscall/sys_fd.cpp

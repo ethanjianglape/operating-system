@@ -1,32 +1,62 @@
-#include "console/console.hpp"
 #include <fs/devfs/devfs.hpp>
 #include <fs/devfs/dev_tty.hpp>
+#include <fs/devfs/dev_null.hpp>
 #include <fs/fs.hpp>
-#include <fs/vfs/vfs.hpp>
 
 namespace fs::devfs {
+    static Inode* devfs_open(FileSystem* self, const kstring& path, int flags);
+    static int devfs_stat(FileSystem* self, const kstring& path, Stat* out);
+    static int devfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
+
     static FileSystem devfs_fs = {
         .name = "devfs",
-        .read = nullptr,
-        .open = open,
-        .readdir = nullptr
+        .private_data = nullptr,
+        .open = devfs_open,
+        .stat = devfs_stat,
+        .readdir = devfs_readdir,
     };
-    
+
     void init() {
-        vfs::mount("/dev", &devfs_fs);
+        fs::mount("/dev", &devfs_fs);
     }
 
-    Inode open(const kstring& path, int flags) {
+    static Inode* devfs_open(FileSystem*, const kstring& path, int) {
         if (path == "/tty1") {
-            return {
-                .type = FileType::CHAR_DEVICE,
-                .size = 0,
-                .metadata = nullptr,
-                .fs = &devfs_fs,
-                .ops = fs::devfs::tty::get_tty_ops()
-            };
+            return tty::get_tty_inode();
         }
         
-        return vfs::NULL_INODE;
+        if (path == "/null") {
+            return null::get_null_inode();
+        }
+
+        return nullptr;
+    }
+
+    static int devfs_stat(FileSystem*, const kstring& path, Stat* out) {
+        if (path == "/tty1" || path == "/null") {
+            out->type = FileType::CHAR_DEVICE;
+            out->size = 0;
+            return 0;
+        }
+
+        return -1;
+    }
+
+    static int devfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>& out) {
+        if (path == "/") {
+            out.push_back(DirEntry{
+                .name = "tty1",
+                .type = FileType::CHAR_DEVICE,
+            });
+            
+            out.push_back(DirEntry{
+                .name = "null",
+                .type = FileType::CHAR_DEVICE,
+            });
+            
+            return 0;
+        }
+
+        return -1;
     }
 }
