@@ -1,5 +1,6 @@
 #include <fs/devfs/devfs.hpp>
 #include <fs/devfs/dev_tty.hpp>
+#include <fs/devfs/dev_null.hpp>
 #include <fs/fs.hpp>
 
 namespace fs::devfs {
@@ -23,12 +24,16 @@ namespace fs::devfs {
         if (path == "/tty1") {
             return tty::get_tty_inode();
         }
+        
+        if (path == "/null") {
+            return null::get_null_inode();
+        }
 
         return nullptr;
     }
 
     static int devfs_stat(FileSystem*, const kstring& path, Stat* out) {
-        if (path == "/tty1") {
+        if (path == "/tty1" || path == "/null") {
             out->type = FileType::CHAR_DEVICE;
             out->size = 0;
             return 0;
@@ -43,6 +48,12 @@ namespace fs::devfs {
                 .name = "tty1",
                 .type = FileType::CHAR_DEVICE,
             });
+            
+            out.push_back(DirEntry{
+                .name = "null",
+                .type = FileType::CHAR_DEVICE,
+            });
+            
             return 0;
         }
 
