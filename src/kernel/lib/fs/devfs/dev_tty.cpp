@@ -23,10 +23,10 @@ namespace fs::devfs::tty {
     static std::size_t buffer_index = 0;
     static std::size_t history_index = 0;
     
-    static std::intmax_t tty_read(FileDescriptor* fd, void* buf, std::size_t count);
-    static std::intmax_t tty_write(FileDescriptor* fd, const void* buf, std::size_t count);
-    static std::intmax_t tty_close(FileDescriptor* fd);
-    static std::intmax_t tty_lseek(FileDescriptor*, std::intmax_t, int);
+    static int tty_read(FileDescriptor* fd, void* buf, std::size_t count);
+    static int tty_write(FileDescriptor* fd, const void* buf, std::size_t count);
+    static int tty_close(FileDescriptor* fd);
+    static int tty_lseek(FileDescriptor*, int, int);
 
     static const FileOps tty_ops = {
         .read = tty_read,
@@ -279,7 +279,7 @@ namespace fs::devfs::tty {
         log::init_end("/dev/tty");
     }
     
-    static std::intmax_t tty_read(FileDescriptor*, void* buff, std::size_t count) {
+    static int tty_read(FileDescriptor*, void* buff, std::size_t count) {
         auto* process = arch::percpu::current_process();
 
         waiting_process = process;
@@ -340,7 +340,7 @@ namespace fs::devfs::tty {
         }
     }
 
-    static std::intmax_t tty_write(FileDescriptor*, const void* buffer, std::size_t count) {
+    static int tty_write(FileDescriptor*, const void* buffer, std::size_t count) {
         const auto* cbuffer = reinterpret_cast<const char*>(buffer);
         kstring str(cbuffer, count);
 
@@ -350,12 +350,12 @@ namespace fs::devfs::tty {
         return str.size();
     }
 
-    static std::intmax_t tty_close(FileDescriptor*) {
+    static int tty_close(FileDescriptor*) {
         // TTY inode is static, nothing to free
         return 0;
     }
 
-    static std::intmax_t tty_lseek(FileDescriptor*, std::intmax_t, int){
+    static int tty_lseek(FileDescriptor*, int, int){
         return -ESPIPE;
     }
 }

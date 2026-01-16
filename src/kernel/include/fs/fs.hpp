@@ -31,10 +31,10 @@ namespace fs {
     // The implementation decides how to handle offset (use it, ignore it, etc.)
 
     struct FileOps {
-        std::intmax_t (*read)(FileDescriptor* fd, void* buf, std::size_t count);
-        std::intmax_t (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
-        std::intmax_t (*close)(FileDescriptor* fd);
-        std::intmax_t (*lseek)(FileDescriptor* fd, std::intmax_t offset, int whence);
+        int (*read)(FileDescriptor* fd, void* buf, std::size_t count);
+        int (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
+        int (*close)(FileDescriptor* fd);
+        int (*lseek)(FileDescriptor* fd, int offset, int whence);
     };
 
     // ============================================================================

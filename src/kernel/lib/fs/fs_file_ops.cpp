@@ -5,7 +5,7 @@
 #include <crt/crt.h>
 
 namespace fs {
-    static std::intmax_t fs_file_read(FileDescriptor* fd, void* buf, std::size_t count) {
+    static int fs_file_read(FileDescriptor* fd, void* buf, std::size_t count) {
         if (!fd || !fd->inode || !buf) {
             return -1;
         }
@@ -25,15 +25,15 @@ namespace fs {
         memcpy(buf, meta->data + fd->offset, to_read);
 
         fd->offset += to_read;
-        return static_cast<std::intmax_t>(to_read);
+        return static_cast<int>(to_read);
     }
 
-    static std::intmax_t fs_file_write(FileDescriptor*, const void*, std::size_t) {
+    static int fs_file_write(FileDescriptor*, const void*, std::size_t) {
         // Read-only for now
         return -1;
     }
 
-    static std::intmax_t fs_file_close(FileDescriptor* fd) {
+    static int fs_file_close(FileDescriptor* fd) {
         if (fd && fd->inode) {
             delete static_cast<FsFileMeta*>(fd->inode->private_data);
             delete fd->inode;
@@ -44,7 +44,7 @@ namespace fs {
         return 0;
     }
 
-    static std::intmax_t fs_file_lseek(FileDescriptor* fd, std::intmax_t offset, int whence) {
+    static int fs_file_lseek(FileDescriptor* fd, int offset, int whence) {
         if (!fd || !fd->inode) {
             return -EBADF;
         }
@@ -53,7 +53,7 @@ namespace fs {
             return -EISDIR;
         }
 
-        std::intmax_t new_offset;
+        int new_offset;
 
         switch (whence) {
         case SEEK_SET:
