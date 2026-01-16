@@ -53,6 +53,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/console/ansi.cpp
   ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
   ${LIB_DIR}/drivers/acpi/acpi.cpp
+  ${LIB_DIR}/drivers/acpi/madt.cpp
   ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
   ${LIB_DIR}/fs/fs.cpp

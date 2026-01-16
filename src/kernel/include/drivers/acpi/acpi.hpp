@@ -26,21 +26,7 @@ namespace drivers::acpi {
         std::uint32_t creator_revision;
     };
 
-    constexpr std::uintptr_t MADT_RECORD_OFFSET = 0x2C;
-    
-    constexpr std::uint8_t MADT_LAPIC               = 0;
-    constexpr std::uint8_t MADT_IOAPIC              = 1;
-    constexpr std::uint8_t MADT_IOAPIC_ISO          = 2; // Interrupt Source Override
-    constexpr std::uint8_t MADT_IOAPIC_NIS          = 3; // Non-Maskable Interrupt Source
-    constexpr std::uint8_t MADT_LAPIC_NI            = 4; // Non-Maskable Interrupts
-    constexpr std::uint8_t MADT_LAPIC_ADDR_OVERRIDE = 5;
-    constexpr std::uint8_t MADT_X2APIC              = 9;
-
-    struct [[gnu::packed]] MADTHeader {
-        ACPIHeader std_header;
-        std::uint32_t lapic_addr;
-        std::uint32_t flags;
-    };
+    constexpr const char* SIG_MADT = "APIC";
 
     struct [[gnu::packed]] XSDT {
         ACPIHeader header;
