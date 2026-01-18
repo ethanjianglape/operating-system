@@ -48,7 +48,7 @@ namespace fs::devfs {
     }
 
     static int devfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>& out) {
-        if (path == "/") {
+        if (path.empty()) {
             out.push_back(DirEntry{
                 .name = "tty1",
                 .type = FileType::CHAR_DEVICE,
