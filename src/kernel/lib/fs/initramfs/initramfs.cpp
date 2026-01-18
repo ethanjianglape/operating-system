@@ -65,11 +65,22 @@ namespace fs::initramfs {
     }
 
     static int initramfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>& out) {
+        tar::TarMeta* entry = tar::find(path);
+
+        if (entry == nullptr) {
+            return -1;
+        }
+        
         kvector<tar::TarMeta*> metas = tar::list(path);
 
         for (tar::TarMeta* meta : metas) {
+            const kstring& fullpath = meta->filename_str;
+            std::size_t prefix_len = path.empty() ? 0 : path.length() + 1;
+            
+            kstring basename = fullpath.substr(prefix_len);
+
             out.push_back(DirEntry{
-                .name = meta->filename_str,
+                .name = basename,
                 .type = meta->header->typeflag == tar::TYPEFLAG_DIR
                     ? FileType::DIRECTORY
                     : FileType::REGULAR,

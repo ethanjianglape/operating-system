@@ -12,6 +12,7 @@ namespace test_kmalloc { void run(); }
 namespace test_kvector { void run(); }
 namespace test_kstring { void run(); }
 namespace test_fmt { void run(); }
+namespace test_fs { void run(); }
 
 namespace test {
     static Results results = {0, 0};
@@ -48,6 +49,7 @@ namespace test {
         test_kvector::run();
         test_kstring::run();
         test_fmt::run();
+        test_fs::run();
 
         auto frames_after_test = pmm::get_free_frames();
 
