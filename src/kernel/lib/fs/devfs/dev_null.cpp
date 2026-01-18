@@ -2,15 +2,19 @@
 #include <fs/fs.hpp>
 
 namespace fs::devfs::null {
-    static std::intmax_t null_read(FileDescriptor*, void*, std::size_t) {
+    static int null_read(FileDescriptor*, void*, std::size_t) {
         return 0;  // EOF
     }
 
-    static std::intmax_t null_write(FileDescriptor*, const void*, std::size_t count) {
+    static int null_write(FileDescriptor*, const void*, std::size_t count) {
         return count;  // Discard, report success
     }
 
-    static std::intmax_t null_close(FileDescriptor*) {
+    static int null_close(FileDescriptor*) {
+        return 0;
+    }
+
+    static int null_lseek(FileDescriptor*, int, int) {
         return 0;
     }
 
@@ -18,6 +22,7 @@ namespace fs::devfs::null {
         .read = null_read,
         .write = null_write,
         .close = null_close,
+        .lseek = null_lseek,
     };
 
     static Inode null_inode = {

@@ -30,7 +30,7 @@ namespace log {
 
     template <typename... Ts>
     void success(Ts... args) {
-        kprintln("[SUCC] ", args...);
+        kprintln("[SUCCESS] ", args...);
     }
 
     template <typename... Ts>

@@ -16,6 +16,10 @@ namespace fs {
 
     constexpr int O_RDONLY = 0x01;
 
+    constexpr int SEEK_SET = 0;
+    constexpr int SEEK_CUR = 1;
+    constexpr int SEEK_END = 2;
+
     struct Inode;
     struct FileDescriptor;
     struct FileSystem;
@@ -27,9 +31,10 @@ namespace fs {
     // The implementation decides how to handle offset (use it, ignore it, etc.)
 
     struct FileOps {
-        std::intmax_t (*read)(FileDescriptor* fd, void* buf, std::size_t count);
-        std::intmax_t (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
-        std::intmax_t (*close)(FileDescriptor* fd);
+        int (*read)(FileDescriptor* fd, void* buf, std::size_t count);
+        int (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
+        int (*close)(FileDescriptor* fd);
+        int (*lseek)(FileDescriptor* fd, int offset, int whence);
     };
 
     // ============================================================================

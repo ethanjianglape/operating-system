@@ -95,6 +95,7 @@
  */
 
 #include "apic.hpp"
+#include <acpi/madt.hpp>
 #include <timer/timer.hpp>
 
 #include <arch/x86_64/cpu/cpu.hpp>
@@ -122,25 +123,22 @@ namespace x86_64::drivers::apic {
     // We map these physical addresses to virtual addresses before use.
 
     static volatile std::uint8_t* lapic_virt_base = nullptr;
-    static volatile std::uint8_t* ioapic_virt_base = nullptr;
 
     /**
      * @brief Sets the Local APIC base address by mapping the physical address.
      * @param lapic_phys_addr Physical address of the LAPIC (from ACPI MADT).
      */
-    void set_lapic_addr(std::uintptr_t lapic_phys_addr) {
+    void set_lapic_addr() {
+        std::uint64_t phys_addr = ::acpi::madt::get_lapic_addr();
+        
         lapic_virt_base =
-            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(lapic_phys_addr, vmm::PAGE_CACHE_DISABLE | vmm::PAGE_WRITE));
+            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(phys_addr, vmm::PAGE_CACHE_DISABLE | vmm::PAGE_WRITE));
     }
 
-    /**
-     * @brief Sets the I/O APIC base address by mapping the physical address.
-     * @param ioapic_phys_addr Physical address of the I/O APIC (from ACPI MADT).
-     */
-    void set_ioapic_addr(std::uintptr_t ioapic_phys_addr) {
-        ioapic_virt_base =
-            reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(ioapic_phys_addr, vmm::PAGE_CACHE_DISABLE | vmm::PAGE_WRITE));
-    }
+    // Helper to get the register offset for a redirection table entry
+    // Each entry is 64 bits = 2 registers (low at 0x10+2n, high at 0x11+2n)
+    constexpr std::uint32_t IOAPIC_REDTBL_LO(std::uint32_t pin) { return IOAPIC_REDTBL_BASE + pin * 2; }
+    constexpr std::uint32_t IOAPIC_REDTBL_HI(std::uint32_t pin) { return IOAPIC_REDTBL_BASE + pin * 2 + 1; }
 
     // =========================================================================
     // LAPIC Register Access
@@ -198,9 +196,9 @@ namespace x86_64::drivers::apic {
      * @return The 32-bit value read from the register.
      */
     [[gnu::used]]
-    static inline std::uint32_t ioapic_read(std::uint32_t reg) {
-        *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOREGSEL) = reg;
-        return *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOWIN);
+    static inline std::uint32_t ioapic_read(volatile std::uint8_t* base, std::uint32_t reg) {
+        *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOREGSEL) = reg;
+        return *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOWIN);
     }
 
     /**
@@ -209,9 +207,14 @@ namespace x86_64::drivers::apic {
      * @param value The 32-bit value to write.
      */
     [[gnu::used]]
-    static inline void ioapic_write(std::uint32_t reg, std::uint32_t value) {
-        *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOREGSEL) = reg;
-        *reinterpret_cast<volatile std::uint32_t*>(ioapic_virt_base + IOAPIC_IOWIN) = value;
+    static inline void ioapic_write(volatile std::uint8_t* base, std::uint32_t reg, std::uint32_t value) {
+        if (base == nullptr) {
+            log::error("Attempt to write to IOApic NULL address");
+            return;
+        }
+        
+        *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOREGSEL) = reg;
+        *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOWIN) = value;
     }
 
     /**
@@ -292,10 +295,13 @@ namespace x86_64::drivers::apic {
     }
 
     /**
-     * @brief Routes the keyboard interrupt (IRQ 1) to the specified vector.
+     * @brief Routes a legacy ISA IRQ to the specified interrupt vector via the IOAPIC.
      *
-     * Configures the I/O APIC Redirection Table entry for the keyboard. Each
-     * redirection table entry is 64 bits with the following layout:
+     * Looks up the correct IOAPIC and pin for the given IRQ using the MADT, applies
+     * any Interrupt Source Override flags (polarity/trigger mode), and programs the
+     * IOAPIC redirection table entry.
+     *
+     * Each redirection table entry is 64 bits with the following layout:
      *
      *   - Bits 0-7:   Interrupt Vector (which IDT entry to invoke, 0x10-0xFE)
      *   - Bits 8-10:  Delivery Mode:
@@ -314,34 +320,57 @@ namespace x86_64::drivers::apic {
      *   - Bits 17-55: Reserved
      *   - Bits 56-63: Destination (which CPU(s) to deliver to)
      *
-     * We use all defaults (0 for upper bits): Fixed delivery, Physical mode,
+     * Unless overridden by the MADT, we use defaults: Fixed delivery, Physical mode,
      * Active High, Edge triggered, Enabled, deliver to CPU 0.
      *
-     * @param vector The interrupt vector number to route keyboard interrupts to.
+     * @param irq Legacy ISA IRQ number (0-15).
+     * @param vector The interrupt vector number to deliver to the CPU.
      */
-    void ioapic_route_keyboard(std::uint8_t vector) {
-        constexpr std::uint32_t KEYBOARD_IRQ = 1;
-        const std::uint64_t entry = vector;  // Low 8 bits = vector, rest = 0 (defaults)
+    void ioapic_route_irq(std::uint8_t irq, std::uint8_t vector) {
+        const std::uint32_t gsi = acpi::madt::get_gsi_for_irq(irq);
+        const acpi::madt::IOApic* ioapic = acpi::madt::get_ioapic_for_gsi(gsi);
 
-        ioapic_write(IOAPIC_REDTBL_LO(KEYBOARD_IRQ), static_cast<std::uint32_t>(entry));
-        ioapic_write(IOAPIC_REDTBL_HI(KEYBOARD_IRQ), static_cast<std::uint32_t>(entry >> 32));
+        if (ioapic == nullptr) {
+            kpanic("No IOAPIC found for GSI: ", gsi);
+        }
+
+        const acpi::madt::InterruptSourceOverride* iso = acpi::madt::get_override_for_irq(irq);
+        volatile std::uint8_t* ioapic_addr = acpi::madt::get_mapped_ioapic_addr(ioapic);
+
+        std::uint32_t pin = gsi - ioapic->gsi_base;
+        std::uint64_t entry = vector;
+
+        if (iso) {
+            if ((iso->flags & 0x3) == 0x3) {
+                entry |= (1 << 13);  // Active Low
+            }
+
+            if ((iso->flags & 0xC) == 0xC) {
+                entry |= (1 << 15);  // Level Triggered
+            }
+        }
+
+        ioapic_write(ioapic_addr, IOAPIC_REDTBL_LO(pin), static_cast<std::uint32_t>(entry));
+        ioapic_write(ioapic_addr, IOAPIC_REDTBL_HI(pin), static_cast<std::uint32_t>(entry >> 32));
     }
 
     /**
-     * @brief Initializes the APIC subsystem (both Local APIC and I/O APIC).
+     * @brief Initializes the APIC subsystem (Local APIC and LAPIC timer).
      *
-     * This function performs complete APIC initialization:
+     * This function performs LAPIC initialization:
      *   1. Verifies APIC support via CPUID
      *   2. Enables the APIC globally via MSR
      *   3. Configures the Spurious Interrupt Vector Register (SVR)
      *   4. Clears the Task Priority Register (TPR) to accept all interrupts
-     *   5. Routes keyboard interrupts via the I/O APIC
-     *   6. Initializes the LAPIC timer for scheduling
+     *   5. Initializes the LAPIC timer for scheduling
      *
-     * @pre set_lapic_addr() and set_ioapic_addr() must be called first.
+     * Device drivers should call ioapic_route_irq() to set up their own
+     * interrupt routing through the I/O APIC.
+     *
+     * @pre The MADT must be parsed before calling this function.
      * @pre The legacy PIC must be disabled (see pic.cpp).
      *
-     * @throws Panics if APIC is not supported or addresses are not set.
+     * @throws Panics if APIC is not supported or LAPIC address is not available.
      */
     void init() {
         log::init_start("APIC");
@@ -350,8 +379,10 @@ namespace x86_64::drivers::apic {
             kpanic("APIC not supported - required for this kernel");
         }
 
-        if (ioapic_virt_base == nullptr || lapic_virt_base == nullptr) {
-            kpanic("IOAPIC/LAPIC physical addresses have not been mapped yet!");
+        set_lapic_addr();
+
+        if (lapic_virt_base == nullptr) {
+            kpanic("LAPIC physical addresses have not been mapped yet!");
         }
 
         // Step 1: Enable the APIC globally via the MSR
@@ -388,10 +419,7 @@ namespace x86_64::drivers::apic {
         // An OS scheduler might temporarily raise TPR during critical sections.
         lapic_write(LAPIC_TPR, 0);
 
-        // Step 4: Configure I/O APIC to route keyboard interrupts
-        ioapic_route_keyboard(irq::IRQ_KEYBOARD);
-
-        // Step 5: Set up the LAPIC timer for periodic ticks
+        // Step 4: Set up the LAPIC timer for periodic ticks
         timer_init();
 
         log::init_end("APIC");
@@ -476,7 +504,7 @@ namespace x86_64::drivers::apic {
         //
         // In periodic mode, the counter automatically reloads when it hits 0,
         // generating a continuous stream of interrupts at our desired rate.
-        lapic_write(LAPIC_TIMER, irq::IRQ_TIMER | TIMER_MODE_PERIODIC);
+        lapic_write(LAPIC_TIMER, irq::VECTOR_TIMER | TIMER_MODE_PERIODIC);
         lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
         lapic_write(LAPIC_TIMER_INIT_COUNT, ticks_elapsed);
 
@@ -484,7 +512,7 @@ namespace x86_64::drivers::apic {
         // From this point on, apic_timer_handler is called every calibration_ms (10ms)
         // automatically - the hardware generates interrupts on its own, no polling needed.
         // This is the heartbeat that drives preemptive scheduling.
-        irq::register_irq_handler(irq::IRQ_TIMER, apic_timer_handler);
+        irq::register_irq_handler(irq::VECTOR_TIMER, apic_timer_handler);
 
         log::info("APIC timer: ", ticks_elapsed, " ticks per ", calibration_ms, "ms");
     }

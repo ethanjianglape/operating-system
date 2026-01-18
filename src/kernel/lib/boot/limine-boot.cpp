@@ -2,8 +2,8 @@
 #include <boot/limine.h>
 
 #include <arch.hpp>
-#include <drivers/acpi/acpi.hpp>
-#include <drivers/framebuffer/framebuffer.hpp>
+#include <acpi/acpi.hpp>
+#include <framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>
 #include <fs/initramfs/initramfs.hpp>
 #include <fs/devfs/devfs.hpp>
@@ -112,7 +112,7 @@ void init_framebuffer() {
         kpanic("No framebuffer available from Limine");
     }
 
-    auto fb_info = drivers::framebuffer::FrameBufferInfo {
+    auto fb_info = framebuffer::FrameBufferInfo {
         .width = fb->width,
         .height = fb->height,
         .pitch = fb->pitch,
@@ -120,7 +120,7 @@ void init_framebuffer() {
         .vram = static_cast<std::uint8_t*>(fb->address)
     };
 
-    drivers::framebuffer::init(fb_info);
+    framebuffer::init(fb_info);
 }
 
 void init_memory() {
@@ -160,7 +160,7 @@ void init_acpi() {
 
     log::info("RSDP address: ", rsdp_address);
 
-    drivers::acpi::init(rsdp_address);
+    acpi::init(rsdp_address);
 }
 
 void init_modules() {

@@ -1,5 +1,5 @@
 #include <console/console.hpp>
-#include <drivers/framebuffer/framebuffer.hpp>
+#include <framebuffer/framebuffer.hpp>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
 #include <arch.hpp>
@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace drivers::framebuffer {
+namespace framebuffer {
     static std::uint64_t fb_width;
     static std::uint64_t fb_height;
     static std::uint64_t fb_num_pixels;

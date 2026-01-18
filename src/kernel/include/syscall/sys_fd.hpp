@@ -9,4 +9,5 @@ namespace syscall {
     int sys_write(int fd, const void* buffer, std::size_t count);
     int sys_close(int fd);
     int sys_fstat(int fd, fs::Stat* stat);
+    int sys_lseek(int fd, std::size_t offset, int whence);
 }

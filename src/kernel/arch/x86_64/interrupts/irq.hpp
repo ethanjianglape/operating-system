@@ -46,29 +46,54 @@ namespace x86_64::irq {
     constexpr std::uint8_t EXC_MAX                  = 0x1F;  // Last exception vector
 
     // =========================================================================
-    // Hardware IRQ Vectors (0x20+)
+    // Hardware IRQ Numbers (legacy ISA IRQs)
     // =========================================================================
     //
-    // These start at 0x20 because we remap the PIC/APIC to avoid conflicts
-    // with CPU exceptions. The actual IRQ number = vector - IRQ_BASE.
+    // These are the actual IRQ numbers used by hardware devices. Use these
+    // when configuring the IOAPIC routing (e.g., ioapic_route_irq).
 
-    constexpr std::uint8_t IRQ_BASE                 = 0x20;  // IRQ 0 maps to vector 0x20
-    constexpr std::uint8_t IRQ_TIMER                = 0x20;  // IRQ 0 - PIT/APIC timer
-    constexpr std::uint8_t IRQ_KEYBOARD             = 0x21;  // IRQ 1 - Keyboard
-    constexpr std::uint8_t IRQ_CASCADE              = 0x22;  // IRQ 2 - Cascade (PIC2)
-    constexpr std::uint8_t IRQ_COM2                 = 0x23;  // IRQ 3 - COM2/COM4
-    constexpr std::uint8_t IRQ_COM1                 = 0x24;  // IRQ 4 - COM1/COM3
-    constexpr std::uint8_t IRQ_LPT2                 = 0x25;  // IRQ 5 - LPT2
-    constexpr std::uint8_t IRQ_FLOPPY               = 0x26;  // IRQ 6 - Floppy disk
-    constexpr std::uint8_t IRQ_LPT1                 = 0x27;  // IRQ 7 - LPT1 / Spurious
-    constexpr std::uint8_t IRQ_RTC                  = 0x28;  // IRQ 8 - Real-time clock
-    constexpr std::uint8_t IRQ_ACPI                 = 0x29;  // IRQ 9 - ACPI
-    constexpr std::uint8_t IRQ_OPEN1                = 0x2A;  // IRQ 10 - Open
-    constexpr std::uint8_t IRQ_OPEN2                = 0x2B;  // IRQ 11 - Open
-    constexpr std::uint8_t IRQ_MOUSE                = 0x2C;  // IRQ 12 - PS/2 Mouse
-    constexpr std::uint8_t IRQ_COPROC               = 0x2D;  // IRQ 13 - Coprocessor
-    constexpr std::uint8_t IRQ_PRIMARY_ATA          = 0x2E;  // IRQ 14 - Primary ATA
-    constexpr std::uint8_t IRQ_SECONDARY_ATA        = 0x2F;  // IRQ 15 - Secondary ATA
+    constexpr std::uint8_t IRQ_TIMER                = 0;   // PIT timer
+    constexpr std::uint8_t IRQ_KEYBOARD             = 1;   // PS/2 Keyboard
+    constexpr std::uint8_t IRQ_CASCADE              = 2;   // Cascade (PIC2)
+    constexpr std::uint8_t IRQ_COM2                 = 3;   // COM2/COM4
+    constexpr std::uint8_t IRQ_COM1                 = 4;   // COM1/COM3
+    constexpr std::uint8_t IRQ_LPT2                 = 5;   // LPT2
+    constexpr std::uint8_t IRQ_FLOPPY               = 6;   // Floppy disk
+    constexpr std::uint8_t IRQ_LPT1                 = 7;   // LPT1 / Spurious
+    constexpr std::uint8_t IRQ_RTC                  = 8;   // Real-time clock
+    constexpr std::uint8_t IRQ_ACPI                 = 9;   // ACPI
+    constexpr std::uint8_t IRQ_OPEN1                = 10;  // Open
+    constexpr std::uint8_t IRQ_OPEN2                = 11;  // Open
+    constexpr std::uint8_t IRQ_MOUSE                = 12;  // PS/2 Mouse
+    constexpr std::uint8_t IRQ_COPROC               = 13;  // Coprocessor
+    constexpr std::uint8_t IRQ_PRIMARY_ATA          = 14;  // Primary ATA
+    constexpr std::uint8_t IRQ_SECONDARY_ATA        = 15;  // Secondary ATA
+
+    // =========================================================================
+    // Interrupt Vector Numbers (IDT entries)
+    // =========================================================================
+    //
+    // These are the CPU interrupt vectors delivered to the IDT. Vectors 0x00-0x1F
+    // are reserved for CPU exceptions, so hardware IRQs start at 0x20.
+    // Use these when registering interrupt handlers.
+
+    constexpr std::uint8_t VECTOR_BASE              = 0x20;  // Hardware IRQs start here
+    constexpr std::uint8_t VECTOR_TIMER             = 0x20;  // IRQ 0 -> Vector 32
+    constexpr std::uint8_t VECTOR_KEYBOARD          = 0x21;  // IRQ 1 -> Vector 33
+    constexpr std::uint8_t VECTOR_CASCADE           = 0x22;  // IRQ 2 -> Vector 34
+    constexpr std::uint8_t VECTOR_COM2              = 0x23;  // IRQ 3 -> Vector 35
+    constexpr std::uint8_t VECTOR_COM1              = 0x24;  // IRQ 4 -> Vector 36
+    constexpr std::uint8_t VECTOR_LPT2              = 0x25;  // IRQ 5 -> Vector 37
+    constexpr std::uint8_t VECTOR_FLOPPY            = 0x26;  // IRQ 6 -> Vector 38
+    constexpr std::uint8_t VECTOR_LPT1              = 0x27;  // IRQ 7 -> Vector 39
+    constexpr std::uint8_t VECTOR_RTC               = 0x28;  // IRQ 8 -> Vector 40
+    constexpr std::uint8_t VECTOR_ACPI              = 0x29;  // IRQ 9 -> Vector 41
+    constexpr std::uint8_t VECTOR_OPEN1             = 0x2A;  // IRQ 10 -> Vector 42
+    constexpr std::uint8_t VECTOR_OPEN2             = 0x2B;  // IRQ 11 -> Vector 43
+    constexpr std::uint8_t VECTOR_MOUSE             = 0x2C;  // IRQ 12 -> Vector 44
+    constexpr std::uint8_t VECTOR_COPROC            = 0x2D;  // IRQ 13 -> Vector 45
+    constexpr std::uint8_t VECTOR_PRIMARY_ATA       = 0x2E;  // IRQ 14 -> Vector 46
+    constexpr std::uint8_t VECTOR_SECONDARY_ATA     = 0x2F;  // IRQ 15 -> Vector 47
 
     struct [[gnu::packed]] InterruptFrame {
         // Pushed by isr_common (reverse order)

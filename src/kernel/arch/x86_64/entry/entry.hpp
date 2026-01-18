@@ -14,11 +14,11 @@ namespace x86_64::entry {
     constexpr std::uint64_t SFMASK_DF = (1 << 10); // Direction Flag (ensure string ops go forward)
     constexpr std::uint64_t SFMASK_TF = (1 << 8);  // Trap Flag (Disable single-stepping)
 
-    constexpr std::uint32_t ENOSYS = -1;
-
     constexpr std::uint64_t SYS_READ     = 0;
     constexpr std::uint64_t SYS_WRITE    = 1;
+    constexpr std::uint64_t SYS_LSEEK    = 8;
     constexpr std::uint64_t SYS_SLEEP_MS = 35;
+    constexpr std::uint64_t SYS_GETPID   = 39;
     constexpr std::uint64_t SYS_EXIT     = 60;
 
     struct [[gnu::packed]] SyscallFrame {

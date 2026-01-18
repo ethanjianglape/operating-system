@@ -1,14 +1,63 @@
 #pragma once
 
 #include <cstdint>
-namespace x86_64::drivers::keyboard {
 
-    // PS/2 Scancode Set 1 (make codes)
+namespace x86_64::drivers::keyboard {
+    // =========================================================================
+    // PS/2 Controller Constants
+    // =========================================================================
+
+    // I/O Ports
+    constexpr std::uint16_t PS2_DATA_PORT    = 0x60;  // Read/write data
+    constexpr std::uint16_t PS2_STATUS_PORT  = 0x64;  // Read status
+    constexpr std::uint16_t PS2_COMMAND_PORT = 0x64;  // Write commands
+
+    // Status register bits (read from port 0x64)
+    constexpr std::uint8_t PS2_STATUS_OUTPUT_FULL = 0x01;  // Data available to read
+    constexpr std::uint8_t PS2_STATUS_INPUT_FULL  = 0x02;  // Controller busy, don't write
+
+    // Controller commands (write to port 0x64)
+    constexpr std::uint8_t PS2_CMD_READ_CONFIG    = 0x20;  // Read configuration byte
+    constexpr std::uint8_t PS2_CMD_WRITE_CONFIG   = 0x60;  // Write configuration byte
+    constexpr std::uint8_t PS2_CMD_DISABLE_PORT2  = 0xA7;  // Disable second PS/2 port
+    constexpr std::uint8_t PS2_CMD_ENABLE_PORT2   = 0xA8;  // Enable second PS/2 port
+    constexpr std::uint8_t PS2_CMD_TEST_PORT2     = 0xA9;  // Test second PS/2 port
+    constexpr std::uint8_t PS2_CMD_SELF_TEST      = 0xAA;  // Controller self-test
+    constexpr std::uint8_t PS2_CMD_TEST_PORT1     = 0xAB;  // Test first PS/2 port
+    constexpr std::uint8_t PS2_CMD_DISABLE_PORT1  = 0xAD;  // Disable first PS/2 port
+    constexpr std::uint8_t PS2_CMD_ENABLE_PORT1   = 0xAE;  // Enable first PS/2 port
+
+    // Configuration byte bits
+    constexpr std::uint8_t PS2_CONFIG_PORT1_IRQ   = 0x01;  // Enable IRQ1 for port 1
+    constexpr std::uint8_t PS2_CONFIG_PORT2_IRQ   = 0x02;  // Enable IRQ12 for port 2
+    constexpr std::uint8_t PS2_CONFIG_PORT1_CLOCK = 0x10;  // Disable port 1 clock
+    constexpr std::uint8_t PS2_CONFIG_PORT2_CLOCK = 0x20;  // Disable port 2 clock
+    constexpr std::uint8_t PS2_CONFIG_TRANSLATION = 0x40;  // Enable scancode translation
+
+    // Self-test responses
+    constexpr std::uint8_t PS2_SELF_TEST_OK       = 0x55;
+    constexpr std::uint8_t PS2_PORT_TEST_OK       = 0x00;
+
+    // Keyboard commands (write to port 0x60)
+    constexpr std::uint8_t KB_CMD_RESET           = 0xFF;  // Reset keyboard
+
+    // Keyboard responses
+    constexpr std::uint8_t KB_RESPONSE_ACK        = 0xFA;  // Command acknowledged
+    constexpr std::uint8_t KB_RESPONSE_SELF_TEST_OK = 0xAA;  // Self-test passed
+
+    // Timeout for polling (iterations)
+    constexpr int PS2_TIMEOUT = 100000;
+
+    // =========================================================================
+    // PS/2 Scancode Set 1
+    // =========================================================================
+    //
     // Key release = make code | 0x80
     // Extended keys are prefixed with 0xE0
+
     enum class ScanCode : std::uint8_t {
         Nil         = 0x00,
-        
+
         // Row 1: Escape and Function keys
         Escape      = 0x01,
         F1          = 0x3B,
@@ -112,10 +161,9 @@ namespace x86_64::drivers::keyboard {
     };
 
     // Extended scancodes (preceded by 0xE0)
-    // Use values 0x80+ to distinguish from regular scancodes
     enum class ExtendedScanCode : std::uint8_t {
         Nil             = 0x00,
-        
+
         // The raw byte after 0xE0 prefix
         RightAlt        = 0x38,
         RightCtrl       = 0x1D,
@@ -142,4 +190,16 @@ namespace x86_64::drivers::keyboard {
     // Special prefix bytes
     constexpr std::uint8_t EXTENDED_PREFIX = 0xE0;
     constexpr std::uint8_t RELEASE_MASK    = 0x80;
+
+    // =========================================================================
+    // PS/2 Backend API
+    // =========================================================================
+
+    namespace ps2 {
+        /**
+         * @brief Initializes the PS/2 controller and keyboard.
+         * @return true if initialization successful.
+         */
+        bool init();
+    }
 }

@@ -19,6 +19,18 @@ namespace syscall {
         return process->fd_table.size() - 1;
     }
 
+    static fs::FileDescriptor* get_fd(int fd) {
+        process::Process* process = arch::percpu::current_process();
+
+        if (fd < 0 || (std::size_t)fd >= process->fd_table.size()) {
+            return nullptr;
+        }
+        
+        fs::FileDescriptor* desc = &process->fd_table[fd];
+
+        return desc;
+    }
+
     int sys_open(const char* path, int flags) {
         log::debug("sys_open: ", path);
 
@@ -73,5 +85,15 @@ namespace syscall {
         return 0;
 
         //return desc->inode->ops->stat(desc, stat);
+    }
+
+    int sys_lseek(int fd, std::size_t offset, int whence) {
+        fs::FileDescriptor* desc = get_fd(fd);
+
+        if (!desc) {
+            return EBADF;
+        }
+
+        return desc->inode->ops->lseek(desc, offset, whence);
     }
 }
