@@ -1,3 +1,4 @@
+#include "fs/devfs/dev_random.hpp"
 #include "fs/devfs/dev_tty.hpp"
 #include "fs/devfs/devfs.hpp"
 #include "fs/fs.hpp"
@@ -18,7 +19,7 @@
 #include <boot/boot.hpp>
 #include <console/console.hpp>
 #include <log/log.hpp>
-#include <drivers/framebuffer/framebuffer.hpp>
+#include <framebuffer/framebuffer.hpp>
 
 #include <containers/kstring.hpp>
 
@@ -51,6 +52,16 @@ void kernel_main() {
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif
+
+    fs::Inode* rand = fs::devfs::random::get_random_inode();
+
+    std::uint64_t nums[8] = {0};
+
+    rand->ops->read(nullptr, &nums[0], 8);
+
+    for (int i = 0; i < 8; i++) {
+        log::debug(nums[i]);
+    }
 
     console::init();
     fs::devfs::tty::init();

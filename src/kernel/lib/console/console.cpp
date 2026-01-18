@@ -7,12 +7,12 @@
 #include <console/console.hpp>
 #include <console/font8x16.hpp>
 #include <timer/timer.hpp>
-#include <drivers/framebuffer/framebuffer.hpp>
+#include <framebuffer/framebuffer.hpp>
 
 #include <cstdint>
 
 namespace console {
-    namespace fb = drivers::framebuffer;
+    namespace fb = framebuffer;
 
     static std::uint32_t cursor_col = 0;
     static std::uint32_t cursor_row = 0;

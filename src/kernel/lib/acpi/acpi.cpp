@@ -1,14 +1,40 @@
+/**
+ * @file acpi.cpp
+ * @brief ACPI table discovery and dispatch.
+ *
+ * ACPI (Advanced Configuration and Power Interface) provides firmware tables
+ * that describe hardware configuration. The bootloader gives us the RSDP
+ * address, and we follow the chain to find specific tables like the MADT.
+ *
+ * RSDP (ACPI 1.0) uses 32-bit pointers to the RSDT. XSDP (ACPI 2.0+) extends
+ * it with 64-bit pointers to the XSDT. We use XSDP/XSDT since we're 64-bit.
+ *
+ * Table chain:
+ *
+ *   XSDP (Extended Root System Description Pointer)
+ *     │
+ *     └──▶ XSDT (Extended System Description Table)
+ *            │
+ *            ├──▶ MADT (APIC info)      → madt::parse()
+ *            ├──▶ FADT (power mgmt)     → [not implemented]
+ *            ├──▶ HPET (timers)         → [not implemented]
+ *            └──▶ ...
+ *
+ * This file handles XSDP/XSDT parsing and dispatches to table-specific
+ * parsers (e.g., madt.cpp) based on the 4-byte signature.
+ */
+
 #include "arch/x86_64/memory/vmm.hpp"
 #include <arch.hpp>
-#include <drivers/acpi/acpi.hpp>
-#include <drivers/acpi/madt.hpp>
+#include <acpi/acpi.hpp>
+#include <acpi/madt.hpp>
 #include <fmt/fmt.hpp>
 #include <kpanic/kpanic.hpp>
 #include <log/log.hpp>
 
 #include <cstdint>
 
-namespace drivers::acpi {
+namespace acpi {
     /**
      * @brief Computes checksum over a range of bytes.
      *

@@ -9,8 +9,8 @@
 - [x] [VFS and Initramfs](#vfs-and-initramfs)
 - [x] [Userspace Program Loading](#userspace-program-loading)
 - [x] [Basic Process Scheduling](#basic-process-scheduling)
-- [ ] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
-- [ ] [PS/2 Controller Initialization](#ps2-controller-initialization)
+- [x] [IOAPIC GSI Mapping](#ioapic-gsi-mapping)
+- [x] [PS/2 Controller Initialization](#ps2-controller-initialization)
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
@@ -286,52 +286,67 @@ iretq → process resumes
 
 ## IOAPIC GSI Mapping
 
-**Status:** Not started
+**Status:** Complete
 
-**Current state:** Hardcoded assumptions for interrupt routing:
-- GSI base = 0
-- No IRQ overrides (IRQ N = GSI N = IOAPIC pin N)
-- ISA defaults (edge triggered, active high)
+**Implemented:**
+- MADT Interrupt Source Overrides are now parsed and stored
+- `get_gsi_for_irq()` resolves legacy IRQ → GSI with override check
+- `get_ioapic_for_gsi()` finds correct IOAPIC by GSI range (multi-IOAPIC support)
+- `get_mapped_ioapic_addr()` returns mapped virtual address for IOAPIC
+- Polarity/trigger flags from overrides applied when programming redirection entries
+- Generic `ioapic_route_irq(irq, vector)` exported for device drivers
+- Clear separation: `IRQ_*` constants for hardware IRQs, `VECTOR_*` for IDT vectors
 
-**Real hardware note:** Keyboard works in QEMU but not on real laptop hardware. Likely cause is different GSI mappings or interrupt source overrides that differ from QEMU's defaults.
-
-**Correct implementation:**
-- Parse and store MADT Interrupt Source Overrides (currently logged but not stored)
-- Lookup function to resolve IRQ → GSI with override check
-- Find correct IOAPIC by GSI range (for multi-IOAPIC systems)
-- Apply polarity/trigger flags from overrides when programming redirection entries
-
-**Diagnosis steps:**
-- Log 8042 status register on real hardware to verify controller presence
-- Log parsed MADT overrides to compare QEMU vs real hardware
-- Check if IRQ1 has an override on real hardware
+**Architecture:**
+```
+Device driver calls ioapic_route_irq(IRQ_KEYBOARD, VECTOR_KEYBOARD)
+    │
+    ▼
+get_gsi_for_irq(1) → checks ISO table → returns GSI (may differ from IRQ)
+    │
+    ▼
+get_ioapic_for_gsi(gsi) → finds which IOAPIC handles this GSI
+    │
+    ▼
+get_override_for_irq(1) → gets polarity/trigger flags if ISO exists
+    │
+    ▼
+Programs correct IOAPIC at correct pin with correct flags
+```
 
 ---
 
 ## PS/2 Controller Initialization
 
-**Status:** Not started
+**Status:** Complete
 
-**Current state:** Assumes PS/2 controller and keyboard are present and working. Directly reads scancodes from port 0x60. Init sequence is commented out.
+**Implemented:**
+- Controller existence check (0xFF from status port = no controller)
+- Disable both ports during initialization
+- Flush output buffer before setup
+- Read/modify controller configuration byte (disable IRQs and translation during setup)
+- Controller self-test (command 0xAA, expect 0x55)
+- Port 1 test (command 0xAB, expect 0x00)
+- Enable port 1 after tests pass
+- Keyboard device reset (send 0xFF, wait for ACK + self-test OK)
+- Enable IRQ1 in configuration after keyboard is ready
+- Graceful failure handling (logs errors, continues boot without keyboard)
 
-**Modern hardware considerations:**
-- Many modern laptops lack a real 8042 PS/2 controller
-- Internal laptop keyboards often connect via I2C/SMBus, not PS/2
-- USB keyboards may work via BIOS "USB Legacy Support" emulation, but this often stops working once the OS takes over USB
-- Reading 0xFF from port 0x64 typically means no controller present
+**Init sequence:**
+```
+1. Check controller exists (status != 0xFF)
+2. Disable ports (0xAD, 0xA7)
+3. Flush output buffer
+4. Read config, disable IRQs/translation
+5. Controller self-test (0xAA → 0x55)
+6. Port 1 test (0xAB → 0x00)
+7. Enable port 1 (0xAE)
+8. Reset keyboard (0xFF → 0xFA, 0xAA)
+9. Enable IRQ1 in config
+10. Route IRQ1 via IOAPIC, register handler
+```
 
-**Correct implementation:**
-- Check if 8042 controller exists before attempting init
-- Disable both PS/2 ports during initialization
-- Flush the output buffer (read port 0x60 until status bit 0 is clear)
-- Read and modify controller configuration byte
-- Perform controller self-test (command 0xAA, expect 0x55)
-- Test first PS/2 port (command 0xAB, expect 0x00)
-- Test second PS/2 port if present (command 0xA9)
-- Enable ports and enable interrupts in config byte
-- Reset keyboard device (send 0xFF, expect 0xFA ACK)
-- Set scancode set if needed (default is usually fine)
-- Handle initialization failures gracefully (fall back to USB HID if available)
+**Modern hardware note:** Many laptops lack real PS/2 controllers. If init fails, the kernel continues without keyboard input. USB HID support (future task) would provide broader compatibility.
 
 ---
 

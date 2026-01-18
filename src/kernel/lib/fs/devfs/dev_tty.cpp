@@ -1,3 +1,4 @@
+#include "fs/devfs/dev_random.hpp"
 #include <arch.hpp>
 #include <cerrno>
 #include <fs/fs.hpp>
@@ -258,6 +259,7 @@ namespace fs::devfs::tty {
         inode->ops->read(&fd, data, size);
 
         process::Process* p = process::create_process(data, size);
+        
         Inode* tty = get_tty_inode();
         
         p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stdin
@@ -272,6 +274,7 @@ namespace fs::devfs::tty {
     void init() {
         log::init_start("/dev/tty");
 
+        //run_tty_program("/bin/hello");
         run_tty_program("/bin/a");
         run_tty_program("/bin/b");
         run_tty_program("/bin/c");

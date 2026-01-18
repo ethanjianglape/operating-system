@@ -37,6 +37,7 @@ set(ARCH_DRIVER_KERNEL_SOURCES
   ${ARCH_DRIVERS_DIR}/apic/apic.cpp
   ${ARCH_DRIVERS_DIR}/serial/serial.cpp
   ${ARCH_DRIVERS_DIR}/keyboard/keyboard.cpp
+  ${ARCH_DRIVERS_DIR}/keyboard/ps2.cpp
   ${ARCH_DRIVERS_DIR}/tsc/tsc.cpp
 )
 
@@ -51,9 +52,9 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/memory/new.cpp
   ${LIB_DIR}/console/console.cpp
   ${LIB_DIR}/console/ansi.cpp
-  ${LIB_DIR}/drivers/framebuffer/framebuffer.cpp
-  ${LIB_DIR}/drivers/acpi/acpi.cpp
-  ${LIB_DIR}/drivers/acpi/madt.cpp
+  ${LIB_DIR}/framebuffer/framebuffer.cpp
+  ${LIB_DIR}/acpi/acpi.cpp
+  ${LIB_DIR}/acpi/madt.cpp
   ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
   ${LIB_DIR}/fs/fs.cpp
@@ -63,6 +64,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/fs/devfs/devfs.cpp
   ${LIB_DIR}/fs/devfs/dev_tty.cpp
   ${LIB_DIR}/fs/devfs/dev_null.cpp
+  ${LIB_DIR}/fs/devfs/dev_random.cpp
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
   ${LIB_DIR}/syscall/sys_fd.cpp

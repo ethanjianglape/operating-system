@@ -1,6 +1,7 @@
 #include <fs/devfs/devfs.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/devfs/dev_null.hpp>
+#include <fs/devfs/dev_random.hpp>
 #include <fs/fs.hpp>
 
 namespace fs::devfs {
@@ -27,6 +28,10 @@ namespace fs::devfs {
         
         if (path == "/null") {
             return null::get_null_inode();
+        }
+
+        if (path == "/random") {
+            return random::get_random_inode();
         }
 
         return nullptr;

@@ -39,21 +39,14 @@ namespace x86_64::drivers::apic {
     constexpr std::uintptr_t IOAPIC_IOREGSEL = 0x00;  // Register select (write reg number here)
     constexpr std::uintptr_t IOAPIC_IOWIN    = 0x10;  // Data window (read/write reg value here)
     
-    // I/O APIC Redirection Table entries (each IRQ has 2 32-bit registers)
-    // IOREDTBL[n] = base + 2*n, where n is the IRQ number (0-23)
+    // I/O APIC Redirection Table entries (each pin has 2 32-bit registers)
+    // IOREDTBL[n] = base + 2*n, where n is the pin number (0-23)
     constexpr std::uint32_t IOAPIC_REDTBL_BASE = 0x10;  // First redirection entry
     
-    // Helper to get the register offset for a redirection table entry
-    // Each entry is 64 bits = 2 registers (low at 0x10+2n, high at 0x11+2n)
-    constexpr std::uint32_t IOAPIC_REDTBL_LO(std::uint32_t irq) { return IOAPIC_REDTBL_BASE + irq * 2; }
-    constexpr std::uint32_t IOAPIC_REDTBL_HI(std::uint32_t irq) { return IOAPIC_REDTBL_BASE + irq * 2 + 1; }
-
-    void set_lapic_addr(std::uintptr_t lapic_phys_addr);
-    void set_ioapic_addr(std::uintptr_t ioapic_phys_addr);
-
     bool check_support();
     void enable_apic();
     void init();
     void send_eoi();
     void timer_init();
+    void ioapic_route_irq(std::uint8_t irq, std::uint8_t vector);
 }

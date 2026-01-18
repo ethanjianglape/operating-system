@@ -1,9 +1,9 @@
 #pragma once
 
-#include <drivers/acpi/acpi.hpp>
+#include <acpi/acpi.hpp>
 #include <cstdint>
 
-namespace drivers::acpi::madt {
+namespace acpi::madt {
     constexpr std::uintptr_t RECORD_OFFSET = 0x2C;
 
     constexpr std::uint8_t TYPE_LAPIC               = 0;
@@ -32,6 +32,11 @@ namespace drivers::acpi::madt {
         std::uint8_t reserved;
         std::uint32_t ioapic_addr;
         std::uint32_t gsi_base;
+    };
+
+    struct MappedIOApic {
+        std::uintptr_t phys_addr;
+        std::uintptr_t virt_addr;
     };
 
     struct [[gnu::packed]] InterruptSourceOverride {
@@ -78,4 +83,38 @@ namespace drivers::acpi::madt {
     };
 
     void parse(ACPIHeader* header);
+
+    std::uint64_t get_lapic_addr();
+
+    /**
+     * @brief Resolves a legacy ISA IRQ to its Global System Interrupt (GSI).
+     *
+     * Checks the Interrupt Source Override table for remappings. If no override
+     * exists, returns the IRQ unchanged (IRQ N = GSI N).
+     *
+     * @param irq Legacy ISA IRQ number (0-15).
+     * @return The corresponding GSI.
+     */
+    std::uint32_t get_gsi_for_irq(std::uint8_t irq);
+
+    /**
+     * @brief Finds the Interrupt Source Override for a given IRQ, if any.
+     *
+     * @param irq Legacy ISA IRQ number.
+     * @return Pointer to the override record, or nullptr if no override exists.
+     */
+    const InterruptSourceOverride* get_override_for_irq(std::uint8_t irq);
+
+    /**
+     * @brief Finds which IOAPIC handles a given GSI.
+     *
+     * Each IOAPIC has a gsi_base and handles a range of GSIs. This function
+     * finds the IOAPIC whose range contains the given GSI.
+     *
+     * @param gsi The Global System Interrupt number.
+     * @return Pointer to the IOApic record, or nullptr if not found.
+     */
+    const IOApic* get_ioapic_for_gsi(std::uint32_t gsi);
+
+    volatile std::uint8_t* get_mapped_ioapic_addr(const IOApic* ioapic);
 }
