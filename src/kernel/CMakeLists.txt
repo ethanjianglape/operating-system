@@ -78,7 +78,7 @@ file(GLOB_RECURSE TEST_SOURCES ${TEST_DIR}/*.cpp)
 
 # Architecture-specific boot files
 set(BOOT_SOURCES
-  ${ARCH_DIR}/boot/entry.cpp
+  ${ARCH_DIR}/boot/limine_entry.cpp
 )
 
 # Architecture-specific CRT (C Runtime) files

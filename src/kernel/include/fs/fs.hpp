@@ -25,11 +25,15 @@ namespace fs {
     struct FileSystem;
 
     // ============================================================================
-    // FileOps - operations on an OPEN file (fd-level)
+    // FileOps
     // ============================================================================
-    // Each file type (regular, char device, etc.) provides its own implementation.
-    // The implementation decides how to handle offset (use it, ignore it, etc.)
 
+    /**
+     * @brief Operations on an open file (fd-level).
+     *
+     * Each file type (regular, char device, etc.) provides its own implementation.
+     * The implementation decides how to handle offset (use it, ignore it, etc.)
+     */
     struct FileOps {
         int (*read)(FileDescriptor* fd, void* buf, std::size_t count);
         int (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
@@ -38,10 +42,14 @@ namespace fs {
     };
 
     // ============================================================================
-    // Inode - a file or directory in the filesystem
+    // Inode
     // ============================================================================
-    // Created by FileSystem::open(), freed by FileOps::close()
 
+    /**
+     * @brief A file or directory in the filesystem.
+     *
+     * Created by FileSystem::open(), freed by FileOps::close().
+     */
     struct Inode {
         FileType type;
         std::size_t size;
@@ -50,9 +58,12 @@ namespace fs {
     };
 
     // ============================================================================
-    // FileDescriptor - an open file handle (per-process)
+    // FileDescriptor
     // ============================================================================
 
+    /**
+     * @brief An open file handle (per-process).
+     */
     struct FileDescriptor {
         Inode* inode;
         std::size_t offset;
@@ -60,28 +71,38 @@ namespace fs {
     };
 
     // ============================================================================
-    // Stat - file metadata (for stat() without opening)
+    // Stat
     // ============================================================================
 
+    /**
+     * @brief File metadata (for stat() without opening).
+     */
     struct Stat {
         FileType type;
         std::size_t size;
     };
 
     // ============================================================================
-    // DirEntry - directory listing entry
+    // DirEntry
     // ============================================================================
 
+    /**
+     * @brief Directory listing entry.
+     */
     struct DirEntry {
         kstring name;
         FileType type;
     };
 
     // ============================================================================
-    // FileSystem - a mounted filesystem (path-based operations)
+    // FileSystem
     // ============================================================================
-    // Handles path resolution and inode creation. Does NOT handle read/write.
 
+    /**
+     * @brief A mounted filesystem (path-based operations).
+     *
+     * Handles path resolution and inode creation. Does NOT handle read/write.
+     */
     struct FileSystem {
         const char* name;
         void* private_data;
@@ -92,9 +113,12 @@ namespace fs {
     };
 
     // ============================================================================
-    // MountPoint - a filesystem mounted at a path
+    // MountPoint
     // ============================================================================
 
+    /**
+     * @brief A filesystem mounted at a path.
+     */
     struct MountPoint {
         kstring root;
         FileSystem* filesystem;

@@ -1,12 +1,6 @@
-#include "fs/devfs/dev_random.hpp"
 #include "fs/devfs/dev_tty.hpp"
-#include "fs/devfs/devfs.hpp"
-#include "fs/fs.hpp"
-#include "fs/initramfs/initramfs.hpp"
-#include "process/process.hpp"
 #include "scheduler/scheduler.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
-#include <cstdint>
 #include <arch/x86_64/entry/entry.hpp>
 #include <arch/x86_64/percpu/percpu.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
@@ -52,16 +46,6 @@ void kernel_main() {
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif
-
-    fs::Inode* rand = fs::devfs::random::get_random_inode();
-
-    std::uint64_t nums[8] = {0};
-
-    rand->ops->read(nullptr, &nums[0], 8);
-
-    for (int i = 0; i < 8; i++) {
-        log::debug(nums[i]);
-    }
 
     console::init();
     fs::devfs::tty::init();

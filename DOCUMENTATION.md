@@ -42,7 +42,7 @@ void set_lapic_addr(std::uintptr_t lapic_phys_addr);
 
 ### 2. Section Banners (`// ===`) — Code Organization
 
-Use for **grouping related functions** within a file. These are visual separators for humans navigating the source, not parsed by documentation tools.
+Use sparingly for **grouping related functions** within a file. These are visual separators for humans navigating the source, not parsed by documentation tools.
 
 ```cpp
 // =========================================================================
@@ -51,6 +51,13 @@ Use for **grouping related functions** within a file. These are visual separator
 //
 // Explanation of this section...
 ```
+
+**When to use section banners:**
+- Only when a file has multiple distinct groups of related functions
+- Never for a single function — if there's only one function in the "section", it doesn't need a banner
+
+**When NOT to use section banners:**
+- The desire to add a section banner often indicates the code should be in its own file or namespace instead. Consider refactoring before reaching for a banner.
 
 ### 3. Inline Comments (`//`) — Implementation Details
 
@@ -65,23 +72,67 @@ enable_apic();
 lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
 ```
 
+**When NOT to use inline comments:**
+- Don't comment self-explanatory function calls — `enable_apic()` doesn't need `// Enable the APIC`
+- Don't repeat information already in a doxygen comment — if the function's `@brief` explains what a call does, don't echo it inline
+
+## Assembly Files (`.s`)
+
+Assembly files use `#` for comments (GNU assembler syntax):
+
+```asm
+# =============================================================================
+# File/section headers use the same banner style as C++
+# =============================================================================
+#
+# Extended explanations follow the header.
+# These are for documentation blocks at the top of files or before functions.
+
+.global my_function
+my_function:
+    # Inline comments explaining the next few instructions
+    push %rbp
+    mov %rsp, %rbp
+
+    xor %eax, %eax      # End-of-line comments
+    ret
+```
+
+**Note:** This project uses GNU assembler (GAS), which uses `#` for comments.
+NASM uses `;`, but we use AT&T syntax with GAS.
+
 ## Documentation Location
 
 We document in `.cpp` files rather than `.hpp` headers. This deviates from the
 typical C++ convention of documenting in headers, but is intentional:
 
+**The philosophy:** `.cpp` files are the primary learning resource. When someone
+wants to understand how the GDT works, they should open `gdt.cpp` and find a
+detailed explanation directly above the code that actually does it. A 100-line
+comment in a header next to `void init_gdt();` doesn't help — you can't see what
+the code is doing. But the same comment above the actual implementation lets you
+read the explanation and the code together, going back and forth as needed.
+
+**Why this works for a kernel:**
+
 - **This is a kernel, not a library** — Headers aren't exposed to external
   consumers. Anyone reading this code has access to both files.
 
-- **Learning-friendly** — Keeping documentation next to the implementation
-  means readers don't need to jump between files to understand what's happening.
+- **Implementation IS the interface** — In library code, you document headers
+  because users only see headers. Here, readers see everything, and the
+  implementation is what they're trying to understand.
 
 - **Hardware details belong with code** — Register layouts, magic numbers, and
   CPU behavior explanations are most useful right where they're used.
 
-- **Many functions are internal** — Not every function is declared in headers.
-  Internal helpers like `make_gdt_entry()` or `lapic_read()` only exist in the
-  `.cpp` file, so their documentation naturally lives there too.
+**The rule:** If a `.cpp` file exists, put the `@file` header and detailed
+documentation there. The `.hpp` should have minimal comments — just enough
+to understand struct layouts or function signatures at a glance.
+
+**Exceptions for header-only code:**
+- Header-only files (no `.cpp`) put documentation in the header (e.g., `context.hpp`)
+- Template functions and constants have no `.cpp` equivalent, so document them in the header
+- Constants don't need doxygen — a simple `//` comment is sufficient
 
 ## Guidelines
 
