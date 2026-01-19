@@ -200,6 +200,13 @@ namespace x86_64::vmm {
         pmm::free_frame(phys);
     }
 
+    /**
+     * @brief Allocates a single raw 4KB page.
+     *
+     * Returns a page with no header or metadata — the caller gets the full 4KB.
+     * Use free_kpage() to release. For allocations that need automatic size
+     * tracking, use alloc_contiguous_kmem() instead.
+     */
     void* alloc_kpage() {
         auto phys = pmm::alloc_frame<std::uintptr_t>();
         return phys_to_virt<void*>(phys);
@@ -209,9 +216,28 @@ namespace x86_64::vmm {
         if (virt == nullptr) {
             return;
         }
+
         pmm::free_frame(hhdm_virt_to_phys(virt));
     }
 
+    /**
+     * @brief Allocates contiguous kernel memory with embedded size tracking.
+     *
+     * Unlike alloc_kpage() which returns raw pages, this function stores the
+     * allocation size in a hidden header so free_contiguous_kmem() can free
+     * the correct number of pages without the caller tracking it.
+     *
+     * Memory layout:
+     *   ┌──────────────┬─────────────────────────────────────┐
+     *   │  num_pages   │         usable memory               │
+     *   │  (8 bytes)   │         (bytes requested)           │
+     *   └──────────────┴─────────────────────────────────────┘
+     *   ^               ^
+     *   actual alloc    returned pointer
+     *
+     * @param bytes Number of bytes to allocate.
+     * @return Pointer to usable memory (after the hidden header).
+     */
     void* alloc_contiguous_kmem(std::size_t bytes) {
         std::size_t total = bytes + sizeof(std::size_t);
         std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -224,6 +250,12 @@ namespace x86_64::vmm {
         return static_cast<std::uint8_t*>(block) + sizeof(std::size_t);
     }
 
+    /**
+     * @brief Frees memory allocated by alloc_contiguous_kmem().
+     *
+     * Reads the page count from the hidden header before the pointer, then
+     * frees that many contiguous frames. Only use with alloc_contiguous_kmem().
+     */
     void free_contiguous_kmem(void* virt) {
         if (virt == nullptr) {
             return;
@@ -235,6 +267,19 @@ namespace x86_64::vmm {
         pmm::free_contiguous_frames(hhdm_virt_to_phys(block), num_pages);
     }
 
+    /**
+     * @brief Maps memory at a specific virtual address, allocating physical frames.
+     *
+     * Allocates individual physical frames (not necessarily contiguous) and maps
+     * them to contiguous virtual addresses. Used for user process memory where
+     * physical contiguity doesn't matter but virtual contiguity does.
+     *
+     * @param pml4 Page table to modify.
+     * @param virt Starting virtual address (must be page-aligned).
+     * @param bytes Number of bytes to map.
+     * @param flags Page flags (PAGE_USER, PAGE_WRITE, etc.).
+     * @return Number of pages mapped (needed for unmap_mem_at).
+     */
     std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags) {
         std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
 
@@ -247,6 +292,11 @@ namespace x86_64::vmm {
         return num_pages;
     }
 
+    /**
+     * @brief Unmaps pages and frees their physical frames.
+     * @param virt Starting virtual address.
+     * @param num_pages Number of pages to unmap (from map_mem_at return value).
+     */
     void unmap_mem_at(std::uintptr_t virt, std::size_t num_pages) {
         for (std::size_t page = 0; page < num_pages; page++) {
             unmap_page(virt + (page * PAGE_SIZE));
