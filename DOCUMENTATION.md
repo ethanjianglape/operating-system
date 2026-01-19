@@ -78,33 +78,28 @@ lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
 
 ## Assembly Files (`.s`)
 
-Assembly files use semicolon-based comments instead of `#` or `//`:
+Assembly files use `#` for comments (GNU assembler syntax):
 
 ```asm
-;;; ============================================================================
-;;; File/section headers use triple semicolons
-;;; ============================================================================
-;;;
-;;; Extended explanations also use triple semicolons.
-;;; These are for documentation blocks at the top of files or before functions.
+# =============================================================================
+# File/section headers use the same banner style as C++
+# =============================================================================
+#
+# Extended explanations follow the header.
+# These are for documentation blocks at the top of files or before functions.
 
 .global my_function
 my_function:
-    ;; Inline comments explaining the next few instructions use double semicolons
+    # Inline comments explaining the next few instructions
     push %rbp
     mov %rsp, %rbp
 
-    xor %eax, %eax      ; Single semicolon for end-of-line comments
+    xor %eax, %eax      # End-of-line comments
     ret
 ```
 
-**Summary:**
-- `;;;` — File headers, section banners, multi-line documentation blocks
-- `;;` — Inline comments explaining the following code
-- `;` — End-of-line comments on the same line as an instruction
-
-This convention renders better in some editors (notably Emacs) and visually
-distinguishes comment "weight" similar to the C++ hierarchy.
+**Note:** This project uses GNU assembler (GAS), which uses `#` for comments.
+NASM uses `;`, but we use AT&T syntax with GAS.
 
 ## Documentation Location
 

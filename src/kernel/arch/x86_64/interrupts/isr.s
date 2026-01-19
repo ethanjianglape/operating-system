@@ -1,6 +1,6 @@
-# =============================================================================
-# Interrupt Service Routine (ISR) Stubs
-# =============================================================================
+# ============================================================================
+# isr.s — Interrupt Service Routine (ISR) Stubs
+# ============================================================================
 #
 # This is the code that ACTUALLY runs when a CPU interrupt occurs.
 #
@@ -10,9 +10,9 @@
 # the stub must push the vector number onto the stack so the C++ handler
 # knows which interrupt occurred.
 #
-# =============================================================================
+# ============================================================================
 # Interrupt Flow
-# =============================================================================
+# ============================================================================
 #
 #   1. Interrupt occurs (hardware, exception, or INT instruction)
 #   2. CPU looks up handler address in IDT[vector]
@@ -25,9 +25,9 @@
 #   9. isr_common restores registers and executes IRETQ
 #  10. CPU pops RIP, CS, RFLAGS, RSP, SS and resumes interrupted code
 #
-# =============================================================================
+# ============================================================================
 # The Error Code Problem
-# =============================================================================
+# ============================================================================
 #
 # Some CPU exceptions push an error code onto the stack, others don't:
 #
@@ -45,9 +45,9 @@
 #   - isr_err_stub: For exceptions where CPU already pushed error code
 #   - isr_no_err_stub: Pushes a dummy 0 as error code for consistency
 #
-# =============================================================================
+# ============================================================================
 # Stack Layout (when isr_common calls interrupt_handler)
-# =============================================================================
+# ============================================================================
 #
 # This is what the InterruptFrame struct in irq.hpp maps to:
 #
@@ -80,9 +80,9 @@
 #                            │
 #                            └─► Passed to interrupt_handler(InterruptFrame* frame)
 #
-# =============================================================================
+# ============================================================================
 # Why Assembly?
-# =============================================================================
+# ============================================================================
 #
 # This must be assembly because:
 #   1. We need exact control over the stack layout
@@ -90,9 +90,9 @@
 #   3. We need IRETQ instruction to return from interrupt (no C++ equivalent)
 #   4. Each stub must be a separate symbol so IDT can point to it
 #
-# =============================================================================
+# ============================================================================
 # Why 256 Separate Stubs?
-# =============================================================================
+# ============================================================================
 #
 # You might wonder: "Why not just have one handler that reads the vector
 # number from somewhere?" The problem is: when the CPU jumps to our handler,
@@ -104,16 +104,16 @@
 # At the bottom of this file, isr_stub_table is an array of 256 pointers to
 # these stubs, which idt.cpp uses to populate the IDT.
 #
-# =============================================================================
+# ============================================================================
 
 .code64
 .global isr_stub_table
 
 .extern interrupt_handler
 
-# =============================================================================
+# ============================================================================
 # Stub Macros
-# =============================================================================
+# ============================================================================
 #
 # isr_err_stub: For exceptions where CPU pushes an error code
 #   Stack on entry: [RIP] [CS] [RFLAGS] [RSP] [SS] [ERROR]
@@ -131,32 +131,25 @@ isr_stub_\num:
 
 .macro isr_no_err_stub num
 isr_stub_\num:
-    pushq $0        # Dummy error code
-    pushq $\num     # Vector number
+    pushq $0
+    pushq $\num
     jmp isr_common
 .endm
 
-.macro swapgs_if_necessary
-	cmp $0x08, 24(%rsp)
-	je 1f
-	swapgs
-1:
-.endm
-
-# =============================================================================
+# ============================================================================
 # Common Interrupt Handler
-# =============================================================================
+# ============================================================================
 #
 # All stubs jump here. We save the full register state, call the C++ handler,
 # restore registers, and return from interrupt.
 
 isr_common:
+    # Check if we came from kernel (CS=0x08) or user mode, swap GS only if user
     cmp $0x08, 24(%rsp)
     je skip_swapgs_entry
     swapgs
 
 skip_swapgs_entry:
-
     # Save all general-purpose registers (in reverse order of InterruptFrame)
     push %rax
     push %rbx
@@ -174,7 +167,7 @@ skip_swapgs_entry:
     push %r14
     push %r15
 
-     # RSP now points to our complete InterruptFrame struct
+    # RSP now points to our complete InterruptFrame struct
     # Pass it as first argument to interrupt_handler (System V ABI: RDI = arg1)
     mov %rsp, %rdi
     call interrupt_handler
@@ -196,30 +189,28 @@ skip_swapgs_entry:
     pop %rbx
     pop %rax
 
-    # Remove vector number and error code from stack (we pushed 16 bytes)
-    add $16, %rsp
+    add $16, %rsp           # Remove vector number and error code (16 bytes)
 
+    # Swap GS back if we came from user mode
     cmp $0x08, 8(%rsp)
     je skip_swapgs_exit
     swapgs
 
 skip_swapgs_exit:
+    iretq                   # Return from interrupt
 
-    # Return from interrupt - pops RIP, CS, RFLAGS, RSP, SS and resumes
-    iretq
-
-# =============================================================================
+# ============================================================================
 # ISR Stubs
-# =============================================================================
+# ============================================================================
 #
 # These define the functions that will be used for every IDT vector (0-255).
 # isr_no_err_stub and isr_err_stub are just compiler macros, so when compiled
 # these will be converted into actual callable functions, the macro is just
 # used to avoid repetative typing
 
-# =============================================================================
+# ============================================================================
 # Exception Stubs (Vectors 0x00 - 0x1F)
-# =============================================================================
+# ============================================================================
 #
 # CPU exceptions. Some push error codes (use isr_err_stub), others don't.
 isr_no_err_stub 0x00
@@ -255,9 +246,9 @@ isr_no_err_stub 0x1d
 isr_err_stub    0x1e
 isr_no_err_stub 0x1f
 
-# =============================================================================
+# ============================================================================
 # IRQ Stubs (Vectors 0x20 - 0xFF)
-# =============================================================================
+# ============================================================================
 #
 # Hardware IRQs and software interrupts. None of these have CPU error codes.
 
@@ -486,9 +477,9 @@ isr_no_err_stub 0xfd
 isr_no_err_stub 0xfe
 isr_no_err_stub 0xff
 
-# =============================================================================
+# ============================================================================
 # ISR Stub Table
-# =============================================================================
+# ============================================================================
 #
 # Array of 256 pointers to our stub functions. idt.cpp reads this table to
 # populate the IDT entries. Each entry is a 64-bit address (.quad).
