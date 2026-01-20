@@ -195,7 +195,7 @@ namespace test_kstring {
 
     void test_truncate() {
         kstring s("hello world");
-        s.truncate(4);
+        s.truncate(5);
         test::assert_true(s == "hello", "truncate() truncates to position");
     }
 

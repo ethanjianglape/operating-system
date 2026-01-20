@@ -17,6 +17,10 @@ namespace kprint_detail {
         serial::puts(str);
     }
 
+    inline void print_one(bool b) {
+        serial::puts(b ? "true" : "false");
+    }
+
     inline void print_one(unsigned char* str) {
         serial::puts(str);
     }

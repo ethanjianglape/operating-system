@@ -34,6 +34,7 @@ namespace process {
 
         p->state = ProcessState::READY;
         p->pid = g_pid++;
+        p->exit_status = 0;
         p->entry = file.entry;
         p->pml4 = pml4;
         p->fd_table = {};
@@ -100,7 +101,7 @@ namespace process {
         p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
         p->context_frame->r15 = p->rip;
         p->context_frame->r14 = p->rsp;
-        p->context_frame->r13 = 0xDEADBEEF;//p->cs;
+        p->context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
         p->context_frame->r12 = 0xABABABAB;
         p->context_frame->rbp = 0x77777777;
         p->context_frame->rbx = 0x12345678;
@@ -131,5 +132,9 @@ namespace process {
         Process* elf = load_elf(buffer, size);
 
         return elf;
+    }
+
+    void terminate_process(Process* proc) {
+        log::info("Terminating process with ID ", proc->pid);
     }
 }

@@ -318,16 +318,18 @@ namespace console {
             kvector<ConsoleChar>& line = buffer[row];
             
             for (std::size_t col = 0; col < screen_cols; col++){
-                ConsoleChar& cc = line[col];
-                
-                if ((draw_clean || cc.dirty) && row - viewport_offset < screen_rows) {
+                if (row - viewport_offset < screen_rows) {
                     if (col < line.size()) {
-                        draw_character_at(cc.c, row - viewport_offset, col, cc.fg, cc.bg);
+                        ConsoleChar& cc = line[col];
+
+                        if (draw_clean || cc.dirty) {
+                            draw_character_at(cc.c, row - viewport_offset, col, cc.fg, cc.bg);                            
+                        }
+
+                        cc.dirty = false;
                     } else {
                         draw_character_at(' ', row - viewport_offset, col, current_fg, current_bg);
                     }
-
-                    cc.dirty = false;
                 }
             }
         }

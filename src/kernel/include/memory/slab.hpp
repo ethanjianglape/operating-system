@@ -4,6 +4,15 @@
 #include <cstdint>
 
 namespace slab {
+    constexpr std::uint64_t SLAB_MAGIC = 0x51AB51AB51AB51AB; // 51AB == slab in leetspeak
+
+    constexpr std::size_t SIZE_32 = 32;
+    constexpr std::size_t SIZE_64 = 64;
+    constexpr std::size_t SIZE_128 = 128;
+    constexpr std::size_t SIZE_256 = 256;
+    constexpr std::size_t SIZE_512 = 512;
+    constexpr std::size_t SIZE_1024 = 1024;
+    
     struct Slab {
         std::uint64_t magic;           // Magic value to identify slab headers
         void* free_head;               // Pointer to next free slab chunk
@@ -30,4 +39,7 @@ namespace slab {
     void* alloc(std::size_t size);
 
     void free(void* addr);
+
+    // Diagnostic: returns total slab count across all size classes
+    std::size_t total_slabs();
 }

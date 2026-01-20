@@ -65,16 +65,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace slab {
-    static constexpr std::uint64_t SLAB_MAGIC = 0x51AB51AB51AB51AB; // 51AB == slab in leetspeak
-
-    static constexpr std::size_t SIZE_32 = 32;
-    static constexpr std::size_t SIZE_64 = 64;
-    static constexpr std::size_t SIZE_128 = 128;
-    static constexpr std::size_t SIZE_256 = 256;
-    static constexpr std::size_t SIZE_512 = 512;
-    static constexpr std::size_t SIZE_1024 = 1024;
-    
+namespace slab {   
     constexpr std::uint8_t chunks_per_slab(std::size_t chunk_size) {
         return (arch::vmm::PAGE_SIZE - sizeof(Slab)) / chunk_size;
     }
@@ -277,5 +268,15 @@ namespace slab {
         if (slab->free_chunks == sc->chunks_per_slab && sc->num_slabs > 1) {
             destroy_slab(sc, slab);
         }
+    }
+
+    std::size_t total_slabs() {
+        std::size_t total = 0;
+        
+        for (const auto& sc : classes) {
+            total += sc.num_slabs;
+        }
+        
+        return total;
     }
 }

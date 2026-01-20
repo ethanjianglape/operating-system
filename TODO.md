@@ -14,6 +14,7 @@
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
+- [ ] [Process Termination and Cleanup](#process-termination-and-cleanup)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -423,6 +424,65 @@ See `src/kernel/CONVENTIONS.md` for full details.
 - `x86_64::context` - context switching mechanics
 - `syscall::` - flat namespace for syscall implementations (sys_read, sys_write, etc.)
 - `arch::` aliases all x86_64 namespaces for portable kernel code
+
+---
+
+## Process Termination and Cleanup
+
+**Status:** Not started
+
+**Goal:** Properly terminate processes and reclaim all resources when they exit or are killed.
+
+**Current state:** Processes can call `sys_exit()` which sets state to DEAD, but resources are not fully cleaned up. Dead processes accumulate without reclamation.
+
+**Required cleanup on process death:**
+- Free user page tables (PML4 and all child tables)
+- Free all physical frames mapped to user address space
+- Free kernel stack
+- Close all open file descriptors
+- Remove from scheduler queues
+- Free Process struct itself
+
+**Implementation approach:**
+```
+sys_exit(status) or process killed
+        │
+        ▼
+Close all file descriptors
+  fd->inode->ops->close() for each
+        │
+        ▼
+Free user memory
+  Walk PML4 entries 0-255 (user half)
+  For each present entry, recurse through PDPT→PD→PT
+  Free each mapped physical frame
+  Free page table pages themselves
+        │
+        ▼
+Free kernel resources
+  Free kernel stack (tracked in Process struct)
+  Free Process struct via kfree()
+        │
+        ▼
+Schedule next process
+  Don't add to any queue, just switch away
+```
+
+**Challenges:**
+- Can't free current kernel stack while running on it — need to defer or switch first
+- Page table walking requires careful recursion (4 levels)
+- Must handle process killed mid-syscall (blocked on I/O)
+- Parent process notification (future: waitpid)
+
+**Design decisions to make:**
+- Immediate cleanup vs deferred (reaper thread)?
+- Who frees the kernel stack — exiting process or next process?
+- Track parent-child relationships now or later?
+
+**Testing:**
+- Run process that exits, verify PMM frame count returns to baseline
+- Run many short-lived processes, verify no memory growth
+- Process that opens files, verify FDs closed on exit
 
 ---
 

@@ -62,7 +62,6 @@ namespace test_fmt {
 
     void test_to_string_signed_negative() {
         const char* result = fmt::to_string(static_cast<std::intmax_t>(-123));
-        log::debug("to_string test = ", result);
         test::assert_true(strcmp(result, "-123") == 0, "to_string(-123) returns \"-123\"");
     }
 

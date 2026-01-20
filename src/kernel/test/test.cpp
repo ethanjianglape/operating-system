@@ -3,6 +3,7 @@
 #include <test/test.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
+#include <memory/slab.hpp>
 
 // Forward declarations for test suites
 namespace test_pmm { void run(); }
@@ -41,6 +42,7 @@ namespace test {
         results = {0, 0};
 
         auto frames_before_test = pmm::get_free_frames();
+        auto slabs_before_test = slab::total_slabs();
 
         test_pmm::run();
         test_vmm::run();
@@ -52,14 +54,18 @@ namespace test {
         test_fs::run();
 
         auto frames_after_test = pmm::get_free_frames();
+        auto slabs_after_test = slab::total_slabs();
 
         log::info("======================================");
         log::info("            Test Results              ");
         log::info("======================================");
-        log::info("PMM free frames before test: ", frames_before_test);
-        log::info("PMM free frames after test:  ", frames_after_test);
-        log::info("Passed: ", results.passed, "/", results.passed + results.failed);
-        log::info("Failed: ", results.failed, "/", results.passed + results.failed);
+        log::info("* PMM free frames before test: ", frames_before_test);
+        log::info("* PMM free frames after test:  ", frames_after_test);
+        log::info("* Slab count before test: ", slabs_before_test);
+        log::info("* Slab count after test:  ", slabs_after_test);
+        log::info("* Passed: ", results.passed, "/", results.passed + results.failed);
+        log::info("* Failed: ", results.failed, "/", results.passed + results.failed);
+        log::info("======================================");
 
         if (results.failed == 0) {
             log::success("All tests passed!");

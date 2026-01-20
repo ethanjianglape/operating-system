@@ -14,6 +14,7 @@ namespace process {
         READY    = 2,
         BLOCKED  = 3,
         SLEEPING = 4,
+        DEAD     = 5,
     };
     
     struct ProcessAllocation {
@@ -25,6 +26,7 @@ namespace process {
         // Process meta info
         std::size_t pid;
         ProcessState state;
+        int exit_status;
 
         // Address space
         arch::vmm::PageTableEntry* pml4;
@@ -57,4 +59,6 @@ namespace process {
     };
     
     Process* create_process(std::uint8_t* buffer, std::size_t size);
+
+    void terminate_process(Process* process);
 }

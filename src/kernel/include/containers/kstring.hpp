@@ -8,7 +8,7 @@
 
 class kstring final {
   private:
-    static constexpr std::size_t INITIAL_CAPACITY = 4096;
+    static constexpr std::size_t INITIAL_CAPACITY = 16;
     static constexpr std::size_t GROWTH_RATE = 2;
 
     char* _data;
@@ -19,6 +19,12 @@ class kstring final {
     void ensure_capacity(std::size_t new_size) {
         while (_capacity < new_size) {
             grow();
+        }
+    }
+
+    void ensure_null_terminated() {
+        if (_data) {
+            _data[_length] = '\0';            
         }
     }
 
@@ -247,14 +253,16 @@ class kstring final {
         if (empty()) {
             return;
         }
-        _data[--_length] = '\0';
+
+        _length--;
+
+        ensure_null_terminated();
     }
 
     void clear() {
-        if (_data) {
-            _data[0] = '\0';
-        }
         _length = 0;
+
+        ensure_null_terminated();
     }
 
     void reverse() {
@@ -286,13 +294,15 @@ class kstring final {
         if (pos == _length) {
             push_back(c);
         } else {
-            for (std::size_t i = _length; i > pos; i--) {
+            for (std::size_t i = _length + 1; i > pos; i--) {
                 _data[i] = _data[i - 1];
             }
 
             _data[pos] = c;
             _length++;
         }
+
+        ensure_null_terminated();
     }
 
     // Removes the char as pos
@@ -306,17 +316,21 @@ class kstring final {
         }
 
         _length--;
+
+        ensure_null_terminated();
     }
 
     // Truncates the string from [0, pos]
-    // "abcdefg".truncate(3) -> "abcd"
+    // "abcdefg".truncate(0) -> ""
+    // "abcdefg".truncate(3) -> "abc"
     void truncate(std::size_t pos) {
         if (pos >= _length) {
             return;
         }
 
-        _data[pos + 1] = '\0';
         _length = pos;
+
+        ensure_null_terminated();
     }
 
     kstring substr(std::size_t pos, std::size_t len = npos) const {
@@ -389,9 +403,11 @@ class kstring final {
         if (s == nullptr) {
             return empty();
         }
+        
         if (empty()) {
             return *s == '\0';
         }
+        
         return strcmp(_data, s) == 0;
     }
 

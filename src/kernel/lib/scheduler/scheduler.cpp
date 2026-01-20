@@ -7,22 +7,38 @@
 #include <cstdint>
 
 namespace scheduler {
-    static kvector<process::Process*> processes;
+    static kvector<process::Process*> g_processes;
 
     extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
-    void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFrame* frame) {
-        for (std::size_t i = 0; i < processes.size(); i++) {
-            if (processes[i]->state == process::ProcessState::BLOCKED && processes[i]->wake_time_ms > 0 && ticks > processes[i]->wake_time_ms) {
-                processes[i]->state = process::ProcessState::READY;
-                processes[i]->wake_time_ms = 0;
+    static void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFrame*) {
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            auto* proc = g_processes[i];
+            
+            if (proc->state == process::ProcessState::BLOCKED && proc->wake_time_ms > 0 && ticks > proc->wake_time_ms) {
+                proc->state = process::ProcessState::READY;
+                proc->wake_time_ms = 0;
             }
         }
     }
 
+    static void terminate_dead_processes(std::uintmax_t, arch::irq::InterruptFrame*) {
+        auto* current_proc = arch::percpu::current_process();
+        
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            auto* proc = g_processes[i];
+
+            if (proc->state != process::ProcessState::DEAD || proc->pid == current_proc->pid) {
+                continue;
+            }
+
+            process::terminate_process(proc);
+        }
+    }
+
     process::Process* find_ready_kernel_process() {
-        for (std::size_t i = 0; i < processes.size(); i++) {
-            auto* p = processes[i];
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            auto* p = g_processes[i];
             if (p->state == process::ProcessState::READY && p->has_kernel_context) {
 
                 return p;
@@ -32,9 +48,9 @@ namespace scheduler {
         return nullptr;
     };
 
-    process::Process* find_ready_user_process() {
-        for (std::size_t i = 0; i < processes.size(); i++) {
-            auto* p = processes[i];
+    static process::Process* find_ready_user_process() {
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            auto* p = g_processes[i];
             if (p->state == process::ProcessState::READY && p->has_user_context) {
 
                 return p;
@@ -44,7 +60,7 @@ namespace scheduler {
         return nullptr;
     };
 
-    void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame) {
+    static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame) {
         auto* per_cpu = arch::percpu::get();
         process::Process* current = per_cpu->process;
 
@@ -160,13 +176,14 @@ namespace scheduler {
     }
 
     void add_process(process::Process* p) {
-        processes.push_back(p);
+        g_processes.push_back(p);
     }
 
     void init() {
         log::init_start("Scheduler");
 
         timer::register_handler(wake_sleeping_processes);
+        timer::register_handler(terminate_dead_processes);
         timer::register_handler(schedule);
 
         log::init_end("Scheduler");

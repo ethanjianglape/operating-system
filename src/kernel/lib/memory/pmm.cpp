@@ -98,6 +98,7 @@ namespace pmm {
         free_frames += total_frames;
 
         set_addr_free(addr, len);
+        set_frame_used(0);
     }
 
     std::size_t get_total_memory() {
