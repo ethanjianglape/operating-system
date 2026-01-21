@@ -302,6 +302,171 @@ namespace test_klist {
         test::assert_true(l2[0] == "first", "kstring copy: independent of original");
     }
 
+    // =========================================================================
+    // Nested klist<klist<kstring>> tests
+    // =========================================================================
+
+    void test_nested_basic() {
+        klist<klist<kstring>> outer;
+
+        klist<kstring> inner1;
+        inner1.push_back(kstring("a"));
+        inner1.push_back(kstring("b"));
+
+        klist<kstring> inner2;
+        inner2.push_back(kstring("c"));
+        inner2.push_back(kstring("d"));
+        inner2.push_back(kstring("e"));
+
+        outer.push_back(inner1);
+        outer.push_back(inner2);
+
+        test::assert_eq(outer.size(), 2ul, "nested basic: outer has 2 elements");
+        test::assert_eq(outer[0].size(), 2ul, "nested basic: inner[0] has 2 elements");
+        test::assert_eq(outer[1].size(), 3ul, "nested basic: inner[1] has 3 elements");
+        test::assert_true(outer[0][0] == "a", "nested basic: [0][0] is a");
+        test::assert_true(outer[1][2] == "e", "nested basic: [1][2] is e");
+    }
+
+    void test_nested_copy_outer() {
+        klist<klist<kstring>> outer1;
+
+        klist<kstring> inner;
+        inner.push_back(kstring("hello"));
+        inner.push_back(kstring("world"));
+        outer1.push_back(inner);
+
+        klist<klist<kstring>> outer2(outer1);
+
+        test::assert_eq(outer2.size(), 1ul, "nested copy outer: size is 1");
+        test::assert_eq(outer2[0].size(), 2ul, "nested copy outer: inner size is 2");
+        test::assert_true(outer2[0][0] == "hello", "nested copy outer: [0][0] is hello");
+
+        // Modify original, verify copy is independent
+        outer1[0][0] = kstring("modified");
+        test::assert_true(outer2[0][0] == "hello", "nested copy outer: independent copy");
+    }
+
+    void test_nested_move_outer() {
+        klist<klist<kstring>> outer1;
+
+        klist<kstring> inner;
+        inner.push_back(kstring("test"));
+        inner.push_back(kstring("string"));
+        outer1.push_back(inner);
+
+        klist<klist<kstring>> outer2(static_cast<klist<klist<kstring>>&&>(outer1));
+
+        test::assert_true(outer1.empty(), "nested move outer: source emptied");
+        test::assert_eq(outer2.size(), 1ul, "nested move outer: dest has 1 element");
+        test::assert_true(outer2[0][0] == "test", "nested move outer: data transferred");
+    }
+
+    void test_nested_push_front_back_mix() {
+        klist<klist<kstring>> outer;
+
+        klist<kstring> first;
+        first.push_back(kstring("first"));
+
+        klist<kstring> second;
+        second.push_back(kstring("second"));
+
+        klist<kstring> third;
+        third.push_back(kstring("third"));
+
+        outer.push_back(first);   // [first]
+        outer.push_front(second); // [second, first]
+        outer.push_back(third);   // [second, first, third]
+
+        test::assert_eq(outer.size(), 3ul, "nested push mix: size is 3");
+        test::assert_true(outer[0][0] == "second", "nested push mix: [0] is second");
+        test::assert_true(outer[1][0] == "first", "nested push mix: [1] is first");
+        test::assert_true(outer[2][0] == "third", "nested push mix: [2] is third");
+    }
+
+    void test_nested_pop_destroys_inner() {
+        klist<klist<kstring>> outer;
+
+        klist<kstring> inner;
+        inner.push_back(kstring("will be destroyed"));
+        inner.push_back(kstring("also destroyed"));
+
+        outer.push_back(inner);
+        outer.push_back(inner);
+        outer.push_back(inner);
+
+        test::assert_eq(outer.size(), 3ul, "nested pop: initial size 3");
+
+        outer.pop_back();
+        test::assert_eq(outer.size(), 2ul, "nested pop: size after pop_back");
+
+        outer.pop_front();
+        test::assert_eq(outer.size(), 1ul, "nested pop: size after pop_front");
+
+        // Remaining element should still be valid
+        test::assert_eq(outer[0].size(), 2ul, "nested pop: remaining inner intact");
+        test::assert_true(outer[0][0] == "will be destroyed", "nested pop: remaining data intact");
+    }
+
+    void test_nested_clear_all() {
+        klist<klist<kstring>> outer;
+
+        for (int i = 0; i < 5; i++) {
+            klist<kstring> inner;
+            inner.push_back(kstring("item"));
+            inner.push_back(kstring("in"));
+            inner.push_back(kstring("list"));
+            outer.push_back(inner);
+        }
+
+        test::assert_eq(outer.size(), 5ul, "nested clear: initial size 5");
+
+        outer.clear();
+
+        test::assert_true(outer.empty(), "nested clear: outer is empty");
+        test::assert_eq(outer.size(), 0ul, "nested clear: size is 0");
+    }
+
+    void test_nested_assignment() {
+        klist<klist<kstring>> outer1;
+        klist<kstring> inner;
+        inner.push_back(kstring("assign"));
+        inner.push_back(kstring("me"));
+        outer1.push_back(inner);
+
+        klist<klist<kstring>> outer2;
+        klist<kstring> other;
+        other.push_back(kstring("will be replaced"));
+        outer2.push_back(other);
+        outer2.push_back(other);
+
+        outer2 = outer1;
+
+        test::assert_eq(outer2.size(), 1ul, "nested assign: size after copy assign");
+        test::assert_true(outer2[0][0] == "assign", "nested assign: data copied");
+
+        // Verify independence
+        outer1[0][0] = kstring("changed");
+        test::assert_true(outer2[0][0] == "assign", "nested assign: independent after copy");
+    }
+
+    void test_nested_modify_inner_after_insert() {
+        klist<klist<kstring>> outer;
+
+        klist<kstring> inner;
+        inner.push_back(kstring("original"));
+        outer.push_back(inner);
+
+        // Modify inner through outer
+        outer[0].push_back(kstring("added"));
+        outer[0].push_front(kstring("prepended"));
+
+        test::assert_eq(outer[0].size(), 3ul, "nested modify: inner grew to 3");
+        test::assert_true(outer[0][0] == "prepended", "nested modify: prepended at front");
+        test::assert_true(outer[0][1] == "original", "nested modify: original in middle");
+        test::assert_true(outer[0][2] == "added", "nested modify: added at back");
+    }
+
     void run() {
         log::info("Running klist tests...");
 
@@ -331,6 +496,16 @@ namespace test_klist {
         test_reuse_after_clear();
         test_kstring_elements();
         test_kstring_copy();
+
+        // Nested klist<klist<kstring>> tests
+        test_nested_basic();
+        test_nested_copy_outer();
+        test_nested_move_outer();
+        test_nested_push_front_back_mix();
+        test_nested_pop_destroys_inner();
+        test_nested_clear_all();
+        test_nested_assignment();
+        test_nested_modify_inner_after_insert();
     }
 }
 
