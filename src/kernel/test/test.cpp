@@ -17,6 +17,7 @@ namespace test_kstring { void run(); }
 namespace test_klist { void run(); }
 namespace test_fmt { void run(); }
 namespace test_fs { void run(); }
+namespace test_algo { void run(); }
 
 namespace test {
     static Results results = {0, 0};
@@ -56,6 +57,7 @@ namespace test {
         test_klist::run();
         test_fmt::run();
         test_fs::run();
+        test_algo::run();
 
         auto frames_after_test = pmm::get_free_frames();
         auto slabs_after_test = slab::total_slabs();

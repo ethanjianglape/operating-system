@@ -233,6 +233,10 @@ namespace fmt {
         return to_string(reinterpret_cast<std::uintptr_t>(ptr), NumberFormat::HEX);
     }
 
+    inline const char* to_string(const kstring& str) {
+        return str.c_str();
+    }
+
     inline std::uintmax_t parse_uint(const char* str, std::size_t len, NumberFormat format = NumberFormat::DEC) {
         const auto divisor = number_format_divisor(format);
         

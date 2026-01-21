@@ -1,5 +1,8 @@
 #pragma once
 
+#include "algo/algo.hpp"
+#include "arch/x86_64/drivers/serial/serial.hpp"
+#include "containers/klist.hpp"
 #include <containers/kstring.hpp>
 #include <arch.hpp>
 #include <fmt/fmt.hpp>
@@ -15,6 +18,13 @@ namespace kprint_detail {
 
     inline void print_one(const char* str) {
         serial::puts(str);
+    }
+
+    template <typename T>
+    inline void print_one(const klist<T>& list) {
+        serial::putchar('[');
+        serial::puts(algo::join(list));
+        serial::putchar(']');
     }
 
     inline void print_one(bool b) {

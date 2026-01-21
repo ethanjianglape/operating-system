@@ -26,9 +26,31 @@ private:
         T data;
     };
 
+    node* _head;
+
     std::size_t _size;
 
-    node* _head;
+    bool remove_node(node* n) {
+        if (empty() || n == nullptr) {
+            return false;
+        }
+        
+        _size--;
+
+        if (empty()) {
+            _head = nullptr;
+        } else {
+            if (n == _head) {
+                _head = n->next;
+            }
+            
+            n->prev->next = n->next;
+            n->next->prev = n->prev;
+        }
+
+        delete n;
+        return true;
+    }
 public:
     klist() : _head{nullptr}, _size{0} {}
 
@@ -117,6 +139,41 @@ public:
         return n->data;
     }
 
+    void reverse() {
+        if (empty()) {
+            return;
+        }
+
+        node* n = _head;
+
+        for (std::size_t i = 0; i < _size; i++) {
+            node* temp = n->next;
+            n->next = n->prev;
+            n->prev = temp;
+            n = temp;
+        }
+
+        _head = _head->next;
+    }
+
+    bool remove(const T& t) {
+        if (empty()) {
+            return false;
+        }
+        
+        node* n = _head;
+
+        for (std::size_t i = 0; i < _size; i++) {
+            if (n->data == t) {
+                return remove_node(n);
+            }
+            
+            n = n->next;
+        }
+
+        return false;
+    }
+
     void push_front(const T& t) {
         auto* n = new node{};
 
@@ -126,7 +183,7 @@ public:
             new (&n->data) T{t};
         }
 
-        if (_head == nullptr) {
+        if (empty()) {
             _head = n;
             _head->next = n;
             _head->prev = n;
@@ -151,7 +208,7 @@ public:
             new (&n->data) T{t};
         }
 
-        if (_head == nullptr) {
+        if (empty()) {
             _head = n;
             _head->next = n;
             _head->prev = n;
@@ -175,7 +232,7 @@ public:
 
         _size--;
 
-        if (_size == 0 ){
+        if (empty()) {
             _head = nullptr;
         } else {
             n->next->prev = n->prev;
@@ -196,7 +253,7 @@ public:
 
         _size--;
 
-        if (_size == 0) {
+        if (empty()) {
             _head = nullptr;
         } else {
             n->next->prev = n->prev;
@@ -204,6 +261,18 @@ public:
         }
 
         delete n;
+    }
+
+    void rotate_next() {
+        if (!empty()) {
+            _head = _head->next;
+        }
+    }
+
+    void rotate_prev() {
+        if (!empty()) {
+            _head = _head->prev;
+        }
     }
 
     void clear() {

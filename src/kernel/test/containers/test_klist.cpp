@@ -469,6 +469,404 @@ namespace test_klist {
         test::assert_true(outer[0][2] == "added", "nested modify: added at back");
     }
 
+    // =========================================================================
+    // reverse() tests
+    // =========================================================================
+
+    void test_reverse_empty() {
+        klist<int> l;
+        l.reverse();  // Should not crash
+        test::assert_true(l.empty(), "reverse empty: list still empty");
+    }
+
+    void test_reverse_single() {
+        klist<int> l;
+        l.push_back(42);
+        l.reverse();
+        test::assert_eq(l.size(), 1ul, "reverse single: size unchanged");
+        test::assert_eq(l[0], 42, "reverse single: element unchanged");
+        test::assert_eq(l.front(), 42, "reverse single: front unchanged");
+        test::assert_eq(l.back(), 42, "reverse single: back unchanged");
+    }
+
+    void test_reverse_two() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.reverse();
+        test::assert_eq(l.size(), 2ul, "reverse two: size unchanged");
+        test::assert_eq(l[0], 2, "reverse two: [0] is 2");
+        test::assert_eq(l[1], 1, "reverse two: [1] is 1");
+        test::assert_eq(l.front(), 2, "reverse two: front is 2");
+        test::assert_eq(l.back(), 1, "reverse two: back is 1");
+    }
+
+    void test_reverse_three() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        l.reverse();
+        test::assert_eq(l.size(), 3ul, "reverse three: size unchanged");
+        test::assert_eq(l[0], 3, "reverse three: [0] is 3");
+        test::assert_eq(l[1], 2, "reverse three: [1] is 2");
+        test::assert_eq(l[2], 1, "reverse three: [2] is 1");
+        test::assert_eq(l.front(), 3, "reverse three: front is 3");
+        test::assert_eq(l.back(), 1, "reverse three: back is 1");
+    }
+
+    void test_reverse_many() {
+        klist<int> l;
+        for (int i = 0; i < 10; i++) {
+            l.push_back(i);
+        }
+        // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+        l.reverse();
+        // [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+
+        test::assert_eq(l.size(), 10ul, "reverse many: size unchanged");
+        test::assert_eq(l.front(), 9, "reverse many: front is 9");
+        test::assert_eq(l.back(), 0, "reverse many: back is 0");
+
+        bool all_correct = true;
+        for (int i = 0; i < 10 && all_correct; i++) {
+            all_correct = (l[i] == 9 - i);
+        }
+        test::assert_true(all_correct, "reverse many: all elements in reverse order");
+    }
+
+    void test_reverse_twice() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        l.push_back(4);
+
+        l.reverse();
+        l.reverse();
+
+        test::assert_eq(l[0], 1, "reverse twice: [0] back to 1");
+        test::assert_eq(l[1], 2, "reverse twice: [1] back to 2");
+        test::assert_eq(l[2], 3, "reverse twice: [2] back to 3");
+        test::assert_eq(l[3], 4, "reverse twice: [3] back to 4");
+    }
+
+    void test_reverse_then_push() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        // [1, 2, 3]
+
+        l.reverse();
+        // [3, 2, 1]
+
+        l.push_back(0);
+        // [3, 2, 1, 0]
+
+        l.push_front(4);
+        // [4, 3, 2, 1, 0]
+
+        test::assert_eq(l.size(), 5ul, "reverse then push: size is 5");
+        test::assert_eq(l[0], 4, "reverse then push: [0] is 4");
+        test::assert_eq(l[1], 3, "reverse then push: [1] is 3");
+        test::assert_eq(l[4], 0, "reverse then push: [4] is 0");
+        test::assert_eq(l.front(), 4, "reverse then push: front is 4");
+        test::assert_eq(l.back(), 0, "reverse then push: back is 0");
+    }
+
+    void test_reverse_then_pop() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        l.push_back(4);
+        // [1, 2, 3, 4]
+
+        l.reverse();
+        // [4, 3, 2, 1]
+
+        l.pop_front();
+        // [3, 2, 1]
+
+        l.pop_back();
+        // [3, 2]
+
+        test::assert_eq(l.size(), 2ul, "reverse then pop: size is 2");
+        test::assert_eq(l.front(), 3, "reverse then pop: front is 3");
+        test::assert_eq(l.back(), 2, "reverse then pop: back is 2");
+    }
+
+    void test_reverse_kstring() {
+        klist<kstring> l;
+        l.push_back(kstring("first"));
+        l.push_back(kstring("second"));
+        l.push_back(kstring("third"));
+
+        l.reverse();
+
+        test::assert_eq(l.size(), 3ul, "reverse kstring: size unchanged");
+        test::assert_true(l[0] == "third", "reverse kstring: [0] is third");
+        test::assert_true(l[1] == "second", "reverse kstring: [1] is second");
+        test::assert_true(l[2] == "first", "reverse kstring: [2] is first");
+    }
+
+    void test_reverse_circular_integrity() {
+        // Verify circular structure is maintained after reverse
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+
+        l.reverse();
+        // [3, 2, 1]
+
+        // Test circular by doing multiple operations that rely on it
+        test::assert_eq(l.front(), 3, "reverse circular: front is 3");
+        test::assert_eq(l.back(), 1, "reverse circular: back is 1");
+
+        l.pop_front();
+        test::assert_eq(l.front(), 2, "reverse circular: front after pop is 2");
+        test::assert_eq(l.back(), 1, "reverse circular: back after pop is 1");
+
+        l.push_front(5);
+        test::assert_eq(l.front(), 5, "reverse circular: front after push_front is 5");
+        test::assert_eq(l.back(), 1, "reverse circular: back after push_front is 1");
+
+        l.push_back(0);
+        test::assert_eq(l.front(), 5, "reverse circular: front after push_back is 5");
+        test::assert_eq(l.back(), 0, "reverse circular: back after push_back is 0");
+    }
+
+    // =========================================================================
+    // rotate_next() / rotate_prev() tests
+    // =========================================================================
+
+    void test_rotate_next_empty() {
+        klist<int> l;
+        l.rotate_next();  // Should not crash
+        test::assert_true(l.empty(), "rotate_next empty: list still empty");
+    }
+
+    void test_rotate_next_single() {
+        klist<int> l;
+        l.push_back(42);
+        l.rotate_next();
+        test::assert_eq(l.front(), 42, "rotate_next single: front unchanged");
+        test::assert_eq(l.back(), 42, "rotate_next single: back unchanged");
+    }
+
+    void test_rotate_next_basic() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        // [1, 2, 3]
+
+        l.rotate_next();
+        // [2, 3, 1]
+
+        test::assert_eq(l.size(), 3ul, "rotate_next: size unchanged");
+        test::assert_eq(l.front(), 2, "rotate_next: front is 2");
+        test::assert_eq(l.back(), 1, "rotate_next: back is 1");
+        test::assert_eq(l[0], 2, "rotate_next: [0] is 2");
+        test::assert_eq(l[1], 3, "rotate_next: [1] is 3");
+        test::assert_eq(l[2], 1, "rotate_next: [2] is 1");
+    }
+
+    void test_rotate_prev_basic() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        // [1, 2, 3]
+
+        l.rotate_prev();
+        // [3, 1, 2]
+
+        test::assert_eq(l.size(), 3ul, "rotate_prev: size unchanged");
+        test::assert_eq(l.front(), 3, "rotate_prev: front is 3");
+        test::assert_eq(l.back(), 2, "rotate_prev: back is 2");
+        test::assert_eq(l[0], 3, "rotate_prev: [0] is 3");
+        test::assert_eq(l[1], 1, "rotate_prev: [1] is 1");
+        test::assert_eq(l[2], 2, "rotate_prev: [2] is 2");
+    }
+
+    void test_rotate_full_cycle() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+
+        // Rotate through entire list and back
+        l.rotate_next();  // [2, 3, 1]
+        l.rotate_next();  // [3, 1, 2]
+        l.rotate_next();  // [1, 2, 3] - back to original
+
+        test::assert_eq(l.front(), 1, "rotate full cycle: back to original front");
+        test::assert_eq(l.back(), 3, "rotate full cycle: back to original back");
+
+        // Same with rotate_prev
+        l.rotate_prev();  // [3, 1, 2]
+        l.rotate_prev();  // [2, 3, 1]
+        l.rotate_prev();  // [1, 2, 3] - back to original
+
+        test::assert_eq(l.front(), 1, "rotate_prev full cycle: back to original front");
+        test::assert_eq(l.back(), 3, "rotate_prev full cycle: back to original back");
+    }
+
+    void test_rotate_round_robin() {
+        // Simulate round-robin scheduler use case
+        klist<int> ready_queue;
+        ready_queue.push_back(100);  // PID 100
+        ready_queue.push_back(200);  // PID 200
+        ready_queue.push_back(300);  // PID 300
+
+        // "Run" front process, then rotate to give next process a turn
+        test::assert_eq(ready_queue.front(), 100, "round robin: first is 100");
+        ready_queue.rotate_next();
+
+        test::assert_eq(ready_queue.front(), 200, "round robin: second is 200");
+        ready_queue.rotate_next();
+
+        test::assert_eq(ready_queue.front(), 300, "round robin: third is 300");
+        ready_queue.rotate_next();
+
+        test::assert_eq(ready_queue.front(), 100, "round robin: back to 100");
+    }
+
+    // =========================================================================
+    // remove() tests
+    // =========================================================================
+
+    void test_remove_empty() {
+        klist<int> l;
+        bool result = l.remove(42);
+        test::assert_true(!result, "remove empty: returns false");
+        test::assert_true(l.empty(), "remove empty: list still empty");
+    }
+
+    void test_remove_single() {
+        klist<int> l;
+        l.push_back(42);
+        bool result = l.remove(42);
+        test::assert_true(result, "remove single: returns true");
+        test::assert_true(l.empty(), "remove single: list now empty");
+        test::assert_eq(l.size(), 0ul, "remove single: size is 0");
+    }
+
+    void test_remove_front() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        // [1, 2, 3]
+
+        bool result = l.remove(1);
+        // [2, 3]
+
+        test::assert_true(result, "remove front: returns true");
+        test::assert_eq(l.size(), 2ul, "remove front: size is 2");
+        test::assert_eq(l.front(), 2, "remove front: new front is 2");
+        test::assert_eq(l.back(), 3, "remove front: back is 3");
+        test::assert_eq(l[0], 2, "remove front: [0] is 2");
+        test::assert_eq(l[1], 3, "remove front: [1] is 3");
+    }
+
+    void test_remove_back() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        // [1, 2, 3]
+
+        bool result = l.remove(3);
+        // [1, 2]
+
+        test::assert_true(result, "remove back: returns true");
+        test::assert_eq(l.size(), 2ul, "remove back: size is 2");
+        test::assert_eq(l.front(), 1, "remove back: front is 1");
+        test::assert_eq(l.back(), 2, "remove back: new back is 2");
+    }
+
+    void test_remove_middle() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        // [1, 2, 3]
+
+        bool result = l.remove(2);
+        // [1, 3]
+
+        test::assert_true(result, "remove middle: returns true");
+        test::assert_eq(l.size(), 2ul, "remove middle: size is 2");
+        test::assert_eq(l.front(), 1, "remove middle: front is 1");
+        test::assert_eq(l.back(), 3, "remove middle: back is 3");
+        test::assert_eq(l[0], 1, "remove middle: [0] is 1");
+        test::assert_eq(l[1], 3, "remove middle: [1] is 3");
+    }
+
+    void test_remove_not_found() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+
+        bool result = l.remove(99);
+
+        test::assert_true(!result, "remove not found: returns false");
+        test::assert_eq(l.size(), 3ul, "remove not found: size unchanged");
+    }
+
+    void test_remove_duplicates() {
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(1);
+        l.push_back(3);
+        l.push_back(1);
+        // [1, 2, 1, 3, 1]
+
+        bool result = l.remove(1);
+        // Should remove first occurrence: [2, 1, 3, 1]
+
+        test::assert_true(result, "remove duplicates: returns true");
+        test::assert_eq(l.size(), 4ul, "remove duplicates: size is 4");
+        test::assert_eq(l.front(), 2, "remove duplicates: front is 2");
+        test::assert_eq(l[1], 1, "remove duplicates: second 1 still present");
+    }
+
+    void test_remove_then_operate() {
+        // Verify list integrity after remove by doing various operations
+        klist<int> l;
+        l.push_back(1);
+        l.push_back(2);
+        l.push_back(3);
+        l.push_back(4);
+
+        l.remove(2);
+        // [1, 3, 4]
+
+        l.push_back(5);
+        // [1, 3, 4, 5]
+
+        l.push_front(0);
+        // [0, 1, 3, 4, 5]
+
+        test::assert_eq(l.size(), 5ul, "remove then operate: size is 5");
+        test::assert_eq(l.front(), 0, "remove then operate: front is 0");
+        test::assert_eq(l.back(), 5, "remove then operate: back is 5");
+
+        l.rotate_next();
+        test::assert_eq(l.front(), 1, "remove then operate: rotate works");
+        
+        l.pop_back();
+        // [1, 3, 4, 5] - removed the 0 from the back
+        test::assert_eq(l.back(), 5, "remove then operate: pop_back works");
+    }
+
     void run() {
         log::info("Running klist tests...");
 
@@ -508,6 +906,36 @@ namespace test_klist {
         test_nested_clear_all();
         test_nested_assignment();
         test_nested_modify_inner_after_insert();
+
+        // reverse() tests
+        test_reverse_empty();
+        test_reverse_single();
+        test_reverse_two();
+        test_reverse_three();
+        test_reverse_many();
+        test_reverse_twice();
+        test_reverse_then_push();
+        test_reverse_then_pop();
+        test_reverse_kstring();
+        test_reverse_circular_integrity();
+
+        // rotate_next()/rotate_prev() tests
+        test_rotate_next_empty();
+        test_rotate_next_single();
+        test_rotate_next_basic();
+        test_rotate_prev_basic();
+        test_rotate_full_cycle();
+        test_rotate_round_robin();
+
+        // remove() tests
+        test_remove_empty();
+        test_remove_single();
+        test_remove_front();
+        test_remove_back();
+        test_remove_middle();
+        test_remove_not_found();
+        test_remove_duplicates();
+        test_remove_then_operate();
     }
 }
 
