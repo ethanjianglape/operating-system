@@ -56,7 +56,7 @@ namespace x86_64::vmm {
     void free_contiguous_kmem(void* virt);
 
     std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags);
-    void free_mem_at(std::uintptr_t virt, std::size_t num_pages);
+    void unmap_mem_at(std::uintptr_t virt, std::size_t num_pages);
 
     PageTableEntry* create_user_pml4();
     

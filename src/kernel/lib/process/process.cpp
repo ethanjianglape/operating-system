@@ -1,4 +1,5 @@
 #include "arch/x86_64/context/context.hpp"
+#include "arch/x86_64/memory/vmm.hpp"
 #include "containers/kvector.hpp"
 #include "fmt/fmt.hpp"
 #include <cstddef>
@@ -119,7 +120,6 @@ namespace process {
         log::debug("p2 context_frame virt = ", fmt::hex{(uint64_t)p->context_frame});
         log::debug("p2 context_frame phys = ", fmt::hex{arch::vmm::hhdm_virt_to_phys(p->context_frame)});
 
-
         return p;
     }
     
@@ -136,5 +136,15 @@ namespace process {
 
     void terminate_process(Process* proc) {
         log::info("Terminating process with ID ", proc->pid);
+
+        for (auto& fd : proc->fd_table) {
+            fd.inode->ops->close(&fd);
+        }
+
+        for (auto& allocation : proc->allocations) {
+            arch::vmm::unmap_mem_at(allocation.virt_addr, allocation.num_pages);
+        }
+
+        delete[] proc->kernel_stack;
     }
 }

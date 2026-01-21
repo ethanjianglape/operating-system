@@ -19,7 +19,7 @@ concept kvector_storable = requires {
 };
 
 template <kvector_storable T> class kvector final {
-  private:
+private:
     static constexpr std::size_t INITIAL_CAPACITY = 16;
     static constexpr std::size_t GROWTH_RATE = 2;
 
