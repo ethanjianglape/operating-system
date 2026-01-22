@@ -29,7 +29,7 @@ namespace scheduler {
         for (std::size_t i = 0; i < g_processes.size(); i++) {
             auto* proc = g_processes[i];
 
-            if (proc->state != process::ProcessState::DEAD || proc->pid == current_proc->pid) {
+            if (proc->state != process::ProcessState::DEAD || (current_proc && proc->pid == current_proc->pid)) {
                 continue;
             }
 
@@ -147,7 +147,10 @@ namespace scheduler {
     }
 
     void yield_dead(process::Process* proc) {
+        auto* per_cpu = arch::percpu::get();
+
         proc->state = process::ProcessState::DEAD;
+        per_cpu->process = nullptr;
 
         while (true) {
             process::Process* ready = find_ready_kernel_process();
@@ -157,7 +160,6 @@ namespace scheduler {
             }
 
             if (ready != nullptr) {
-                auto* per_cpu = arch::percpu::get();
                 per_cpu->process = ready;
                 per_cpu->kernel_rsp = ready->kernel_rsp;
                 

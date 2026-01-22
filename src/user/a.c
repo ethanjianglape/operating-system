@@ -1,5 +1,6 @@
 #define SYS_WRITE 1
 #define SYS_SLEEP 35
+#define SYS_EXIT  60
 
 typedef unsigned long size_t;
 typedef long ssize_t;
@@ -34,9 +35,14 @@ ssize_t sleep_ms(unsigned long ms) {
     return syscall1(SYS_SLEEP, ms);
 }
 
+void exit(int status) {
+    syscall1(SYS_EXIT, status);
+}
+
 void _start(void) {
-    while (1) {
+    for (int i = 0; i < 30; i++) {
         write(1, "A", 1);
         sleep_ms(25);
     }
+    exit(0);
 }
