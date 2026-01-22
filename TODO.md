@@ -14,6 +14,7 @@
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
+- [x] [Process Termination and Cleanup](#process-termination-and-cleanup)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -423,6 +424,60 @@ See `src/kernel/CONVENTIONS.md` for full details.
 - `x86_64::context` - context switching mechanics
 - `syscall::` - flat namespace for syscall implementations (sys_read, sys_write, etc.)
 - `arch::` aliases all x86_64 namespaces for portable kernel code
+
+---
+
+## Process Termination and Cleanup
+
+**Status:** Complete
+
+**Goal:** Properly terminate processes and reclaim all resources when they exit or are killed.
+
+**Implemented:**
+- `sys_exit()` marks process as DEAD and calls `yield_dead()` (never returns)
+- `yield_dead()` context switches away from the dying process permanently
+- `terminate_dead_processes()` runs on timer interrupt, cleans up DEAD processes
+- `terminate_process()` frees all process resources:
+  - Closes all file descriptors via `fd->inode->ops->close()`
+  - Unmaps user pages and frees physical frames via `unmap_mem_at()`
+  - Frees page table hierarchy (PT, PD, PDPT, PML4) via `free_page_tables()`
+  - Frees kernel stack via `delete[]`
+  - Frees Process struct via `delete`
+- Removed from scheduler queue via `klist::erase()`
+- Sanity logging shows PMM frames reclaimed and slab counts
+
+**Architecture:**
+```
+sys_exit(status)
+        │
+        ▼
+Mark process DEAD, call yield_dead()
+        │
+        ▼
+yield_dead() context switches to ready process
+  (saves RSP to dead process, but no one will switch back)
+        │
+        ▼
+Timer fires, terminate_dead_processes() runs
+        │
+        ▼
+terminate_process(proc)
+  - Close FDs
+  - Unmap user pages (frees physical frames)
+  - Free page table hierarchy
+  - Free kernel stack
+  - Free Process struct
+        │
+        ▼
+Remove from scheduler queue
+```
+
+**Key insight:** The exiting process can't free its own kernel stack while running on it. Solution: `yield_dead()` switches away first, then cleanup happens later from a different context (timer interrupt handler).
+
+**Future enhancements:**
+- Parent-child relationships for `waitpid()`
+- Signal-based process termination (SIGKILL, SIGTERM)
+- Exit status retrieval by parent process
 
 ---
 

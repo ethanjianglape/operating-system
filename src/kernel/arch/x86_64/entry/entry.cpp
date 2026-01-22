@@ -127,11 +127,12 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
     process->has_kernel_context = true;
     process->has_user_context = false;
 
-    std::uint64_t arg1 = frame->rdi;
-    std::uint64_t arg2 = frame->rsi;
-    std::uint64_t arg3 = frame->rdx;
+    const std::uint64_t syscall_num = frame->rax;
+    const std::uint64_t arg1 = frame->rdi;
+    const std::uint64_t arg2 = frame->rsi;
+    const std::uint64_t arg3 = frame->rdx;
 
-    switch (frame->rax) {
+    switch (syscall_num) {
     case SYS_WRITE:
         return syscall::sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
     case SYS_READ:
@@ -142,6 +143,8 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
         return syscall::sys_lseek(arg1, arg2, arg3);
     case SYS_GETPID:
         return syscall::sys_getpid();
+    case SYS_EXIT:
+        return syscall::sys_exit(arg1);
     default:
         log::error("Unsupported syscall: ", frame->rax);
         return -ENOSYS;

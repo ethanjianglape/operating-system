@@ -1,4 +1,5 @@
 #include "arch/x86_64/context/context.hpp"
+#include "arch/x86_64/memory/vmm.hpp"
 #include "containers/kvector.hpp"
 #include "fmt/fmt.hpp"
 #include <cstddef>
@@ -8,6 +9,8 @@
 #include <log/log.hpp>
 #include <arch.hpp>
 #include <crt/crt.h>
+#include <memory/pmm.hpp>
+#include <memory/slab.hpp>
 
 namespace process {
     constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
@@ -34,6 +37,7 @@ namespace process {
 
         p->state = ProcessState::READY;
         p->pid = g_pid++;
+        p->exit_status = 0;
         p->entry = file.entry;
         p->pml4 = pml4;
         p->fd_table = {};
@@ -100,7 +104,7 @@ namespace process {
         p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
         p->context_frame->r15 = p->rip;
         p->context_frame->r14 = p->rsp;
-        p->context_frame->r13 = 0xDEADBEEF;//p->cs;
+        p->context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
         p->context_frame->r12 = 0xABABABAB;
         p->context_frame->rbp = 0x77777777;
         p->context_frame->rbx = 0x12345678;
@@ -118,7 +122,6 @@ namespace process {
         log::debug("p2 context_frame virt = ", fmt::hex{(uint64_t)p->context_frame});
         log::debug("p2 context_frame phys = ", fmt::hex{arch::vmm::hhdm_virt_to_phys(p->context_frame)});
 
-
         return p;
     }
     
@@ -131,5 +134,34 @@ namespace process {
         Process* elf = load_elf(buffer, size);
 
         return elf;
+    }
+
+    void terminate_process(Process* proc) {
+        log::info("========================================");
+        log::info("Terminating process ", proc->pid);
+        log::info("========================================");
+
+        auto frames_before = pmm::get_free_frames();
+        auto slabs_before = slab::total_slabs();
+
+        for (auto& fd : proc->fd_table) {
+            fd.inode->ops->close(&fd);
+        }
+
+        for (auto& allocation : proc->allocations) {
+            arch::vmm::unmap_mem_at(proc->pml4, allocation.virt_addr, allocation.num_pages);
+        }
+
+        arch::vmm::free_page_tables(proc->pml4);
+        delete[] proc->kernel_stack;
+        delete proc;
+
+        auto frames_after = pmm::get_free_frames();
+        auto slabs_after = slab::total_slabs();
+
+        log::info("PMM frames: ", frames_before, " -> ", frames_after,
+                  " (+", frames_after - frames_before, ")");
+        log::info("Slabs: ", slabs_before, " -> ", slabs_after);
+        log::info("========================================");
     }
 }

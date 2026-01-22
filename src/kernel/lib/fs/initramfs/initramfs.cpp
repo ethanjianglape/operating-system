@@ -25,8 +25,6 @@ namespace fs::initramfs {
     }
 
     static Inode* initramfs_open(FileSystem*, const kstring& path, int) {
-        log::debug("initramfs::open ", path);
-
         tar::TarMeta* meta = tar::find(path);
         if (!meta) {
             return nullptr;
@@ -46,7 +44,6 @@ namespace fs::initramfs {
         file_meta->size = meta->size_bytes;
         inode->private_data = file_meta;
 
-        log::debug("initramfs::open success, size=", inode->size);
         return inode;
     }
 

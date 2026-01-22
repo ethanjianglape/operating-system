@@ -47,9 +47,6 @@ add_compile_options(
 # Sysroot configuration
 set(SYSROOT "${CMAKE_SOURCE_DIR}/sysroot" CACHE PATH "Sysroot directory")
 
-# Add libc subdirectory FIRST (this installs headers to sysroot)
-#add_subdirectory(src/libc)
-
 # Add kernel subdirectory (this installs kernel headers to sysroot)
 add_subdirectory(src/kernel)
 

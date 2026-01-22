@@ -283,4 +283,38 @@ After the process runs and blocks, `context_switch` saves its *real* kernel cont
 
 ---
 
+## Container and Allocator Pitfalls
+
+### Reducing allocation sizes can expose latent out-of-bounds bugs
+
+When `kvector<T>` used a large initial capacity (4096 bytes), code that accessed `v[i]` where `i >= size()` appeared to work. The memory was technically allocated and owned by the vector, so no crash occurred.
+
+**The bug**: After changing `kvector` to use a smaller initial capacity (16 elements) to leverage the slab allocator, these latent bugs became real corruption:
+
+```cpp
+// In console::redraw()
+for (std::size_t col = 0; col < max_cols; col++) {
+    auto& cc = line[col];  // BUG: col can exceed line.size()
+    cc.dirty = true;       // Corrupts memory outside the vector!
+}
+```
+
+**Why it worked before**: With 4096-byte capacity, `line` had room for ~4096 characters. Accessing `line[200]` when `size()` was 80 wrote into allocated (but unused) capacity - no immediate crash, just silent wrongness.
+
+**Why it broke after**: With 16-element initial capacity that grows on demand, accessing beyond `size()` writes into memory belonging to other allocations. The slab allocator packs objects tightly, so corruption immediately affects neighboring data.
+
+**The fix**:
+```cpp
+for (std::size_t col = 0; col < line.size(); col++) {
+    auto& cc = line[col];
+    cc.dirty = true;
+}
+```
+
+**The lesson**: Large allocations hide bugs by providing a "buffer zone" of unused memory. Switching to right-sized allocations (via slab allocator) exposes code that incorrectly assumes capacity == valid access. This is actually a *benefit* - the bug was always there, it just became visible.
+
+**Debugging hint**: If behavior changes after modifying allocator sizing, look for out-of-bounds access patterns, not allocator bugs.
+
+---
+
 *Add new insights as you discover them. Future you (and other developers) will thank you.*

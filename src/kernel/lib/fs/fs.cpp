@@ -69,7 +69,6 @@ namespace fs {
         }
 
         kstring relative = strip_mount_prefix(canonical, mp);
-        log::debug("fs::open: ", canonical, " -> ", mp->filesystem->name, ":", relative);
 
         return mp->filesystem->open(mp->filesystem, relative, flags);
     }
@@ -103,7 +102,6 @@ namespace fs {
         }
 
         kstring relative = strip_mount_prefix(canonical, mp);
-        log::debug("fs::readdir: ", canonical, " -> ", mp->filesystem->name, ":", relative);
 
         return mp->filesystem->readdir(mp->filesystem, relative, out);
     }

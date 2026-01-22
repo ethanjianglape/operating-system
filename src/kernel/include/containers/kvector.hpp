@@ -19,9 +19,8 @@ concept kvector_storable = requires {
 };
 
 template <kvector_storable T> class kvector final {
-  private:
-    static constexpr std::size_t PAGE_SIZE = 4096;
-    static constexpr std::size_t INITIAL_CAPACITY = PAGE_SIZE / sizeof(T);
+private:
+    static constexpr std::size_t INITIAL_CAPACITY = 16;
     static constexpr std::size_t GROWTH_RATE = 2;
 
     T* _data;
@@ -30,7 +29,7 @@ template <kvector_storable T> class kvector final {
     std::size_t _capacity;
 
     void ensure_capacity(std::size_t new_size) {
-        while (_capacity < new_size) {
+        while (_capacity <= new_size) {
             grow();
         }
     }
@@ -45,7 +44,10 @@ template <kvector_storable T> class kvector final {
         } else {
             for (std::size_t i = 0; i < _size; i++) {
                 new (&new_data[i]) T(std::move(_data[i]));
-                _data[i].~T();
+
+                if constexpr (!std::is_trivially_destructible_v<T>) {
+                    _data[i].~T();                    
+                }
             }
         }
 

@@ -34,9 +34,11 @@ namespace algo {
                               char delim) {
         kvector<kstring> result{};
         kstring part = "";
+        char last = '\0';
 
         while (begin != end) {
             char c = *begin;
+            last = c;
 
             if (c == delim) {
                 result.push_back(part);
@@ -48,7 +50,7 @@ namespace algo {
             ++begin;
         }
 
-        if (!part.empty()) {
+        if (!part.empty() || last == delim) {
             result.push_back(part);
         }
 
