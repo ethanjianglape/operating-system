@@ -14,7 +14,7 @@
 - [ ] [USB HID Keyboard Support](#usb-hid-keyboard-support)
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
-- [ ] [Process Termination and Cleanup](#process-termination-and-cleanup)
+- [x] [Process Termination and Cleanup](#process-termination-and-cleanup)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -429,60 +429,55 @@ See `src/kernel/CONVENTIONS.md` for full details.
 
 ## Process Termination and Cleanup
 
-**Status:** Not started
+**Status:** Complete
 
 **Goal:** Properly terminate processes and reclaim all resources when they exit or are killed.
 
-**Current state:** Processes can call `sys_exit()` which sets state to DEAD, but resources are not fully cleaned up. Dead processes accumulate without reclamation.
+**Implemented:**
+- `sys_exit()` marks process as DEAD and calls `yield_dead()` (never returns)
+- `yield_dead()` context switches away from the dying process permanently
+- `terminate_dead_processes()` runs on timer interrupt, cleans up DEAD processes
+- `terminate_process()` frees all process resources:
+  - Closes all file descriptors via `fd->inode->ops->close()`
+  - Unmaps user pages and frees physical frames via `unmap_mem_at()`
+  - Frees page table hierarchy (PT, PD, PDPT, PML4) via `free_page_tables()`
+  - Frees kernel stack via `delete[]`
+  - Frees Process struct via `delete`
+- Removed from scheduler queue via `klist::erase()`
+- Sanity logging shows PMM frames reclaimed and slab counts
 
-**Required cleanup on process death:**
-- Free user page tables (PML4 and all child tables)
-- Free all physical frames mapped to user address space
-- Free kernel stack
-- Close all open file descriptors
-- Remove from scheduler queues
-- Free Process struct itself
-
-**Implementation approach:**
+**Architecture:**
 ```
-sys_exit(status) or process killed
+sys_exit(status)
         │
         ▼
-Close all file descriptors
-  fd->inode->ops->close() for each
+Mark process DEAD, call yield_dead()
         │
         ▼
-Free user memory
-  Walk PML4 entries 0-255 (user half)
-  For each present entry, recurse through PDPT→PD→PT
-  Free each mapped physical frame
-  Free page table pages themselves
+yield_dead() context switches to ready process
+  (saves RSP to dead process, but no one will switch back)
         │
         ▼
-Free kernel resources
-  Free kernel stack (tracked in Process struct)
-  Free Process struct via kfree()
+Timer fires, terminate_dead_processes() runs
         │
         ▼
-Schedule next process
-  Don't add to any queue, just switch away
+terminate_process(proc)
+  - Close FDs
+  - Unmap user pages (frees physical frames)
+  - Free page table hierarchy
+  - Free kernel stack
+  - Free Process struct
+        │
+        ▼
+Remove from scheduler queue
 ```
 
-**Challenges:**
-- Can't free current kernel stack while running on it — need to defer or switch first
-- Page table walking requires careful recursion (4 levels)
-- Must handle process killed mid-syscall (blocked on I/O)
-- Parent process notification (future: waitpid)
+**Key insight:** The exiting process can't free its own kernel stack while running on it. Solution: `yield_dead()` switches away first, then cleanup happens later from a different context (timer interrupt handler).
 
-**Design decisions to make:**
-- Immediate cleanup vs deferred (reaper thread)?
-- Who frees the kernel stack — exiting process or next process?
-- Track parent-child relationships now or later?
-
-**Testing:**
-- Run process that exits, verify PMM frame count returns to baseline
-- Run many short-lived processes, verify no memory growth
-- Process that opens files, verify FDs closed on exit
+**Future enhancements:**
+- Parent-child relationships for `waitpid()`
+- Signal-based process termination (SIGKILL, SIGTERM)
+- Exit status retrieval by parent process
 
 ---
 
