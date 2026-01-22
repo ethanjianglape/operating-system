@@ -45,52 +45,47 @@ namespace x86_64::vmm {
 
     std::uintptr_t get_hhdm_offset() { return hhdm_offset; }
 
+    static std::size_t get_kernel_pml4_index() { return (hhdm_offset >> 39) & 0x1FF; }
+
+    static PageTableEntry* get_table_from_pte(const PageTableEntry& pte) {
+        return phys_to_virt<PageTableEntry*>(pte.addr << 12);
+    }
+
     /**
      * @brief Walks the page table hierarchy to find the PTE for a virtual address.
+     * @param pml4 The top-level page table to walk.
      * @param virt The virtual address to look up.
      * @return Pointer to the page table entry, or nullptr if not mapped.
      */
-    PageTableEntry* get_pte(std::uintptr_t virt){
+    static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt){
         const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
         const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
         const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
         const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
 
-        if (!kernel_pml4[pml4_idx].p) {
+        if (!pml4[pml4_idx].p) {
             return nullptr;
         }
-        
-        auto* pdpt = phys_to_virt<PageTableEntry*>(kernel_pml4[pml4_idx].addr << 12);
+
+        PageTableEntry* pdpt = get_table_from_pte(pml4[pml4_idx]);
 
         if (!pdpt[pdpt_idx].p) {
             return nullptr;
         }
-        
-        auto* pd = phys_to_virt<PageTableEntry*>(pdpt[pdpt_idx].addr << 12);
+
+        PageTableEntry* pd = get_table_from_pte(pdpt[pdpt_idx]);
 
         if (!pd[pd_idx].p) {
             return nullptr;
         }
-        
-        auto* pt = phys_to_virt<PageTableEntry*>(pd[pd_idx].addr << 12);
+
+        PageTableEntry* pt = get_table_from_pte(pd[pd_idx]);
 
         if (!pt[pt_idx].p) {
             return nullptr;
         }
 
         return &pt[pt_idx];
-    }
-
-    template <typename T>
-    std::uintptr_t virt_to_phys(T virt) {
-        PageTableEntry* pte = get_pte(virt);
-
-        if (pte == nullptr) {
-            log::warn("virt_to_phys called on unmapped address: ", fmt::hex{virt});
-            return 0;
-        }
-
-        return pte->addr << 12;
     }
 
     /**
@@ -181,10 +176,11 @@ namespace x86_64::vmm {
 
     /**
      * @brief Unmaps a virtual address and frees its physical frame.
+     * @param pml4 The page table to modify.
      * @param virt Virtual address to unmap.
      */
-    void unmap_page(std::uintptr_t virt) {
-        PageTableEntry* pte = get_pte(virt);
+    void unmap_page(PageTableEntry* pml4, std::uintptr_t virt) {
+        PageTableEntry* pte = get_pte(pml4, virt);
 
         if (pte == nullptr) {
             log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex{virt});
@@ -294,13 +290,58 @@ namespace x86_64::vmm {
 
     /**
      * @brief Unmaps pages and frees their physical frames.
+     * @param pml4 The page table to modify.
      * @param virt Starting virtual address.
      * @param num_pages Number of pages to unmap (from map_mem_at return value).
      */
-    void unmap_mem_at(std::uintptr_t virt, std::size_t num_pages) {
+    void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages) {
         for (std::size_t page = 0; page < num_pages; page++) {
-            unmap_page(virt + (page * PAGE_SIZE));
+            unmap_page(pml4, virt + (page * PAGE_SIZE));
         }
+    }
+
+    /**
+     * @brief Frees all user-space page table structures for a process.
+     *
+     * Walks the user half of the address space (entries 0 to kernel_pml4_idx-1)
+     * and frees all intermediate page table frames (PT, PD, PDPT) as well as
+     * the PML4 itself. Does NOT free the kernel half (shared mappings).
+     *
+     * @pre Leaf physical frames should already be freed via unmap_mem_at().
+     * @param pml4 The top-level page table to free.
+     */
+    void free_page_tables(PageTableEntry* pml4) {
+        std::size_t kernel_pml4_idx = get_kernel_pml4_index();
+
+        for (std::size_t pml4_idx = 0; pml4_idx < kernel_pml4_idx; pml4_idx++) {
+            if (!pml4[pml4_idx].p) {
+                continue;
+            }
+
+            PageTableEntry* pdpt = get_table_from_pte(pml4[pml4_idx]);
+
+            for (std::size_t pdpt_idx = 0; pdpt_idx < NUM_PT_ENTRIES; pdpt_idx++) {
+                if (!pdpt[pdpt_idx].p) {
+                    continue;
+                }
+
+                PageTableEntry* pd = get_table_from_pte(pdpt[pdpt_idx]);
+
+                for (std::size_t pd_idx = 0; pd_idx < NUM_PT_ENTRIES; pd_idx++) {
+                    if (!pd[pd_idx].p) {
+                        continue;
+                    }
+
+                    pmm::free_frame(pd[pd_idx].addr << 12);
+                }
+
+                pmm::free_frame(pdpt[pdpt_idx].addr << 12);
+            }
+
+            pmm::free_frame(pml4[pml4_idx].addr << 12);
+        }
+
+        pmm::free_frame(hhdm_virt_to_phys(pml4));
     }
 
     // Set our local pml4 to point to the pml4 created by Limine which
@@ -314,10 +355,6 @@ namespace x86_64::vmm {
         kernel_pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
         log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
-    }
-
-    std::size_t get_kernel_pml4_index() {
-        return (hhdm_offset >> 39) & 0x1FF;
     }
 
     /**

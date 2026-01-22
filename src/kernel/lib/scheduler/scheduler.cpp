@@ -1,3 +1,4 @@
+#include "kpanic/kpanic.hpp"
 #include <scheduler/scheduler.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
@@ -7,7 +8,7 @@
 #include <cstdint>
 
 namespace scheduler {
-    static kvector<process::Process*> g_processes;
+    static klist<process::Process*> g_processes;
 
     extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
@@ -33,14 +34,17 @@ namespace scheduler {
             }
 
             process::terminate_process(proc);
+
+            g_processes.erase(i);
         }
     }
 
-    process::Process* find_ready_kernel_process() {
+    static process::Process* find_ready_kernel_process() {
         for (std::size_t i = 0; i < g_processes.size(); i++) {
             auto* p = g_processes[i];
-            if (p->state == process::ProcessState::READY && p->has_kernel_context) {
 
+            if (p->state == process::ProcessState::READY && p->has_kernel_context) {
+                g_processes.rotate_next();
                 return p;
             }
         }
@@ -51,8 +55,9 @@ namespace scheduler {
     static process::Process* find_ready_user_process() {
         for (std::size_t i = 0; i < g_processes.size(); i++) {
             auto* p = g_processes[i];
+            
             if (p->state == process::ProcessState::READY && p->has_user_context) {
-
+                g_processes.rotate_next();
                 return p;
             }
         }
@@ -62,7 +67,7 @@ namespace scheduler {
 
     static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame) {
         auto* per_cpu = arch::percpu::get();
-        process::Process* current = per_cpu->process;
+        auto* current = per_cpu->process;
 
         if (current != nullptr) {
             if (frame->cs == 0x08) {
@@ -141,6 +146,35 @@ namespace scheduler {
         }
     }
 
+    void yield_dead(process::Process* proc) {
+        proc->state = process::ProcessState::DEAD;
+
+        while (true) {
+            process::Process* ready = find_ready_kernel_process();
+
+            if (ready == nullptr) {
+                ready = find_ready_user_process();
+            }
+
+            if (ready != nullptr) {
+                auto* per_cpu = arch::percpu::get();
+                per_cpu->process = ready;
+                per_cpu->kernel_rsp = ready->kernel_rsp;
+                
+                arch::vmm::switch_pml4(ready->pml4);
+
+                ready->state = process::ProcessState::RUNNING;
+                
+                context_switch(&proc->kernel_rsp_saved, ready->kernel_rsp_saved);
+
+                kpanic("Context switch back to DEAD process pid ", proc->pid);
+            } else {
+                arch::cpu::sti();
+                arch::cpu::hlt();
+            }
+        }
+    }
+
     void yield_blocked(process::Process* process) {
         if (process == nullptr) {
             log::warn("per_cpu->process is null, nothing to yield");
@@ -151,6 +185,10 @@ namespace scheduler {
 
         while (process->state == process::ProcessState::BLOCKED) {
             process::Process* ready = find_ready_kernel_process();
+
+            if (ready == nullptr) {
+                ready = find_ready_user_process();
+            }
             
             if (ready != nullptr) {
                 // Switch to the target process's page tables and set up per_cpu
@@ -180,12 +218,8 @@ namespace scheduler {
     }
 
     void init() {
-        log::init_start("Scheduler");
-
         timer::register_handler(wake_sleeping_processes);
         timer::register_handler(terminate_dead_processes);
         timer::register_handler(schedule);
-
-        log::init_end("Scheduler");
     }
 }

@@ -9,6 +9,8 @@
 #include <log/log.hpp>
 #include <arch.hpp>
 #include <crt/crt.h>
+#include <memory/pmm.hpp>
+#include <memory/slab.hpp>
 
 namespace process {
     constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
@@ -135,16 +137,31 @@ namespace process {
     }
 
     void terminate_process(Process* proc) {
-        log::info("Terminating process with ID ", proc->pid);
+        log::info("========================================");
+        log::info("Terminating process ", proc->pid);
+        log::info("========================================");
+
+        auto frames_before = pmm::get_free_frames();
+        auto slabs_before = slab::total_slabs();
 
         for (auto& fd : proc->fd_table) {
             fd.inode->ops->close(&fd);
         }
 
         for (auto& allocation : proc->allocations) {
-            arch::vmm::unmap_mem_at(allocation.virt_addr, allocation.num_pages);
+            arch::vmm::unmap_mem_at(proc->pml4, allocation.virt_addr, allocation.num_pages);
         }
 
+        arch::vmm::free_page_tables(proc->pml4);
         delete[] proc->kernel_stack;
+        delete proc;
+
+        auto frames_after = pmm::get_free_frames();
+        auto slabs_after = slab::total_slabs();
+
+        log::info("PMM frames: ", frames_before, " -> ", frames_after,
+                  " (+", frames_after - frames_before, ")");
+        log::info("Slabs: ", slabs_before, " -> ", slabs_after);
+        log::info("========================================");
     }
 }

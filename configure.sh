@@ -39,10 +39,9 @@ if [ ! -f "../sysroot/boot/kernel.elf" ]; then
     exit 1
 fi
 
-
-if [ -d "initramfs" ]; then
+if [ -d "../initramfs" ]; then
     echo "Creating initramfs.tar..."
-    tar -cvf ./sysroot/boot/initramfs.tar -C ./initramfs .
+    tar -cvf ../sysroot/boot/initramfs.tar -C ../initramfs .
 fi
 
 echo -e "${GREEN}Build successful!${NC}"

@@ -1,4 +1,4 @@
-#include "arch/x86_64/percpu/percpu.hpp"
+#include <scheduler/scheduler.hpp>
 #include <syscall/sys_proc.hpp>
 #include <process/process.hpp>
 #include <arch.hpp>
@@ -13,9 +13,8 @@ namespace syscall {
     int sys_exit(int status) {
         auto* proc = arch::percpu::current_process();
 
-        proc->state = process::ProcessState::DEAD;
         proc->exit_status = status;
 
-        return 0;
+        scheduler::yield_dead(proc);
     }
 }

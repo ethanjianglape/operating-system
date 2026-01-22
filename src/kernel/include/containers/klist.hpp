@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <concepts>
 #include <type_traits>
-#include <utility>
 #include <initializer_list>
 #include <new> // IWYU pragma: keep (required for placement new)
 
@@ -53,6 +52,12 @@ private:
     }
 public:
     klist() : _head{nullptr}, _size{0} {}
+
+    klist(std::initializer_list<T> init) : klist{} {
+        for (const auto& val : init) {
+            push_back(val);
+        }
+    }
 
     explicit klist(std::size_t count, const T& value = {}) : klist{} {
         while (count--) {
@@ -154,6 +159,20 @@ public:
         }
 
         _head = _head->next;
+    }
+
+    bool erase(std::size_t pos) {
+        if (empty() || pos >= _size) {
+            return false;
+        }
+
+        node* n = _head;
+
+        for (std::size_t i = 0; i < pos; i++) {
+            n = n->next;
+        }
+
+        return remove_node(n);
     }
 
     bool remove(const T& t) {
