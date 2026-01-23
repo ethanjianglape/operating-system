@@ -71,6 +71,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/syscall/sys_sleep.cpp
   ${LIB_DIR}/syscall/sys_proc.cpp
   ${LIB_DIR}/scheduler/scheduler.cpp
+  ${LIB_DIR}/acpica/acpica_glue.cpp
 )
 
 # Test sources (compiled when KERNEL_TESTS is defined)
@@ -148,3 +149,82 @@ set_target_properties(kernel_objs PROPERTIES
 message(STATUS "Kernel architecture: ${KERNEL_ARCH}")
 message(STATUS "Linker script: ${LINKER_SCRIPT}")
 message(STATUS "Boot sources: ${BOOT_SOURCES}")
+
+# =============================================================================
+# ACPICA Integration
+# =============================================================================
+
+set(ACPICA_DIR "${CMAKE_SOURCE_DIR}/acpica/source")
+
+# ACPICA component sources (exclude debugger and disassembler)
+file(GLOB ACPICA_DISPATCHER_SOURCES "${ACPICA_DIR}/components/dispatcher/*.c")
+file(GLOB ACPICA_EVENTS_SOURCES "${ACPICA_DIR}/components/events/*.c")
+file(GLOB ACPICA_EXECUTER_SOURCES "${ACPICA_DIR}/components/executer/*.c")
+file(GLOB ACPICA_HARDWARE_SOURCES "${ACPICA_DIR}/components/hardware/*.c")
+file(GLOB ACPICA_NAMESPACE_SOURCES "${ACPICA_DIR}/components/namespace/*.c")
+file(GLOB ACPICA_PARSER_SOURCES "${ACPICA_DIR}/components/parser/*.c")
+file(GLOB ACPICA_RESOURCES_SOURCES "${ACPICA_DIR}/components/resources/*.c")
+file(GLOB ACPICA_TABLES_SOURCES "${ACPICA_DIR}/components/tables/*.c")
+file(GLOB ACPICA_UTILITIES_SOURCES "${ACPICA_DIR}/components/utilities/*.c")
+
+set(ACPICA_SOURCES
+    ${ACPICA_DISPATCHER_SOURCES}
+    ${ACPICA_EVENTS_SOURCES}
+    ${ACPICA_EXECUTER_SOURCES}
+    ${ACPICA_HARDWARE_SOURCES}
+    ${ACPICA_NAMESPACE_SOURCES}
+    ${ACPICA_PARSER_SOURCES}
+    ${ACPICA_RESOURCES_SOURCES}
+    ${ACPICA_TABLES_SOURCES}
+    ${ACPICA_UTILITIES_SOURCES}
+)
+
+# Exclude debugger-only dump files
+list(FILTER ACPICA_SOURCES EXCLUDE REGEX ".*dump.*\\.c$")
+
+# OSL implementation
+set(ACPICA_OSL_SOURCES
+    ${LIB_DIR}/acpica/acpica_osl.c
+)
+
+# Create ACPICA object library with C-specific flags
+add_library(acpica_objs OBJECT ${ACPICA_SOURCES} ${ACPICA_OSL_SOURCES})
+
+# ACPICA compile options (C99, kernel flags, platform define)
+# Undefine __linux__ so ACPICA uses our acmyos.h platform header instead of aclinux.h.
+# We still use system headers but provide glibc ctype stubs in crt.c.
+target_compile_options(acpica_objs PRIVATE
+    -std=c99
+    -m64
+    -march=x86-64
+    -mcmodel=kernel
+    -mno-red-zone
+    -ffreestanding
+    -fno-stack-protector
+    -fno-pic
+    -mno-80387
+    -mno-mmx
+    -mno-sse
+    -mno-sse2
+    -g
+    -O1
+    -U__linux__
+    -U_LINUX
+    -D__MYOS__
+    -Wno-unused-parameter
+    -Wno-missing-field-initializers
+)
+
+# ACPICA include directories
+target_include_directories(acpica_objs PRIVATE
+    ${ACPICA_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/acpica
+)
+
+# Add ACPICA headers to kernel_objs so kernel code can include acpi.h
+target_include_directories(kernel_objs PRIVATE
+    ${ACPICA_DIR}/include
+)
+
+message(STATUS "ACPICA sources: ${ACPICA_DIR}/components/")

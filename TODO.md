@@ -15,7 +15,8 @@
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
 - [x] [Process Termination and Cleanup](#process-termination-and-cleanup)
-- [ ] [ACPI Shutdown](#acpi-shutdown)
+- [x] [ACPICA Integration](#acpica-integration)
+- [ ] [ACPI Functionality](#acpi-functionality)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -482,41 +483,66 @@ Remove from scheduler queue
 
 ---
 
-## ACPI Shutdown
+## ACPICA Integration
 
-**Status:** Not started
+**Status:** Complete
 
-**Goal:** Implement proper ACPI-based system shutdown when all processes have terminated.
+**Goal:** Integrate Intel's ACPICA reference implementation into the kernel build system.
 
-**Context:** When the last userspace process exits, the system should cleanly shut down rather than just halting. This requires ACPI power management.
-
-**Recommended approach: ACPICA integration**
-
-Intel's ACPICA (ACPI Component Architecture) is the reference implementation used by many operating systems. Similar to using Limine for bootloading, integrating ACPICA avoids reimplementing complex ACPI functionality:
-
+**Why ACPICA:** Similar to using Limine for bootloading, integrating ACPICA avoids reimplementing complex ACPI functionality. ACPICA provides:
 - Full AML bytecode interpreter
 - Complete ACPI table parsing
 - Power management (shutdown, sleep states, reboot)
 - Device enumeration and configuration
 - Well-tested, production-quality code
 
-**Integration steps:**
-- Download ACPICA source from Intel
-- Implement OS Services Layer (OSL) - the glue between ACPICA and our kernel
-- OSL provides: memory allocation, I/O port access, PCI config access, interrupt handling
-- Call `AcpiInitializeSubsystem()`, `AcpiLoadTables()`, `AcpiEnableSubsystem()`
-- Use `AcpiEnterSleepState(ACPI_STATE_S5)` for shutdown
+**Implemented:**
+- ACPICA added as git submodule at `acpica/`
+- Platform header `acmyos.h` for MyOS-specific configuration
+- Modified `acenv.h` to detect `__MYOS__` and include our platform header
+- OS Services Layer (OSL) stub implementation in `acpica_osl.c`
+- C/C++ glue layer (`acpica_glue.h`, `acpica_glue.cpp`) for kernel API access
+- CMake configuration compiles ~150 ACPICA source files
+- Added 16/32-bit I/O port functions (`inw/outw/inl/outl`) to `cpu.hpp`
+- glibc ctype compatibility stubs (`__ctype_b_loc`, etc.) in `crt.c`
 
-**Alternative: Manual implementation**
+**Build configuration:**
+- ACPICA compiled with `-U__linux__` to use our platform header
+- ACPICA's `utclib.c` provides standard C library functions
+- Compiled as separate object library with C99 flags
 
-If ACPICA is too heavy, a minimal approach:
-- Parse FADT for PM1a_CNT_BLK address
-- Pattern-match DSDT for \_S5 object (works for most systems, avoids full AML interpreter)
-- Write `(SLP_TYPa << 10) | SLP_EN` to trigger shutdown
+**License:** ACPICA is dual-licensed; we use the BSD 3-Clause option for GPL v3 compatibility. See `THIRD_PARTY_LICENSES` for details.
+
+**Current state:** ACPICA compiles and links but is not yet initialized or called. The foundation is in place for future ACPI functionality.
+
+---
+
+## ACPI Functionality
+
+**Status:** Not started
+
+**Goal:** Initialize ACPICA and use it for system shutdown when all processes have terminated.
+
+**Prerequisite:** ACPICA Integration (complete)
+
+**Initialization steps:**
+1. Call `AcpiOslSetRsdp()` with RSDP address from Limine during early init
+2. Call `AcpiInitializeSubsystem()` to initialize ACPICA internals
+3. Call `AcpiLoadTables()` to load ACPI tables from firmware
+4. Call `AcpiEnableSubsystem()` to enable ACPI hardware mode
+
+**Shutdown implementation:**
+- Call `AcpiEnterSleepState(ACPI_STATE_S5)` to trigger power off
+- Trigger point: `scheduler::yield_dead()` when `g_processes.empty()`
 
 **Current behavior:** System halts with message when no processes remain.
 
-**Trigger point:** `scheduler::yield_dead()` when `g_processes.empty()`.
+**Future ACPI features:**
+- Sleep states (S1-S4 suspend/hibernate)
+- System reboot
+- Device enumeration via `_HID`/`_CID` methods
+- Power button handling
+- Thermal management
 
 ---
 
