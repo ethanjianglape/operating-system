@@ -15,6 +15,7 @@
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
 - [x] [Process Termination and Cleanup](#process-termination-and-cleanup)
+- [ ] [ACPI Shutdown](#acpi-shutdown)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -478,6 +479,44 @@ Remove from scheduler queue
 - Parent-child relationships for `waitpid()`
 - Signal-based process termination (SIGKILL, SIGTERM)
 - Exit status retrieval by parent process
+
+---
+
+## ACPI Shutdown
+
+**Status:** Not started
+
+**Goal:** Implement proper ACPI-based system shutdown when all processes have terminated.
+
+**Context:** When the last userspace process exits, the system should cleanly shut down rather than just halting. This requires ACPI power management.
+
+**Recommended approach: ACPICA integration**
+
+Intel's ACPICA (ACPI Component Architecture) is the reference implementation used by many operating systems. Similar to using Limine for bootloading, integrating ACPICA avoids reimplementing complex ACPI functionality:
+
+- Full AML bytecode interpreter
+- Complete ACPI table parsing
+- Power management (shutdown, sleep states, reboot)
+- Device enumeration and configuration
+- Well-tested, production-quality code
+
+**Integration steps:**
+- Download ACPICA source from Intel
+- Implement OS Services Layer (OSL) - the glue between ACPICA and our kernel
+- OSL provides: memory allocation, I/O port access, PCI config access, interrupt handling
+- Call `AcpiInitializeSubsystem()`, `AcpiLoadTables()`, `AcpiEnableSubsystem()`
+- Use `AcpiEnterSleepState(ACPI_STATE_S5)` for shutdown
+
+**Alternative: Manual implementation**
+
+If ACPICA is too heavy, a minimal approach:
+- Parse FADT for PM1a_CNT_BLK address
+- Pattern-match DSDT for \_S5 object (works for most systems, avoids full AML interpreter)
+- Write `(SLP_TYPa << 10) | SLP_EN` to trigger shutdown
+
+**Current behavior:** System halts with message when no processes remain.
+
+**Trigger point:** `scheduler::yield_dead()` when `g_processes.empty()`.
 
 ---
 

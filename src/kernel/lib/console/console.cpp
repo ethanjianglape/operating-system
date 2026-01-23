@@ -45,9 +45,6 @@ namespace console {
         return (cursor_row - viewport_offset) < screen_rows;
     }
 
-    void blink_handler(std::uintmax_t ticks) {
-    }
-
     kvector<char> empty_line() {
         return kvector<char>(screen_cols, ' ');
     }

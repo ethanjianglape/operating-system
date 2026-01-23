@@ -1,3 +1,4 @@
+#include "arch/x86_64/cpu/cpu.hpp"
 #include "kpanic/kpanic.hpp"
 #include <scheduler/scheduler.hpp>
 #include <log/log.hpp>
@@ -162,14 +163,23 @@ namespace scheduler {
             if (ready != nullptr) {
                 per_cpu->process = ready;
                 per_cpu->kernel_rsp = ready->kernel_rsp;
-                
+
                 arch::vmm::switch_pml4(ready->pml4);
 
                 ready->state = process::ProcessState::RUNNING;
-                
+
                 context_switch(&proc->kernel_rsp_saved, ready->kernel_rsp_saved);
 
                 kpanic("Context switch back to DEAD process pid ", proc->pid);
+            } else if (g_processes.empty()) {
+                log::info("========================================");
+                log::info("All processes terminated. System halted.");
+                log::info("========================================");
+                
+                while (true) {
+                    arch::cpu::cli();
+                    arch::cpu::hlt();
+                }
             } else {
                 arch::cpu::sti();
                 arch::cpu::hlt();

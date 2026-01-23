@@ -53,7 +53,7 @@ namespace fs {
             return -EISDIR;
         }
 
-        int new_offset;
+        int new_offset = -1;
 
         switch (whence) {
         case SEEK_SET:

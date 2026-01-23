@@ -17,7 +17,8 @@ concept klist_storable = requires {
     requires std::move_constructible<T> || std::copy_constructible<T>;
 };
 
-template <klist_storable T> class klist final {
+template <klist_storable T>
+class klist final {
 private:
     struct node final {
         node* prev;
