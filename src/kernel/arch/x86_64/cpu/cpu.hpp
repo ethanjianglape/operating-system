@@ -39,6 +39,34 @@ namespace x86_64::cpu {
     }
 
     [[gnu::always_inline]]
+    inline void outw(const std::uint16_t port, const std::uint16_t value) {
+        asm volatile("outw %0, %1" : : "a"(value), "Nd"(port) : "memory");
+    }
+
+    [[gnu::always_inline]]
+    inline std::uint16_t inw(const std::uint16_t port) {
+        std::uint16_t ret;
+
+        asm volatile("inw %1, %0" : "=a"(ret) : "Nd"(port) : "memory");
+
+        return ret;
+    }
+
+    [[gnu::always_inline]]
+    inline void outl(const std::uint16_t port, const std::uint32_t value) {
+        asm volatile("outl %0, %1" : : "a"(value), "Nd"(port) : "memory");
+    }
+
+    [[gnu::always_inline]]
+    inline std::uint32_t inl(const std::uint16_t port) {
+        std::uint32_t ret;
+
+        asm volatile("inl %1, %0" : "=a"(ret) : "Nd"(port) : "memory");
+
+        return ret;
+    }
+
+    [[gnu::always_inline]]
     inline void cpuid(std::uint32_t code, std::uint32_t* a, std::uint32_t* d) {
         asm volatile("cpuid" : "=a"(*a), "=d"(*d) : "a"(code) : "ebx", "ecx", "memory");
     }
