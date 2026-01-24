@@ -160,6 +160,8 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
         return syscall::sys_getcwd(reinterpret_cast<char*>(arg1), arg2);
     case SYS_CHDIR:
         return syscall::sys_chdir(reinterpret_cast<char*>(arg1), arg2);
+    case SYS_FCHDIR:
+        return syscall::sys_fchdir(arg1);
     default:
         log::error("Unsupported syscall: ", syscall_num);
         return -ENOSYS;

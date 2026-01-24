@@ -47,6 +47,7 @@ namespace syscall {
         process->fd_table[fd].inode = inode;
         process->fd_table[fd].offset = 0;
         process->fd_table[fd].flags = flags;
+        process->fd_table[fd].path = fs::canonicalize(path);
 
         return fd;
     }
@@ -112,13 +113,13 @@ namespace syscall {
 
     int sys_getcwd(char* buffer, std::size_t size) {
         process::Process* proc = arch::percpu::current_process();
-        std::size_t len = size-1;//proc->working_dir.length();
+        std::size_t len = proc->working_dir.length();
 
         if (len >= size) {
             return -ERANGE;
         }
 
-        //memcpy(buffer, proc->working_dir.c_str(), len);
+        memcpy(buffer, proc->working_dir.c_str(), len);
         buffer[len] = '\0';
 
         return 0;
@@ -139,7 +140,24 @@ namespace syscall {
             return -ENOTDIR;
         }
 
-        //proc->working_dir = fs::canonicalize(path);
+        proc->working_dir = fs::canonicalize(path);
+
+        return 0;
+    }
+
+    int sys_fchdir(int fd) {
+        process::Process* proc = arch::percpu::current_process();
+        fs::FileDescriptor* desc = get_fd(fd);
+
+        if (!desc) {
+            return -EBADF;
+        }
+
+        if (desc->inode->type != fs::FileType::DIRECTORY) {
+            return -ENOTDIR;
+        }
+
+        proc->working_dir = desc->path;
 
         return 0;
     }

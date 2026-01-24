@@ -47,7 +47,7 @@ namespace process {
         p->wake_time_ms = 0;
         p->has_kernel_context = true;
         p->has_user_context = true;
-        //p->working_dir = "/";
+        p->working_dir = "/";
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;

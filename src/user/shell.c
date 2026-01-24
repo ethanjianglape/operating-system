@@ -349,10 +349,10 @@ void _start(void) {
 
     while (1) {
         // Print prompt with cwd
-        //char cwd[128];
-        //if (getcwd(cwd, sizeof(cwd)) == 0) {
-          //  print(cwd);
-        //}
+        char cwd[128];
+        if (getcwd(cwd, sizeof(cwd)) == 0) {
+            print(cwd);
+        }
         print(" $ ");
 
         // Read input

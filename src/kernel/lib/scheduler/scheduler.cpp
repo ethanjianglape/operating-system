@@ -1,4 +1,3 @@
-#include "arch/x86_64/cpu/cpu.hpp"
 #include "kpanic/kpanic.hpp"
 #include <scheduler/scheduler.hpp>
 #include <log/log.hpp>

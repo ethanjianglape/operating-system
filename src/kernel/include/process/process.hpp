@@ -36,7 +36,7 @@ namespace process {
         WaitReason wait_reason;
         int exit_status;
 
-        //kstring working_dir;
+        kstring working_dir;
 
         // Address space
         arch::vmm::PageTableEntry* pml4;
