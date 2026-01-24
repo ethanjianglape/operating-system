@@ -40,6 +40,7 @@ namespace process {
         p->wait_reason = WaitReason::NONE;
         p->exit_status = 0;
         p->entry = file.entry;
+        p->heap_break = 0;
         p->pml4 = pml4;
         p->fd_table = {};
         p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
@@ -54,7 +55,12 @@ namespace process {
             auto size = header.p_filesz;
             auto offset = header.p_offset;
 
-            std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, size, arch::vmm::PAGE_USER);
+            std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+            std::uintptr_t heap_break = virt + (code_pages * arch::vmm::PAGE_SIZE);
+
+            if (heap_break > p->heap_break) {
+                p->heap_break = heap_break;
+            }
 
             p->allocations.push_back(ProcessAllocation{
                 .virt_addr = virt,

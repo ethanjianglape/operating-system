@@ -93,6 +93,7 @@
 
 #include "entry.hpp"
 #include "syscall/sys_fd.hpp"
+#include "syscall/sys_mem.hpp"
 #include "syscall/sys_proc.hpp"
 #include "syscall/sys_sleep.hpp"
 
@@ -154,6 +155,8 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
         return syscall::sys_sleep_ms(arg1);
     case SYS_GETPID:
         return syscall::sys_getpid();
+    case SYS_BRK:
+        return syscall::sys_brk(reinterpret_cast<void*>(arg1));
     case SYS_EXIT:
         return syscall::sys_exit(arg1);
     case SYS_GETCWD:

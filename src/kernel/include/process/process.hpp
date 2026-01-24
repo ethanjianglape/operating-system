@@ -41,6 +41,7 @@ namespace process {
         // Address space
         arch::vmm::PageTableEntry* pml4;
         std::uintptr_t entry;
+        std::uintptr_t heap_break;
 
         std::uint8_t* kernel_stack;      // Base of kernel stack
         std::uintptr_t kernel_rsp;       // Top of stack (initially)
