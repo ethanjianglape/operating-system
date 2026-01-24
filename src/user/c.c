@@ -40,9 +40,9 @@ void exit(int status) {
 }
 
 void _start(void) {
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 50; i++) {
         sleep_ms(1000);
-        write(1, "C", 1);
+        write(1, "\n", 1);
     }
     exit(0);
 }

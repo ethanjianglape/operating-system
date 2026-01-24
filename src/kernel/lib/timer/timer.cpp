@@ -1,3 +1,4 @@
+#include "log/log.hpp"
 #include <timer/timer.hpp>
 #include <containers/kvector.hpp>
 #include <cstdint>

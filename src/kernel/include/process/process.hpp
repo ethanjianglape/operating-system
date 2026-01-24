@@ -1,6 +1,7 @@
 #pragma once
 
 #include "arch/x86_64/context/context.hpp"
+#include "containers/kstring.hpp"
 #include "containers/kvector.hpp"
 #include "fs/fs.hpp"
 #include <arch.hpp>
@@ -16,6 +17,12 @@ namespace process {
         SLEEPING = 4,
         DEAD     = 5,
     };
+
+    enum class WaitReason : std::uint8_t {
+        NONE     = 0,
+        KEYBOARD = 1,
+        SLEEP    = 2,
+    };
     
     struct ProcessAllocation {
         std::uintptr_t virt_addr;
@@ -26,7 +33,10 @@ namespace process {
         // Process meta info
         std::size_t pid;
         ProcessState state;
+        WaitReason wait_reason;
         int exit_status;
+
+        //kstring working_dir;
 
         // Address space
         arch::vmm::PageTableEntry* pml4;

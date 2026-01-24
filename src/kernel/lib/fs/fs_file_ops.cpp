@@ -76,11 +76,23 @@ namespace fs {
         return new_offset;
     }
 
+    static int fs_file_fstat(FileDescriptor* fd, Stat* stat) {
+        if (!fd || !fd->inode) {
+            return -EBADF;
+        }
+
+        stat->type = fd->inode->type;
+        stat->size = fd->inode->size;
+        
+        return 0;
+    }
+
     static const FileOps fs_file_ops = {
         .read = fs_file_read,
         .write = fs_file_write,
         .close = fs_file_close,
-        .lseek = fs_file_lseek
+        .lseek = fs_file_lseek,
+        .fstat = fs_file_fstat
     };
 
     const FileOps* get_fs_file_ops() {

@@ -1,10 +1,10 @@
 #include "ps2.hpp"
 #include "keyboard.hpp"
+#include "scheduler/scheduler.hpp"
 
 #include <arch/x86_64/drivers/apic/apic.hpp>
 #include <arch/x86_64/interrupts/irq.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <fs/devfs/dev_tty.hpp>
 #include <kpanic/kpanic.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
@@ -122,16 +122,15 @@ namespace x86_64::drivers::keyboard {
     }
 
     static void keyboard_interrupt_handler(irq::InterruptFrame*) {
-        std::uint8_t byte = cpu::inb(PS2_DATA_PORT);
+        while (cpu::inb(PS2_STATUS_PORT) & PS2_STATUS_OUTPUT_FULL) {
+            std::uint8_t byte = cpu::inb(PS2_DATA_PORT);            
 
-        handle_scancode(byte);
-
-        // Wake TTY process waiting for keyboard input
-        auto* process = fs::devfs::tty::get_waiting_process();
-        
-        if (process != nullptr && process->state == ::process::ProcessState::BLOCKED) {
-            process->state = ::process::ProcessState::READY;
+            handle_scancode(byte);
         }
+
+        // Tell the scheduler there is keyboard input ready for any process
+        // that is currently waiting for it
+        scheduler::wake_single(process::WaitReason::KEYBOARD);
 
         apic::send_eoi();
     }
@@ -266,7 +265,7 @@ namespace x86_64::drivers::keyboard {
             // Step 9: Enable IRQ for port 1 in configuration
             ps2_send_command(PS2_CMD_READ_CONFIG);
             if (ps2_read_data(config)) {
-                config |= PS2_CONFIG_PORT1_IRQ;
+                config |= PS2_CONFIG_PORT1_IRQ | PS2_CONFIG_TRANSLATION;
                 ps2_send_command(PS2_CMD_WRITE_CONFIG);
                 ps2_send_data(config);
             }

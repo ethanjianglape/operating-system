@@ -40,7 +40,7 @@ void exit(int status) {
 }
 
 void _start(void) {
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 200; i++) {
         write(1, "B", 1);
         sleep_ms(50);
     }

@@ -432,6 +432,150 @@ namespace test_kvector {
         test::assert_eq(outer[10][0], 10, "nested move: data transferred correctly");
     }
 
+    // ==========================================================================
+    // Console-pattern tests (pre-filled lines with in-place modification)
+    // ==========================================================================
+    //
+    // The console uses kvector<kvector<ConsoleChar>> where each line is
+    // pre-filled to screen width. These tests verify that pattern works.
+
+    void test_prefilled_inner_vectors() {
+        // Console pattern: create lines pre-filled to fixed width
+        kvector<kvector<int>> lines;
+        const std::size_t LINE_WIDTH = 80;
+        const std::size_t LINE_COUNT = 25;
+
+        // Create pre-filled lines (like console init)
+        for (std::size_t i = 0; i < LINE_COUNT; i++) {
+            kvector<int> line(LINE_WIDTH, 0);  // Pre-fill with zeros
+            lines.push_back(static_cast<kvector<int>&&>(line));
+        }
+
+        test::assert_eq(lines.size(), LINE_COUNT, "prefilled: correct line count");
+        test::assert_eq(lines[0].size(), LINE_WIDTH, "prefilled: correct line width");
+
+        // Modify elements in-place (like console writing characters)
+        for (std::size_t row = 0; row < LINE_COUNT; row++) {
+            for (std::size_t col = 0; col < LINE_WIDTH; col++) {
+                lines[row][col] = static_cast<int>(row * 100 + col);
+            }
+        }
+
+        // Verify all modifications
+        bool all_correct = true;
+        for (std::size_t row = 0; row < LINE_COUNT && all_correct; row++) {
+            for (std::size_t col = 0; col < LINE_WIDTH && all_correct; col++) {
+                all_correct = (lines[row][col] == static_cast<int>(row * 100 + col));
+            }
+        }
+        test::assert_true(all_correct, "prefilled: in-place modifications preserved");
+    }
+
+    void test_grow_outer_with_prefilled_inner() {
+        // Start with some pre-filled lines, then grow outer
+        kvector<kvector<int>> lines;
+        const std::size_t LINE_WIDTH = 80;
+
+        // Initial lines
+        for (int i = 0; i < 10; i++) {
+            kvector<int> line(LINE_WIDTH, i);
+            lines.push_back(static_cast<kvector<int>&&>(line));
+        }
+
+        // Write to first 10 lines
+        for (int row = 0; row < 10; row++) {
+            lines[row][0] = row * 1000;
+        }
+
+        // Grow outer vector by adding more lines (triggers outer growth at 16)
+        for (int i = 10; i < 30; i++) {
+            kvector<int> line(LINE_WIDTH, i);
+            lines.push_back(static_cast<kvector<int>&&>(line));
+        }
+
+        // Verify original lines survived outer growth
+        bool original_intact = true;
+        for (int row = 0; row < 10 && original_intact; row++) {
+            original_intact = (lines[row][0] == row * 1000 &&
+                              lines[row].size() == LINE_WIDTH);
+        }
+        test::assert_true(original_intact, "grow outer prefilled: original lines intact");
+
+        // Verify new lines are correct
+        bool new_correct = true;
+        for (int row = 10; row < 30 && new_correct; row++) {
+            new_correct = (lines[row].size() == LINE_WIDTH &&
+                          lines[row][0] == row);
+        }
+        test::assert_true(new_correct, "grow outer prefilled: new lines correct");
+    }
+
+    void test_interleaved_access_and_growth() {
+        // Simulate typing into console: alternate between accessing existing
+        // lines and growing the buffer
+        kvector<kvector<int>> lines;
+
+        // Pattern: add line, write to it, add line, write to previous, etc.
+        for (int cycle = 0; cycle < 40; cycle++) {
+            // Add a new line
+            kvector<int> new_line;
+            new_line.push_back(cycle * 100);
+            lines.push_back(static_cast<kvector<int>&&>(new_line));
+
+            // Write to a previous line (if any exist)
+            if (cycle > 0) {
+                lines[cycle - 1].push_back(cycle);
+            }
+
+            // Write more to current line
+            lines[cycle].push_back(cycle + 1);
+            lines[cycle].push_back(cycle + 2);
+        }
+
+        // Verify structure
+        test::assert_eq(lines.size(), 40ul, "interleaved: 40 lines");
+
+        // Check first line: [0, 1, 2, 3] (initial + next cycle wrote 1)
+        // Actually: lines[0] = push(0), push(1), push(2), then cycle 1 writes push(1)
+        // So lines[0] = [0, 1, 2, 1]
+        test::assert_eq(lines[0].size(), 4ul, "interleaved: line 0 has 4 elements");
+        test::assert_eq(lines[0][0], 0, "interleaved: line 0 first element");
+        test::assert_eq(lines[0][3], 1, "interleaved: line 0 got write from next cycle");
+
+        // Check last line (no next cycle to write back)
+        test::assert_eq(lines[39].size(), 3ul, "interleaved: last line has 3 elements");
+    }
+
+    void test_stress_many_small_inner_grows() {
+        // Stress test: many small inner vector grows in sequence
+        kvector<kvector<std::uint8_t>> lines;
+
+        // Create 100 lines
+        for (int i = 0; i < 100; i++) {
+            kvector<std::uint8_t> line;
+            lines.push_back(static_cast<kvector<std::uint8_t>&&>(line));
+        }
+
+        // Grow each line by 1 element in round-robin fashion
+        // This creates many small allocations
+        for (int round = 0; round < 50; round++) {
+            for (int line = 0; line < 100; line++) {
+                lines[line].push_back(static_cast<std::uint8_t>((round * 100 + line) % 256));
+            }
+        }
+
+        // Verify all lines have 50 elements with correct values
+        bool all_correct = true;
+        for (int line = 0; line < 100 && all_correct; line++) {
+            all_correct = (lines[line].size() == 50);
+            for (int i = 0; i < 50 && all_correct; i++) {
+                std::uint8_t expected = static_cast<std::uint8_t>((i * 100 + line) % 256);
+                all_correct = (lines[line][i] == expected);
+            }
+        }
+        test::assert_true(all_correct, "stress small grows: all data correct");
+    }
+
     void run() {
         log::info("Running kvector tests...");
 
@@ -474,6 +618,12 @@ namespace test_kvector {
         test_nested_kvector_multiple_grows();
         test_nested_kvector_copy_line();
         test_nested_kvector_move_semantics();
+
+        // Console-pattern tests
+        test_prefilled_inner_vectors();
+        test_grow_outer_with_prefilled_inner();
+        test_interleaved_access_and_growth();
+        test_stress_many_small_inner_grows();
     }
 }
 

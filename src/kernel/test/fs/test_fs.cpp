@@ -118,6 +118,80 @@ namespace test_fs {
         test::assert_ne(result, 0, "readdir on nonexistent dir returns error");
     }
 
+    // =========================================================================
+    // canonicalize tests
+    // =========================================================================
+
+    void test_canonicalize_simple() {
+        kstring result = fs::canonicalize("/bin/a");
+        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize simple path unchanged");
+    }
+
+    void test_canonicalize_trailing_slash() {
+        kstring result = fs::canonicalize("/bin/");
+        test::assert_eq(result, kstring{"/bin"}, "canonicalize removes trailing slash");
+    }
+
+    void test_canonicalize_double_slash() {
+        kstring result = fs::canonicalize("/bin//a");
+        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize removes double slashes");
+    }
+
+    void test_canonicalize_dot() {
+        kstring result = fs::canonicalize("/bin/./a");
+        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize removes . component");
+    }
+
+    void test_canonicalize_dotdot() {
+        kstring result = fs::canonicalize("/bin/../dev/null");
+        test::assert_eq(result, kstring{"/dev/null"}, "canonicalize resolves .. component");
+    }
+
+    void test_canonicalize_dotdot_at_root() {
+        kstring result = fs::canonicalize("/../bin/a");
+        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize handles .. at root");
+    }
+
+    void test_canonicalize_multiple_dotdot() {
+        kstring result = fs::canonicalize("/a/b/c/../../d");
+        test::assert_eq(result, kstring{"/a/d"}, "canonicalize handles multiple ..");
+    }
+
+    void test_canonicalize_root() {
+        kstring result = fs::canonicalize("/");
+        test::assert_eq(result, kstring{"/"}, "canonicalize root stays root");
+    }
+
+    void test_canonicalize_complex() {
+        kstring result = fs::canonicalize("/a/./b/../c//d/");
+        test::assert_eq(result, kstring{"/a/c/d"}, "canonicalize handles complex path");
+    }
+
+    // =========================================================================
+    // Additional stat tests
+    // =========================================================================
+
+    void test_stat_directory() {
+        fs::Stat st;
+        int result = fs::stat("/bin", &st);
+        test::assert_eq(result, 0, "stat on /bin returns 0");
+        test::assert_eq(st.type, fs::FileType::DIRECTORY, "stat reports /bin as directory");
+    }
+
+    void test_stat_dev_tty() {
+        fs::Stat st;
+        int result = fs::stat("/dev/tty1", &st);
+        test::assert_eq(result, 0, "stat on /dev/tty1 returns 0");
+        test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "/dev/tty1 is char device");
+    }
+
+    void test_stat_with_dotdot() {
+        fs::Stat st;
+        int result = fs::stat("/bin/../bin/a", &st);
+        test::assert_eq(result, 0, "stat with .. in path returns 0");
+        test::assert_eq(st.type, fs::FileType::REGULAR, "stat resolves .. correctly");
+    }
+
     void run() {
         log::info("Running filesystem tests...");
 
@@ -129,10 +203,22 @@ namespace test_fs {
         test_stat_existing_file();
         test_stat_nonexistent_file();
         test_stat_dev_null();
+        test_stat_directory();
+        test_stat_dev_tty();
+        test_stat_with_dotdot();
         test_readdir_root();
         test_readdir_bin();
         test_readdir_dev();
         test_readdir_nonexistent();
+        test_canonicalize_simple();
+        test_canonicalize_trailing_slash();
+        test_canonicalize_double_slash();
+        test_canonicalize_dot();
+        test_canonicalize_dotdot();
+        test_canonicalize_dotdot_at_root();
+        test_canonicalize_multiple_dotdot();
+        test_canonicalize_root();
+        test_canonicalize_complex();
     }
 }
 

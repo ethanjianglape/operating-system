@@ -42,6 +42,8 @@ namespace x86_64::drivers::apic {
     // I/O APIC Redirection Table entries (each pin has 2 32-bit registers)
     // IOREDTBL[n] = base + 2*n, where n is the pin number (0-23)
     constexpr std::uint32_t IOAPIC_REDTBL_BASE = 0x10;  // First redirection entry
+
+    volatile std::uint8_t* get_lapic_addr();
     
     bool check_support();
     void enable_apic();

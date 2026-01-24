@@ -124,6 +124,8 @@ namespace x86_64::drivers::apic {
 
     static volatile std::uint8_t* lapic_virt_base = nullptr;
 
+    volatile std::uint8_t* get_lapic_addr() { return lapic_virt_base; }
+
     /**
      * @brief Sets the Local APIC base address by mapping the physical address.
      * @param lapic_phys_addr Physical address of the LAPIC (from ACPI MADT).

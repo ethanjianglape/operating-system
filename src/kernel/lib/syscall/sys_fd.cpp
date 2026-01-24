@@ -1,4 +1,6 @@
+#include "containers/kstring.hpp"
 #include <arch.hpp>
+#include <cstddef>
 #include <process/process.hpp>
 #include <log/log.hpp>
 #include <syscall/sys_fd.hpp>
@@ -26,9 +28,7 @@ namespace syscall {
             return nullptr;
         }
         
-        fs::FileDescriptor* desc = &process->fd_table[fd];
-
-        return desc;
+        return &process->fd_table[fd];
     }
 
     int sys_open(const char* path, int flags) {
@@ -52,24 +52,32 @@ namespace syscall {
     }
 
     int sys_read(int fd, void* buffer, std::size_t count) {
-        process::Process* process = arch::percpu::current_process();
-        fs::FileDescriptor* desc = &process->fd_table[fd];
+        fs::FileDescriptor* desc = get_fd(fd);
 
-        auto ret = desc->inode->ops->read(desc, buffer, count);
+        if (!desc) {
+            return -EBADF;
+        }
 
-        return ret;
+        return desc->inode->ops->read(desc, buffer, count);
     }
 
     int sys_write(int fd, const void* buffer, std::size_t count) {
-        process::Process* process = arch::percpu::current_process();
-        fs::FileDescriptor* desc = &process->fd_table[fd];
+        fs::FileDescriptor* desc = get_fd(fd);
+
+        if (!desc) {
+            return -EBADF;
+        }
 
         return desc->inode->ops->write(desc, buffer, count);
     }
 
     int sys_close(int fd) {
         process::Process* process = arch::percpu::current_process();
-        fs::FileDescriptor* desc = &process->fd_table[fd];
+        fs::FileDescriptor* desc = get_fd(fd);
+
+        if (!desc) {
+            return -EBADF;
+        }
 
         int result = desc->inode->ops->close(desc);
 
@@ -78,22 +86,61 @@ namespace syscall {
         return result;
     }
 
+    int sys_stat(const char* path, fs::Stat* stat) {
+        return fs::stat(path, stat);
+    }
+
     int sys_fstat(int fd, fs::Stat* stat) {
-        process::Process* process = arch::percpu::current_process();
-        fs::FileDescriptor* desc = &process->fd_table[fd];
+        fs::FileDescriptor* desc = get_fd(fd);
 
-        return 0;
+        if (!desc) {
+            return -EBADF;
+        }
 
-        //return desc->inode->ops->stat(desc, stat);
+        return desc->inode->ops->fstat(desc, stat);
     }
 
     int sys_lseek(int fd, std::size_t offset, int whence) {
         fs::FileDescriptor* desc = get_fd(fd);
 
         if (!desc) {
-            return EBADF;
+            return -EBADF;
         }
 
         return desc->inode->ops->lseek(desc, offset, whence);
+    }
+
+    int sys_getcwd(char* buffer, std::size_t size) {
+        process::Process* proc = arch::percpu::current_process();
+        std::size_t len = size-1;//proc->working_dir.length();
+
+        if (len >= size) {
+            return -ERANGE;
+        }
+
+        //memcpy(buffer, proc->working_dir.c_str(), len);
+        buffer[len] = '\0';
+
+        return 0;
+    }
+
+    int sys_chdir(const char* buffer, std::size_t size) {
+        process::Process* proc = arch::percpu::current_process();
+        kstring path{buffer, size};
+        fs::Stat stat;
+
+        int stat_res = fs::stat(path, &stat);
+
+        if (stat_res != 0) {
+            return stat_res;
+        }
+
+        if (stat.type != fs::FileType::DIRECTORY) {
+            return -ENOTDIR;
+        }
+
+        //proc->working_dir = fs::canonicalize(path);
+
+        return 0;
     }
 }

@@ -5,7 +5,7 @@
 namespace fs {
     static kvector<MountPoint> mount_points;
 
-    static kstring canonicalize(const kstring& path) {
+    kstring canonicalize(const kstring& path) {
         kvector<kstring> canonical;
         kvector<kstring> parts = algo::split(path, '/');
 

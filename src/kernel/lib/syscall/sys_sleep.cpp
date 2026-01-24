@@ -10,7 +10,7 @@ namespace syscall {
 
         process->wake_time_ms = timer::get_ticks() + ms;
 
-        scheduler::yield_blocked(process);
+        scheduler::yield_blocked(process, process::WaitReason::SLEEP);
 
         return 0;
     }

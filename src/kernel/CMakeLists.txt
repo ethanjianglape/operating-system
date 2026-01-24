@@ -138,6 +138,13 @@ if(KERNEL_TESTS_QUIET)
   target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS_QUIET)
 endif()
 
+# Enable debug assertions (bounds checking, etc.)
+option(KERNEL_DEBUG "Enable debug assertions" OFF)
+if(KERNEL_DEBUG)
+  target_compile_definitions(kernel_objs PRIVATE KERNEL_DEBUG)
+  message(STATUS "Debug assertions: ENABLED")
+endif()
+
 # Set C++ standard
 set_target_properties(kernel_objs PROPERTIES
   CXX_STANDARD 23

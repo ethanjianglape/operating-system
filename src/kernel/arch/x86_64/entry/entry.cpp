@@ -18,10 +18,10 @@
  *
  *   Four MSRs control SYSCALL behavior:
  *
- *   ┌─────────────────────────────────────────────────────────────────────────┐
+ *   ┌────────────────────────────────────────────────────────────────────────┐
  *   │ MSR_EFER (0xC0000080) — Extended Feature Enable Register               │
  *   │   Bit 0 (SCE): Enable SYSCALL/SYSRET instructions                      │
- *   ├─────────────────────────────────────────────────────────────────────────┤
+ *   ├────────────────────────────────────────────────────────────────────────┤
  *   │ MSR_STAR (0xC0000081) — Segment Selectors                              │
  *   │   [63:48] SYSRET CS/SS base (add 16 for CS, add 8 for SS)              │
  *   │   [47:32] SYSCALL CS/SS (CS = value, SS = value + 8)                   │
@@ -34,16 +34,16 @@
  *   │   STAR = (0x10 << 48) | (0x08 << 32)                                   │
  *   │     SYSCALL: CS=0x08, SS=0x10 (kernel)                                 │
  *   │     SYSRET:  CS=0x10+16=0x20, SS=0x10+8=0x18 (user, with RPL=3)        │
- *   ├─────────────────────────────────────────────────────────────────────────┤
+ *   ├────────────────────────────────────────────────────────────────────────┤
  *   │ MSR_LSTAR (0xC0000082) — Long Mode SYSCALL Target                      │
  *   │   Address of syscall_entry (in syscall_entry.s)                        │
- *   ├─────────────────────────────────────────────────────────────────────────┤
+ *   ├────────────────────────────────────────────────────────────────────────┤
  *   │ MSR_SFMASK (0xC0000084) — SYSCALL Flag Mask                            │
  *   │   Bits set here are CLEARED in RFLAGS on SYSCALL entry:                │
  *   │     IF (bit 9):  Disable interrupts on entry                           │
  *   │     DF (bit 10): Clear direction flag (string ops go forward)          │
  *   │     TF (bit 8):  Disable single-stepping                               │
- *   └─────────────────────────────────────────────────────────────────────────┘
+ *   └────────────────────────────────────────────────────────────────────────┘
  *
  * Syscall Flow:
  *
@@ -131,22 +131,37 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
     const std::uint64_t arg1 = frame->rdi;
     const std::uint64_t arg2 = frame->rsi;
     const std::uint64_t arg3 = frame->rdx;
+    const std::uint64_t arg4 = frame->r10;
+    const std::uint64_t arg5 = frame->r8;
+    const std::uint64_t arg6 = frame->r9;
 
     switch (syscall_num) {
-    case SYS_WRITE:
-        return syscall::sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
     case SYS_READ:
         return syscall::sys_read(arg1, reinterpret_cast<char*>(arg2), arg3);
-    case SYS_SLEEP_MS:
-        return syscall::sys_sleep_ms(arg1);
+    case SYS_WRITE:
+        return syscall::sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
+    case SYS_OPEN:
+        return syscall::sys_open(reinterpret_cast<const char*>(arg1), arg2);
+    case SYS_CLOSE:
+        return syscall::sys_close(arg1);
+    case SYS_STAT:
+        return syscall::sys_stat(reinterpret_cast<const char*>(arg1), reinterpret_cast<fs::Stat*>(arg2));
+    case SYS_FSTAT:
+        return syscall::sys_fstat(arg1, reinterpret_cast<fs::Stat*>(arg2));
     case SYS_LSEEK:
         return syscall::sys_lseek(arg1, arg2, arg3);
+    case SYS_SLEEP_MS:
+        return syscall::sys_sleep_ms(arg1);
     case SYS_GETPID:
         return syscall::sys_getpid();
     case SYS_EXIT:
         return syscall::sys_exit(arg1);
+    case SYS_GETCWD:
+        return syscall::sys_getcwd(reinterpret_cast<char*>(arg1), arg2);
+    case SYS_CHDIR:
+        return syscall::sys_chdir(reinterpret_cast<char*>(arg1), arg2);
     default:
-        log::error("Unsupported syscall: ", frame->rax);
+        log::error("Unsupported syscall: ", syscall_num);
         return -ENOSYS;
     }
 }

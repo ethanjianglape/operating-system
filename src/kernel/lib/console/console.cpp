@@ -10,6 +10,7 @@
 #include <framebuffer/framebuffer.hpp>
 
 #include <cstdint>
+#include <utility>
 
 namespace console {
     namespace fb = framebuffer;
@@ -31,7 +32,6 @@ namespace console {
     static bool cursor_enabled = true;
 
     static kvector<kvector<ConsoleChar>> buffer;
-    //static kvector<kvector<bool>> dirty;
 
     std::uint32_t get_cursor_pixel_x(int offset = 0) {
         return (cursor_col + offset) * fonts::FONT_WIDTH;
@@ -39,6 +39,22 @@ namespace console {
 
     std::uint32_t get_cursor_pixel_y(int offset = 0) {
         return (cursor_row - viewport_offset + offset) * fonts::FONT_HEIGHT;
+    }
+
+    void ensure_valid_cursor_buffer_pos(std::size_t row, std::size_t col) {
+        while (row >= buffer.size()) {
+            kvector<ConsoleChar> line;
+            buffer.push_back({});
+        }
+
+        while (col >= buffer[row].size()) {
+            buffer[row].push_back(ConsoleChar{
+                .c = ' ',
+                .fg = current_fg,
+                .bg = current_bg,
+                .dirty = true
+            });
+        }
     }
 
     bool cursor_within_viewport() {
@@ -89,6 +105,7 @@ namespace console {
 
     void clear_to_eol() {
         for (std::size_t col = cursor_col; col < screen_cols; col++) {
+            ensure_valid_cursor_buffer_pos(cursor_row, col);
             buffer[cursor_row][col].c = ' ';
             buffer[cursor_row][col].dirty = true;
         }
@@ -96,6 +113,7 @@ namespace console {
 
     void erase_in_line(std::size_t from, std::size_t to) {
         for (std::size_t col = from; col < to; col++){
+            ensure_valid_cursor_buffer_pos(cursor_row, col);
             buffer[cursor_row][col].c = ' ';
             buffer[cursor_row][col].dirty = true;
         }
@@ -112,28 +130,11 @@ namespace console {
         set_cursor(cursor_col, y);
     }
 
-    void ensure_valid_cursor_buffer_pos(std::size_t row, std::size_t col) {
-        while (row >= buffer.size()) {
-            buffer.push_back({});
-        }
-
-        kvector<ConsoleChar>& line = buffer[row];
-
-        while (col >= line.size()) {
-            line.push_back(ConsoleChar{
-                .c = ' ',
-                .fg = current_fg,
-                .bg = current_bg,
-                .dirty = true
-            });
-        }
-    }
-
     void set_cursor(std::uint32_t col, std::uint32_t row) {
         if (cursor_col == col && cursor_row == row) {
             return;
         }
-
+        
         ensure_valid_cursor_buffer_pos(row, col);
 
         draw_cursor();
@@ -229,20 +230,7 @@ namespace console {
             return 1;
         }
 
-        while (cursor_row >= buffer.size()) {
-            buffer.push_back({});
-        }
-
-        kvector<ConsoleChar>& line = buffer[cursor_row];
-
-        while (cursor_col >= line.size()) {
-            line.push_back(ConsoleChar{
-                .c = ' ',
-                .fg = current_fg,
-                .bg = current_bg,
-                .dirty = true
-            });
-        }
+        ensure_valid_cursor_buffer_pos(cursor_row, cursor_col);
 
         buffer[cursor_row][cursor_col].c = c;
         buffer[cursor_row][cursor_col].dirty = true;
@@ -312,18 +300,18 @@ namespace console {
         }
 
         for (std::size_t row = viewport_offset; row < buffer.size(); row++) {
-            kvector<ConsoleChar>& line = buffer[row];
+            //kvector<ConsoleChar>& line = buffer[row];
             
             for (std::size_t col = 0; col < screen_cols; col++){
                 if (row - viewport_offset < screen_rows) {
-                    if (col < line.size()) {
-                        ConsoleChar& cc = line[col];
+                    if (col < buffer[row].size()) {
+                        ConsoleChar& cc = buffer[row][col];
 
                         if (draw_clean || cc.dirty) {
                             draw_character_at(cc.c, row - viewport_offset, col, cc.fg, cc.bg);                            
                         }
 
-                        cc.dirty = false;
+                        //cc.dirty = false;
                     } else {
                         draw_character_at(' ', row - viewport_offset, col, current_fg, current_bg);
                     }

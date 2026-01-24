@@ -23,6 +23,7 @@ namespace fs {
     struct Inode;
     struct FileDescriptor;
     struct FileSystem;
+    struct Stat;
 
     // ============================================================================
     // FileOps
@@ -39,6 +40,7 @@ namespace fs {
         int (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
         int (*close)(FileDescriptor* fd);
         int (*lseek)(FileDescriptor* fd, int offset, int whence);
+        int (*fstat)(FileDescriptor* fd, Stat* stat);
     };
 
     // ============================================================================
@@ -128,6 +130,7 @@ namespace fs {
     // VFS operations - global path-based file access
     // ============================================================================
 
+    kstring canonicalize(const kstring& path);
     void mount(const kstring& path, FileSystem* fs);
     Inode* open(const kstring& path, int flags);
     int stat(const kstring& path, Stat* out);

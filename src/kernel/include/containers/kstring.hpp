@@ -133,7 +133,7 @@ class kstring final {
     }
 
     // Construct from C string of count length
-    kstring(const char* s, int count): kstring{} {
+    kstring(const char* s, std::size_t count): kstring{} {
         if (s == nullptr){
             return;
         }

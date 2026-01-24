@@ -9,6 +9,11 @@
 #include <utility>
 #include <initializer_list>
 #include <new> // IWYU pragma: keep (required for placement new)
+#include <arch.hpp>
+
+#ifdef KERNEL_DEBUG
+#include <kpanic/kpanic.hpp>
+#endif
 
 template <typename T>
 concept kvector_storable = requires {
@@ -21,7 +26,7 @@ concept kvector_storable = requires {
 template <kvector_storable T>
 class kvector final {
 private:
-    static constexpr std::size_t INITIAL_CAPACITY = 16;
+    static constexpr std::size_t INITIAL_CAPACITY = 2;
     static constexpr std::size_t GROWTH_RATE = 2;
 
     T* _data;
@@ -30,13 +35,15 @@ private:
     std::size_t _capacity;
 
     void ensure_capacity(std::size_t new_size) {
-        while (_capacity <= new_size) {
+        while (_capacity < new_size) {
             grow();
         }
     }
 
     void grow() {
         std::size_t new_capacity = _capacity == 0 ? INITIAL_CAPACITY : _capacity * GROWTH_RATE;
+
+        arch::cpu::cli();
 
         T* new_data = kalloc<T>(new_capacity);
 
@@ -55,6 +62,8 @@ private:
         kfree(_data);
         _data = new_data;
         _capacity = new_capacity;
+
+        arch::cpu::sti();
     }
 
   public:
@@ -220,6 +229,7 @@ private:
 
     void reserve(std::size_t capacity) { ensure_capacity(capacity); }
 
+    std::size_t capacity() const { return _capacity; }
     std::size_t size() const { return _size; }
 
     bool empty() const { return _size == 0; }
@@ -239,8 +249,23 @@ private:
     T& back() { return _data[_size - 1]; }
     const T& back() const { return _data[_size - 1]; }
 
-    T& operator[](std::size_t i) { return _data[i]; }
-    const T& operator[](std::size_t i) const { return _data[i]; }
+    T& operator[](std::size_t i) {
+#ifdef KERNEL_DEBUG
+        if (i >= _size) {
+            kpanic("kvector: index ", i, " out of bounds (size=", _size, ")");
+        }
+#endif
+        return _data[i];
+    }
+
+    const T& operator[](std::size_t i) const {
+#ifdef KERNEL_DEBUG
+        if (i >= _size) {
+            kpanic("kvector: index ", i, " out of bounds (size=", _size, ")");
+        }
+#endif
+        return _data[i];
+    }
 
     T& push_back(const T& t) {
         ensure_capacity(_size + 1);
@@ -303,7 +328,7 @@ private:
             return;
         }
 
-        for (std::size_t i = pos; i < _size; i++) {
+        for (std::size_t i = pos; i < _size - 1; i++) {
             _data[i] = _data[i + 1];
         }
 

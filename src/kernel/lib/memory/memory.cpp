@@ -6,16 +6,21 @@
 #include <cstddef>
 
 void* kmalloc(std::size_t size) {
+    arch::cpu::cli();
+
+    void* ret = nullptr;
+    
     if (size == 0) {
         log::warn("kmalloc(0) returns NULL");
-        return nullptr;
+    } else if (slab::can_alloc(size)) {
+        ret = slab::alloc(size);
+    } else {
+        ret = arch::vmm::alloc_contiguous_kmem(size);
     }
 
-    if (slab::can_alloc(size)) {
-        return slab::alloc(size);
-    }
+    arch::cpu::sti();
 
-    return arch::vmm::alloc_contiguous_kmem(size);
+    return ret;
 }
 
 void kfree(void* ptr) {
@@ -23,9 +28,13 @@ void kfree(void* ptr) {
         return;
     }
 
+    arch::cpu::cli();
+
     if (slab::is_slab(ptr)) {
         slab::free(ptr);
     } else {
         arch::vmm::free_contiguous_kmem(ptr);        
     }
+
+    arch::cpu::sti();
 }

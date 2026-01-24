@@ -18,11 +18,19 @@ namespace fs::devfs::null {
         return 0;
     }
 
+    static int null_fstat(FileDescriptor*, Stat* stat) {
+        stat->size = 0;
+        stat->type = FileType::CHAR_DEVICE;
+        
+        return 0;
+    }
+
     static const FileOps null_ops = {
         .read = null_read,
         .write = null_write,
         .close = null_close,
         .lseek = null_lseek,
+        .fstat = null_fstat
     };
 
     static Inode null_inode = {

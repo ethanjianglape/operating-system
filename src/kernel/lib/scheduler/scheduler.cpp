@@ -19,6 +19,7 @@ namespace scheduler {
             
             if (proc->state == process::ProcessState::BLOCKED && proc->wake_time_ms > 0 && ticks > proc->wake_time_ms) {
                 proc->state = process::ProcessState::READY;
+                proc->wait_reason = process::WaitReason::NONE;
                 proc->wake_time_ms = 0;
             }
         }
@@ -45,7 +46,6 @@ namespace scheduler {
             auto* p = g_processes[i];
 
             if (p->state == process::ProcessState::READY && p->has_kernel_context) {
-                g_processes.rotate_next();
                 return p;
             }
         }
@@ -58,7 +58,6 @@ namespace scheduler {
             auto* p = g_processes[i];
             
             if (p->state == process::ProcessState::READY && p->has_user_context) {
-                g_processes.rotate_next();
                 return p;
             }
         }
@@ -111,6 +110,8 @@ namespace scheduler {
         process::Process* p = find_ready_user_process();
 
         if (p != nullptr) {
+            g_processes.rotate_next();
+            
             p->state = process::ProcessState::RUNNING;
             p->has_kernel_context = false;
             p->has_user_context = true;
@@ -147,6 +148,38 @@ namespace scheduler {
         }
     }
 
+    void wake_single(process::WaitReason wait_reason) {
+        arch::cpu::cli();
+
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            auto* p = g_processes[i];
+
+            if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
+                p->state = process::ProcessState::READY;
+                p->wait_reason = process::WaitReason::NONE;
+                goto cleanup;
+            }
+        }
+
+ cleanup:
+        arch::cpu::sti();
+    }
+
+    void wake_all(process::WaitReason wait_reason) {
+        arch::cpu::cli();
+        
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            auto* p = g_processes[i];
+
+            if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
+                p->state = process::ProcessState::READY;
+                p->wait_reason = process::WaitReason::NONE;
+            }
+        }
+
+        arch::cpu::sti();
+    }
+
     void yield_dead(process::Process* proc) {
         auto* per_cpu = arch::percpu::get();
 
@@ -168,6 +201,8 @@ namespace scheduler {
 
                 ready->state = process::ProcessState::RUNNING;
 
+                arch::cpu::sti();
+
                 context_switch(&proc->kernel_rsp_saved, ready->kernel_rsp_saved);
 
                 kpanic("Context switch back to DEAD process pid ", proc->pid);
@@ -187,13 +222,14 @@ namespace scheduler {
         }
     }
 
-    void yield_blocked(process::Process* process) {
+    void yield_blocked(process::Process* process, process::WaitReason wait_reason) {
         if (process == nullptr) {
             log::warn("per_cpu->process is null, nothing to yield");
             return;
         }
 
         process->state = process::ProcessState::BLOCKED;
+        process->wait_reason = wait_reason;
 
         while (process->state == process::ProcessState::BLOCKED) {
             process::Process* ready = find_ready_kernel_process();
@@ -204,6 +240,8 @@ namespace scheduler {
             
             if (ready != nullptr) {
                 // Switch to the target process's page tables and set up per_cpu
+                arch::cpu::cli();
+
                 auto* per_cpu = arch::percpu::get();
                 per_cpu->process = ready;
                 per_cpu->kernel_rsp = ready->kernel_rsp;
@@ -218,6 +256,7 @@ namespace scheduler {
                 per_cpu->kernel_rsp = process->kernel_rsp;
 
                 arch::vmm::switch_pml4(process->pml4);
+                arch::cpu::sti();
             } else {
                 arch::cpu::sti();
                 arch::cpu::hlt();

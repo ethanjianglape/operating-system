@@ -43,7 +43,7 @@ function(add_user_program name source)
 endfunction()
 
 # Add userspace programs
-add_user_program(hello hello.c)
+add_user_program(shell shell.c)
 add_user_program(a a.c)
 add_user_program(b b.c)
 add_user_program(c c.c)

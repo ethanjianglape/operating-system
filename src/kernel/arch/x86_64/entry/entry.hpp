@@ -16,10 +16,16 @@ namespace x86_64::entry {
 
     constexpr std::uint64_t SYS_READ     = 0;
     constexpr std::uint64_t SYS_WRITE    = 1;
+    constexpr std::uint64_t SYS_OPEN     = 2;
+    constexpr std::uint64_t SYS_CLOSE    = 3;
+    constexpr std::uint64_t SYS_STAT     = 4;
+    constexpr std::uint64_t SYS_FSTAT    = 5;
     constexpr std::uint64_t SYS_LSEEK    = 8;
     constexpr std::uint64_t SYS_SLEEP_MS = 35;
     constexpr std::uint64_t SYS_GETPID   = 39;
     constexpr std::uint64_t SYS_EXIT     = 60;
+    constexpr std::uint64_t SYS_GETCWD   = 79;
+    constexpr std::uint64_t SYS_CHDIR    = 80;
 
     struct [[gnu::packed]] SyscallFrame {
         std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;

@@ -28,12 +28,14 @@ namespace fs::devfs::tty {
     static int tty_write(FileDescriptor* fd, const void* buf, std::size_t count);
     static int tty_close(FileDescriptor* fd);
     static int tty_lseek(FileDescriptor*, int, int);
+    static int tty_fstat(FileDescriptor*, fs::Stat*);
 
     static const FileOps tty_ops = {
         .read = tty_read,
         .write = tty_write,
         .close = tty_close,
-        .lseek = tty_lseek
+        .lseek = tty_lseek,
+        .fstat = tty_fstat
     };
 
     static Inode tty_inode = {
@@ -44,10 +46,6 @@ namespace fs::devfs::tty {
     };
 
     Inode* get_tty_inode() { return &tty_inode; }
-
-    static process::Process* waiting_process;
-
-    process::Process* get_waiting_process() { return waiting_process; }
 
     // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
     // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -221,7 +219,7 @@ namespace fs::devfs::tty {
         console::put(buffer);
     }
 
-    void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode extended) {
+    void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode) {
         if (c == ScanCode::A) {
             move_to_start();
         } else if (c == ScanCode::E) {
@@ -274,18 +272,17 @@ namespace fs::devfs::tty {
     void init() {
         log::init_start("/dev/tty");
 
-        //run_tty_program("/bin/hello");
-        run_tty_program("/bin/a");
-        run_tty_program("/bin/b");
-        run_tty_program("/bin/c");
+        buffer.reserve(128);
+        
+        run_tty_program("/bin/shell");
+        //run_tty_program("/bin/a");
+                //run_tty_program("/bin/b");
+        //run_tty_program("/bin/c");
 
         log::init_end("/dev/tty");
     }
     
     static int tty_read(FileDescriptor*, void* buff, std::size_t count) {
-        auto* process = arch::percpu::current_process();
-
-        waiting_process = process;
         buffer = "";
         buffer_index = 0;
 
@@ -312,7 +309,6 @@ namespace fs::devfs::tty {
                 } else if (scancode == ScanCode::Enter) {
                     add_buffer_history();
 
-                    waiting_process = nullptr;
                     std::size_t len = buffer.size();
                     memcpy(buff, buffer.c_str(), len > count ? count : len);
                     console::newline();
@@ -338,8 +334,9 @@ namespace fs::devfs::tty {
                 console::redraw();
             }
 
-            log::debug("/dev/tty yielding");
-            scheduler::yield_blocked(waiting_process);
+            auto* process = arch::percpu::current_process();
+
+            scheduler::yield_blocked(process, process::WaitReason::KEYBOARD);
         }
     }
 
@@ -360,5 +357,12 @@ namespace fs::devfs::tty {
 
     static int tty_lseek(FileDescriptor*, int, int){
         return -ESPIPE;
+    }
+
+    static int tty_fstat(FileDescriptor*, Stat* stat) {
+        stat->size = 0;
+        stat->type = FileType::CHAR_DEVICE;
+        
+        return 0;
     }
 }

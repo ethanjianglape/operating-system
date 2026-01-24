@@ -1,11 +1,11 @@
 #include "keyboard.hpp"
+#include "containers/klist.hpp"
 
-#include <arch/x86_64/cpu/cpu.hpp>
 #include <containers/kvector.hpp>
 #include <log/log.hpp>
 
 namespace x86_64::drivers::keyboard {
-    static kvector<KeyEvent> event_buffer;
+    static klist<KeyEvent> event_buffer;
 
     static bool shift_held = false;
     static bool control_held = false;
@@ -48,7 +48,7 @@ namespace x86_64::drivers::keyboard {
 
         // Copy front element to static storage, then remove from buffer
         static KeyEvent current_event;
-        current_event = event_buffer[0];
+        current_event = event_buffer.front();
         event_buffer.erase(0);
 
         return &current_event;

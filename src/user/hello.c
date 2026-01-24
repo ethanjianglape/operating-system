@@ -69,6 +69,5 @@ void _start(void) {
         sleep_ms(5000);
     }
 
-
     while (1) {}
 }
