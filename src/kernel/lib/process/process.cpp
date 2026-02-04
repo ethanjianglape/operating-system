@@ -1,5 +1,3 @@
-#include "arch/x86_64/context/context.hpp"
-#include "arch/x86_64/memory/vmm.hpp"
 #include "containers/kvector.hpp"
 #include "fmt/fmt.hpp"
 #include <cstddef>
@@ -52,15 +50,11 @@ namespace process {
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;
-            auto size = header.p_filesz;
+            auto file_size = header.p_filesz;
+            auto mem_size = header.p_memsz;
             auto offset = header.p_offset;
 
-            std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
-            std::uintptr_t heap_break = virt + (code_pages * arch::vmm::PAGE_SIZE);
-
-            if (heap_break > p->heap_break) {
-                p->heap_break = heap_break;
-            }
+            std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
             p->allocations.push_back(ProcessAllocation{
                 .virt_addr = virt,
@@ -69,7 +63,17 @@ namespace process {
 
             memcpy(reinterpret_cast<void*>(virt),
                    reinterpret_cast<void*>(buffer + offset),
-                   size);
+                   file_size);
+
+            if (mem_size > file_size) {
+                memset(reinterpret_cast<void*>(virt + file_size), 0, mem_size - file_size);
+            }
+
+            std::uintptr_t segment_end = virt + mem_size;
+
+            if (segment_end > p->heap_break) {
+                p->heap_break = (segment_end + 0xFFF) & ~0xFFF;
+            }
         }
 
         std::size_t stack_pages = arch::vmm::map_mem_at(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER);

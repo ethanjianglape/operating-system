@@ -158,8 +158,6 @@ void init_memory() {
 void init_acpi() {
     void* rsdp_address = rsdp_request.response->address;
 
-    log::info("RSDP address: ", rsdp_address);
-
     acpi::init(rsdp_address);
 }
 

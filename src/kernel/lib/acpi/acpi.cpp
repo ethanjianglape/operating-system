@@ -211,6 +211,7 @@ namespace acpi {
 
     void init(void* rsdp_addr) {
         log::init_start("ACPI");
+        log::info("RSDP address: ", rsdp_addr);
 
         XSDT* xsdt = get_xsdt(rsdp_addr);
         parse_xsdt(xsdt);

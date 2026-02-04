@@ -20,6 +20,7 @@ void _start(void) {
     kernel_main();
 
     while (true) {
+        x86_64::cpu::cli();
         x86_64::cpu::hlt();
     }
 }
