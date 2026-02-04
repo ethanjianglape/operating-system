@@ -410,7 +410,7 @@ See `src/kernel/CONVENTIONS.md` for full details.
 
 | Before | After | Purpose |
 |--------|-------|---------|
-| `x86_64::syscall` | `x86_64::entry` | Syscall entry mechanism (LSTAR, SYSRET, SyscallFrame) |
+| `x86_64::syscall` | `x86_64::trap` | User→kernel trap mechanism (LSTAR, SYSRET, SyscallFrame) |
 | (in entry) | `x86_64::percpu` | Per-CPU data structures (GS segment, kernel RSP) |
 | `syscall::fd` | `syscall::` | Flattened syscall namespace |
 | `panic()` | `kpanic()` | Variadic template, matches kmalloc naming |
@@ -421,7 +421,7 @@ See `src/kernel/CONVENTIONS.md` for full details.
 - Added `arch::percpu::current_process()` helper for common access pattern
 
 **Final structure:**
-- `x86_64::entry` - syscall entry/exit, LSTAR/STAR/SFMASK MSR setup
+- `x86_64::trap` - user→kernel transition mechanism (LSTAR/STAR/SFMASK MSR setup)
 - `x86_64::percpu` - per-CPU data, GS segment management
 - `x86_64::context` - context switching mechanics
 - `syscall::` - flat namespace for syscall implementations (sys_read, sys_write, etc.)

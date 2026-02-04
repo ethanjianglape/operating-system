@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace x86_64::entry {
+namespace x86_64::trap {
     constexpr std::uint32_t MSR_EFER   = 0xC0000080;
     constexpr std::uint32_t MSR_STAR   = 0xC0000081;
     constexpr std::uint32_t MSR_LSTAR  = 0xC0000082;

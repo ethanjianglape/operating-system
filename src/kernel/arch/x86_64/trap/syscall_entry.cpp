@@ -1,5 +1,5 @@
 /**
- * @file entry.cpp
+ * @file syscall_entry.cpp
  * @brief SYSCALL/SYSRET configuration and syscall dispatch.
  *
  * This file configures the x86-64 SYSCALL instruction and provides the C++
@@ -91,7 +91,7 @@
  * @see percpu.hpp for per-CPU data structure used for stack switching
  */
 
-#include "entry.hpp"
+#include "syscall_entry.hpp"
 #include "syscall/sys_fd.hpp"
 #include "syscall/sys_mem.hpp"
 #include "syscall/sys_proc.hpp"
@@ -118,8 +118,8 @@ void syscall_entry();
  * in frame->rax, arguments in frame->rdi, rsi, rdx (matching System V ABI).
  */
 extern "C"
-std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
-    using namespace x86_64::entry;
+std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
+    using namespace x86_64::trap;
 
     auto* process = x86_64::percpu::current_process();
 
@@ -171,7 +171,7 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
     }
 }
 
-namespace x86_64::entry {
+namespace x86_64::trap {
     /**
      * @brief Configures the CPU for SYSCALL/SYSRET operation.
      *

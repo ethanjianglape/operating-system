@@ -24,8 +24,8 @@ set(ARCH_KERNEL_SOURCES
   ${ARCH_DIR}/interrupts/idt.cpp
   ${ARCH_DIR}/interrupts/irq.cpp
   ${ARCH_DIR}/interrupts/isr.s
-  ${ARCH_DIR}/entry/entry.cpp
-  ${ARCH_DIR}/entry/syscall_entry.s
+  ${ARCH_DIR}/trap/syscall_entry.cpp
+  ${ARCH_DIR}/trap/syscall_entry.s
   ${ARCH_DIR}/percpu/percpu.cpp
   ${ARCH_DIR}/memory/vmm.cpp
   ${ARCH_DIR}/context/context_switch.s
