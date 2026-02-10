@@ -23,6 +23,7 @@ typedef int pid_t;
 #define SYS_STAT     4
 #define SYS_FSTAT    5
 #define SYS_LSEEK    8
+#define SYS_MMAP     9
 #define SYS_GETPID   39
 #define SYS_EXIT     60
 #define SYS_GETCWD   79
@@ -30,6 +31,18 @@ typedef int pid_t;
 
 // Non-standard (MyOS specific)
 #define SYS_SLEEP_MS 35
+
+// ============================================================================
+// mmap flags
+// ============================================================================
+
+#define PROT_READ    0x1
+#define PROT_WRITE   0x2
+#define PROT_EXEC    0x4
+#define PROT_NONE    0x0
+
+#define MAP_PRIVATE   0x02
+#define MAP_ANONYMOUS 0x20
 
 // ============================================================================
 // File types and flags
@@ -100,6 +113,22 @@ static inline ssize_t syscall3(int num, unsigned long arg1, unsigned long arg2, 
     return ret;
 }
 
+static inline ssize_t syscall6(int num, unsigned long arg1, unsigned long arg2,
+                               unsigned long arg3, unsigned long arg4,
+                               unsigned long arg5, unsigned long arg6) {
+    ssize_t ret;
+    register unsigned long r10 asm("r10") = arg4;
+    register unsigned long r8  asm("r8")  = arg5;
+    register unsigned long r9  asm("r9")  = arg6;
+    asm volatile(
+        "syscall"
+        : "=a"(ret)
+        : "a"(num), "D"(arg1), "S"(arg2), "d"(arg3), "r"(r10), "r"(r8), "r"(r9)
+        : "rcx", "r11", "memory"
+    );
+    return ret;
+}
+
 // ============================================================================
 // Libc-style syscall wrappers
 // ============================================================================
@@ -154,6 +183,10 @@ int chdir(const char* path) {
 // MyOS specific
 ssize_t sleep_ms(unsigned long ms) {
     return syscall1(SYS_SLEEP_MS, ms);
+}
+
+void* mmap(void* addr, size_t length, int prot, int flags, int fd, size_t offset) {
+    return (void*)syscall6(SYS_MMAP, (unsigned long)addr, length, prot, flags, fd, offset);
 }
 
 // ============================================================================
@@ -224,6 +257,25 @@ void print_int(int n) {
     }
 }
 
+void print_hex(unsigned long n) {
+    print("0x");
+    if (n == 0) {
+        write(1, "0", 1);
+        return;
+    }
+
+    char buf[20];
+    int i = 0;
+    while (n > 0) {
+        int digit = n & 0xF;
+        buf[i++] = digit < 10 ? '0' + digit : 'a' + (digit - 10);
+        n >>= 4;
+    }
+    while (i > 0) {
+        write(1, &buf[--i], 1);
+    }
+}
+
 // ============================================================================
 // Shell commands
 // ============================================================================
@@ -234,6 +286,7 @@ void cmd_help(void) {
     println("  pwd      - Print working directory");
     println("  cd PATH  - Change directory");
     println("  pid      - Show process ID");
+    println("  mmap     - Test mmap syscall");
     println("  exit     - Exit shell");
 }
 
@@ -291,6 +344,47 @@ void cmd_stat(const char* path) {
     print("\n");
 }
 
+void cmd_mmap(void) {
+    println("Testing mmap...");
+
+    // Allocate one page (4096 bytes) of anonymous memory
+    size_t size = 4096;
+    void* ptr = mmap((void*)0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    print("  mmap returned: ");
+    print_hex((unsigned long)ptr);
+    print("\n");
+
+    // Check for failure (MAP_FAILED is typically -1)
+    if (ptr == (void*)-1 || ptr == (void*)0) {
+        println("  FAILED: mmap returned invalid pointer");
+        return;
+    }
+
+    // Write a test pattern
+    unsigned char* mem = (unsigned char*)ptr;
+    for (size_t i = 0; i < size; i++) {
+        mem[i] = (unsigned char)(i & 0xFF);
+    }
+    println("  Wrote test pattern to memory");
+
+    // Read back and verify
+    int errors = 0;
+    for (size_t i = 0; i < size; i++) {
+        if (mem[i] != (unsigned char)(i & 0xFF)) {
+            errors++;
+        }
+    }
+
+    if (errors == 0) {
+        println("  SUCCESS: All bytes verified correctly");
+    } else {
+        print("  FAILED: ");
+        print_int(errors);
+        println(" byte mismatches");
+    }
+}
+
 // ============================================================================
 // Command parser
 // ============================================================================
@@ -323,6 +417,8 @@ void process_command(char* cmd) {
         }
     } else if (strcmp(cmd, "pid") == 0) {
         cmd_pid();
+    } else if (strcmp(cmd, "mmap") == 0) {
+        cmd_mmap();
     } else if (strcmp(cmd, "stat") == 0) {
         if (*arg) {
             cmd_stat(arg);

@@ -22,6 +22,7 @@ namespace x86_64::trap {
     constexpr std::uint64_t SYS_FSTAT    = 5;
     constexpr std::uint64_t SYS_LSEEK    = 8;
     constexpr std::uint64_t SYS_MMAP     = 9;
+    constexpr std::uint64_t SYS_MUNMAP   = 11;
     constexpr std::uint64_t SYS_BRK      = 12;
     constexpr std::uint64_t SYS_SLEEP_MS = 35;
     constexpr std::uint64_t SYS_GETPID   = 39;

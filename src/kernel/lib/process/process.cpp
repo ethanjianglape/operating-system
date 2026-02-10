@@ -47,6 +47,7 @@ namespace process {
         p->has_kernel_context = true;
         p->has_user_context = true;
         p->working_dir = "/";
+        p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;

@@ -155,6 +155,10 @@ std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
         return syscall::sys_sleep_ms(arg1);
     case SYS_GETPID:
         return syscall::sys_getpid();
+    case SYS_MMAP:
+        return syscall::sys_mmap(reinterpret_cast<void*>(arg1), arg2, arg3, arg4, arg5, arg6);
+    case SYS_MUNMAP:
+        return syscall::sys_munmap(reinterpret_cast<void*>(arg1), arg2);
     case SYS_BRK:
         return syscall::sys_brk(reinterpret_cast<void*>(arg1));
     case SYS_EXIT:

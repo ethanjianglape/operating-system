@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 
 namespace x86_64::vmm {
@@ -32,6 +33,11 @@ namespace x86_64::vmm {
 
     static_assert(sizeof(PageTableEntry) == 8, "PTE must be 32 bits");
 
+    struct MemoryAllocation {
+        std::uintptr_t virt_addr;
+        std::size_t num_pages;
+    };
+
     std::uintptr_t get_hhdm_offset();
 
     template <typename T> std::uintptr_t hhdm_virt_to_phys(T addr) {
@@ -54,6 +60,8 @@ namespace x86_64::vmm {
     // Tracked HHDM allocation (stores size header) - for general kernel use
     void* alloc_contiguous_kmem(std::size_t bytes);
     void free_contiguous_kmem(void* virt);
+
+    MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t bytes, std::uint32_t flags);
 
     std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags);
     void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages);
