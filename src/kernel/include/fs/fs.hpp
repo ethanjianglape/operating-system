@@ -68,6 +68,7 @@ namespace fs {
      */
     struct FileDescriptor {
         Inode* inode;
+        kstring path;
         std::size_t offset;
         int flags;
     };

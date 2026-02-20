@@ -7,14 +7,14 @@ namespace x86_64::idt {
     constexpr std::size_t IDT_MAX_DESCRIPTORS = 256;
 
     // IDT attribute flags
-    constexpr std::uint8_t IDT_PRESENT      = 0x80;  // Entry is valid
-    constexpr std::uint8_t IDT_DPL_RING0    = 0x00;  // Kernel only
-    constexpr std::uint8_t IDT_DPL_RING3    = 0x60;  // Userspace can trigger
-    constexpr std::uint8_t IDT_INTERRUPT    = 0x0E;  // 64-bit interrupt gate
+    constexpr std::uint8_t IDT_PRESENT   = 0x80;  // Entry is valid
+    constexpr std::uint8_t IDT_DPL_RING0 = 0x00;  // Kernel only
+    constexpr std::uint8_t IDT_DPL_RING3 = 0x60;  // Userspace can trigger
+    constexpr std::uint8_t IDT_INTERRUPT = 0x0E;  // 64-bit interrupt gate
 
     // Combined attribute values
-    constexpr std::uint8_t IDT_KERNEL_INT   = IDT_PRESENT | IDT_DPL_RING0 | IDT_INTERRUPT;  // 0x8E
-    constexpr std::uint8_t IDT_USER_INT     = IDT_PRESENT | IDT_DPL_RING3 | IDT_INTERRUPT;  // 0xEE
+    constexpr std::uint8_t IDT_KERNEL_INT = IDT_PRESENT | IDT_DPL_RING0 | IDT_INTERRUPT;  // 0x8E
+    constexpr std::uint8_t IDT_USER_INT   = IDT_PRESENT | IDT_DPL_RING3 | IDT_INTERRUPT;  // 0xEE
 
     // Kernel code segment selector (must match GDT layout)
     constexpr std::uint16_t KERNEL_CODE_SEL = 0x08;

@@ -13,4 +13,5 @@ namespace syscall {
     int sys_lseek(int fd, std::size_t offset, int whence);
     int sys_getcwd(char* buffer, std::size_t size);
     int sys_chdir(const char* buffer, std::size_t size);
+    int sys_fchdir(int fd);
 }

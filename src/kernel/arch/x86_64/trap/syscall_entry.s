@@ -36,7 +36,7 @@
 #
 # SyscallFrame Layout:
 #
-#   After pushing all registers, the stack matches SyscallFrame in entry.hpp:
+#   After pushing all registers, the stack matches SyscallFrame in syscall_entry.hpp:
 #
 #       +0x00  ss      (we push ss/cs for debugging/consistency)
 #       +0x08  cs

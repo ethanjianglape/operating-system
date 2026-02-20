@@ -145,7 +145,7 @@ isr_stub_\num:
 
 isr_common:
     # Check if we came from kernel (CS=0x08) or user mode, swap GS only if user
-    cmp $0x08, 24(%rsp)
+    cmpq $0x08, 24(%rsp)
     je skip_swapgs_entry
     swapgs
 
@@ -192,7 +192,7 @@ skip_swapgs_entry:
     add $16, %rsp           # Remove vector number and error code (16 bytes)
 
     # Swap GS back if we came from user mode
-    cmp $0x08, 8(%rsp)
+    cmpq $0x08, 8(%rsp)
     je skip_swapgs_exit
     swapgs
 

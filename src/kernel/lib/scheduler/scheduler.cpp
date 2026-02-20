@@ -14,6 +14,8 @@ namespace scheduler {
     extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
     static void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFrame*) {
+        arch::cpu::cli();
+        
         for (std::size_t i = 0; i < g_processes.size(); i++) {
             auto* proc = g_processes[i];
             
@@ -23,9 +25,12 @@ namespace scheduler {
                 proc->wake_time_ms = 0;
             }
         }
+
+        arch::cpu::sti();
     }
 
     static void terminate_dead_processes(std::uintmax_t, arch::irq::InterruptFrame*) {
+        arch::cpu::cli();
         auto* current_proc = arch::percpu::current_process();
         
         for (std::size_t i = 0; i < g_processes.size(); i++) {
@@ -39,6 +44,8 @@ namespace scheduler {
 
             g_processes.erase(i);
         }
+
+        arch::cpu::sti();
     }
 
     static process::Process* find_ready_kernel_process() {
@@ -194,6 +201,8 @@ namespace scheduler {
             }
 
             if (ready != nullptr) {
+                arch::cpu::cli();
+
                 per_cpu->process = ready;
                 per_cpu->kernel_rsp = ready->kernel_rsp;
 
@@ -201,11 +210,9 @@ namespace scheduler {
 
                 ready->state = process::ProcessState::RUNNING;
 
-                arch::cpu::sti();
-
                 context_switch(&proc->kernel_rsp_saved, ready->kernel_rsp_saved);
 
-                kpanic("Context switch back to DEAD process pid ", proc->pid);
+                kpanic("Context switch back to DEAD process");
             } else if (g_processes.empty()) {
                 log::info("========================================");
                 log::info("All processes terminated. System halted.");
@@ -238,8 +245,7 @@ namespace scheduler {
                 ready = find_ready_user_process();
             }
             
-            if (ready != nullptr) {
-                // Switch to the target process's page tables and set up per_cpu
+            if (ready != nullptr && ready->pid != process->pid) {
                 arch::cpu::cli();
 
                 auto* per_cpu = arch::percpu::get();

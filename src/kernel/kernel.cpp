@@ -1,7 +1,7 @@
 #include "fs/devfs/dev_tty.hpp"
 #include "scheduler/scheduler.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
-#include <arch/x86_64/entry/entry.hpp>
+#include <arch/x86_64/trap/syscall_entry.hpp>
 #include <arch/x86_64/percpu/percpu.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <arch/x86_64/drivers/apic/apic.hpp>
@@ -33,7 +33,7 @@ void kernel_main() {
     x86_64::gdt::init();
     x86_64::idt::init();
     x86_64::percpu::init();
-    x86_64::entry::init();
+    x86_64::trap::init();
 
     x86_64::drivers::pic::init();
     x86_64::drivers::apic::init();

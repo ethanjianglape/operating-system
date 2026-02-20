@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace x86_64::entry {
+namespace x86_64::trap {
     constexpr std::uint32_t MSR_EFER   = 0xC0000080;
     constexpr std::uint32_t MSR_STAR   = 0xC0000081;
     constexpr std::uint32_t MSR_LSTAR  = 0xC0000082;
@@ -21,11 +21,15 @@ namespace x86_64::entry {
     constexpr std::uint64_t SYS_STAT     = 4;
     constexpr std::uint64_t SYS_FSTAT    = 5;
     constexpr std::uint64_t SYS_LSEEK    = 8;
+    constexpr std::uint64_t SYS_MMAP     = 9;
+    constexpr std::uint64_t SYS_MUNMAP   = 11;
+    constexpr std::uint64_t SYS_BRK      = 12;
     constexpr std::uint64_t SYS_SLEEP_MS = 35;
     constexpr std::uint64_t SYS_GETPID   = 39;
     constexpr std::uint64_t SYS_EXIT     = 60;
     constexpr std::uint64_t SYS_GETCWD   = 79;
     constexpr std::uint64_t SYS_CHDIR    = 80;
+    constexpr std::uint64_t SYS_FCHDIR   = 81;
 
     struct [[gnu::packed]] SyscallFrame {
         std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;

@@ -36,11 +36,13 @@ namespace process {
         WaitReason wait_reason;
         int exit_status;
 
-        //kstring working_dir;
+        kstring working_dir;
 
         // Address space
         arch::vmm::PageTableEntry* pml4;
         std::uintptr_t entry;
+        std::uintptr_t heap_break;
+        std::uintptr_t mmap_min_addr;
 
         std::uint8_t* kernel_stack;      // Base of kernel stack
         std::uintptr_t kernel_rsp;       // Top of stack (initially)
@@ -66,6 +68,8 @@ namespace process {
         std::uint64_t cs, ss;
         std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
         std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+
+        std::uint64_t fs_base; // For thread local storage (TLS)
     };
     
     Process* create_process(std::uint8_t* buffer, std::size_t size);

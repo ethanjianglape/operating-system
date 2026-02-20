@@ -1,5 +1,5 @@
 /**
- * @file entry.cpp
+ * @file syscall_entry.cpp
  * @brief SYSCALL/SYSRET configuration and syscall dispatch.
  *
  * This file configures the x86-64 SYSCALL instruction and provides the C++
@@ -91,8 +91,9 @@
  * @see percpu.hpp for per-CPU data structure used for stack switching
  */
 
-#include "entry.hpp"
+#include "syscall_entry.hpp"
 #include "syscall/sys_fd.hpp"
+#include "syscall/sys_mem.hpp"
 #include "syscall/sys_proc.hpp"
 #include "syscall/sys_sleep.hpp"
 
@@ -117,8 +118,8 @@ void syscall_entry();
  * in frame->rax, arguments in frame->rdi, rsi, rdx (matching System V ABI).
  */
 extern "C"
-std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
-    using namespace x86_64::entry;
+std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
+    using namespace x86_64::trap;
 
     auto* process = x86_64::percpu::current_process();
 
@@ -154,19 +155,27 @@ std::uint64_t syscall_dispatcher(x86_64::entry::SyscallFrame* frame) {
         return syscall::sys_sleep_ms(arg1);
     case SYS_GETPID:
         return syscall::sys_getpid();
+    case SYS_MMAP:
+        return syscall::sys_mmap(reinterpret_cast<void*>(arg1), arg2, arg3, arg4, arg5, arg6);
+    case SYS_MUNMAP:
+        return syscall::sys_munmap(reinterpret_cast<void*>(arg1), arg2);
+    case SYS_BRK:
+        return syscall::sys_brk(reinterpret_cast<void*>(arg1));
     case SYS_EXIT:
         return syscall::sys_exit(arg1);
     case SYS_GETCWD:
         return syscall::sys_getcwd(reinterpret_cast<char*>(arg1), arg2);
     case SYS_CHDIR:
         return syscall::sys_chdir(reinterpret_cast<char*>(arg1), arg2);
+    case SYS_FCHDIR:
+        return syscall::sys_fchdir(arg1);
     default:
         log::error("Unsupported syscall: ", syscall_num);
         return -ENOSYS;
     }
 }
 
-namespace x86_64::entry {
+namespace x86_64::trap {
     /**
      * @brief Configures the CPU for SYSCALL/SYSRET operation.
      *

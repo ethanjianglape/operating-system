@@ -312,7 +312,6 @@ namespace fs::devfs::tty {
                     std::size_t len = buffer.size();
                     memcpy(buff, buffer.c_str(), len > count ? count : len);
                     console::newline();
-                    log::debug("/dev/tty returning: ", buffer);
                     
                     return len;
                 } else if (extended == ExtendedScanCode::LeftArrow) {

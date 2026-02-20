@@ -29,6 +29,7 @@
  */
 
 #include "vmm.hpp"
+#include "kpanic/kpanic.hpp"
 
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
@@ -261,6 +262,46 @@ namespace x86_64::vmm {
         auto num_pages = *static_cast<std::size_t*>(block);
 
         pmm::free_contiguous_frames(hhdm_virt_to_phys(block), num_pages);
+    }
+
+    std::uintptr_t find_contiguous_unmapped_space(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t num_pages) {
+        std::uintptr_t virt = virt_hint;
+
+        while (virt + (num_pages * PAGE_SIZE) < hhdm_offset) {
+            bool found = true;
+            
+            for (std::size_t page = 0; page < num_pages; page++) {
+                PageTableEntry* pte = get_pte(pml4, virt + (page * PAGE_SIZE));
+
+                if (pte != nullptr && pte->p == 1) {
+                    virt += num_pages * PAGE_SIZE;
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                return virt;                
+            }
+        }
+
+        kpanic("VMM failed to find unmapped space");
+    }
+
+    MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t bytes, std::uint32_t flags) {
+        std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+        std::uintptr_t virt = find_contiguous_unmapped_space(pml4, virt_hint, num_pages);
+        
+        for (std::size_t page = 0; page < num_pages; page++) {
+            auto phys = pmm::alloc_frame<std::uintptr_t>();
+
+            map_page(pml4, virt + (page * PAGE_SIZE), phys, flags);
+        }
+
+        return MemoryAllocation{
+            .virt_addr = virt,
+            .num_pages = num_pages
+        };
     }
 
     /**
