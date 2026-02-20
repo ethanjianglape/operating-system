@@ -8,6 +8,7 @@
 #include <arch/x86_64/context/context.hpp>
 #include <arch/x86_64/trap/syscall_entry.hpp>
 #include <arch/x86_64/percpu/percpu.hpp>
+#include <arch/x86_64/tls/tls.hpp>
 
 // Allows kernel library code to indirectly access the current CPU architecture
 namespace arch {
@@ -18,4 +19,5 @@ namespace arch {
     namespace context = ::x86_64::context;
     namespace trap    = ::x86_64::trap;
     namespace percpu  = ::x86_64::percpu;
+    namespace tls     = ::x86_64::tls;
 }

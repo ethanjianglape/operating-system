@@ -68,6 +68,8 @@ namespace process {
         std::uint64_t cs, ss;
         std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
         std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+
+        std::uint64_t fs_base; // For thread local storage (TLS)
     };
     
     Process* create_process(std::uint8_t* buffer, std::size_t size);
