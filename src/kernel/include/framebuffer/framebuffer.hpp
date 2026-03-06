@@ -9,6 +9,10 @@ namespace framebuffer {
     constexpr std::uint32_t RGB_RED   = 0x00FF0000;
     constexpr std::uint32_t RGB_GREEN = 0x0000FF00;
     constexpr std::uint32_t RGB_BLUE  = 0x000000FF;
+
+    constexpr std::size_t RGB_OFFB = 0;
+    constexpr std::size_t RGB_OFFG = 1;
+    constexpr std::size_t RGB_OFFR = 2;
     
     struct FrameBufferInfo {
         std::uint64_t width;

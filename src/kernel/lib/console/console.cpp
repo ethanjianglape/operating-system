@@ -43,17 +43,13 @@ namespace console {
 
     void ensure_valid_cursor_buffer_pos(std::size_t row, std::size_t col) {
         while (row >= buffer.size()) {
-            kvector<ConsoleChar> line;
             buffer.push_back({});
         }
 
-        while (col >= buffer[row].size()) {
-            buffer[row].push_back(ConsoleChar{
-                .c = ' ',
-                .fg = current_fg,
-                .bg = current_bg,
-                .dirty = true
-            });
+        auto& line = buffer[row];
+
+        while (col >= line.size()) {
+            line.emplace_back(' ', current_fg, current_bg, true);
         }
     }
 

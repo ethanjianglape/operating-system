@@ -25,10 +25,6 @@ namespace fs {
     struct FileSystem;
     struct Stat;
 
-    // ============================================================================
-    // FileOps
-    // ============================================================================
-
     /**
      * @brief Operations on an open file (fd-level).
      *
@@ -43,10 +39,6 @@ namespace fs {
         int (*fstat)(FileDescriptor* fd, Stat* stat);
     };
 
-    // ============================================================================
-    // Inode
-    // ============================================================================
-
     /**
      * @brief A file or directory in the filesystem.
      *
@@ -59,10 +51,6 @@ namespace fs {
         void* private_data;
     };
 
-    // ============================================================================
-    // FileDescriptor
-    // ============================================================================
-
     /**
      * @brief An open file handle (per-process).
      */
@@ -73,10 +61,6 @@ namespace fs {
         int flags;
     };
 
-    // ============================================================================
-    // Stat
-    // ============================================================================
-
     /**
      * @brief File metadata (for stat() without opening).
      */
@@ -85,10 +69,6 @@ namespace fs {
         std::size_t size;
     };
 
-    // ============================================================================
-    // DirEntry
-    // ============================================================================
-
     /**
      * @brief Directory listing entry.
      */
@@ -96,10 +76,6 @@ namespace fs {
         kstring name;
         FileType type;
     };
-
-    // ============================================================================
-    // FileSystem
-    // ============================================================================
 
     /**
      * @brief A mounted filesystem (path-based operations).
@@ -114,10 +90,6 @@ namespace fs {
         int (*stat)(FileSystem* self, const kstring& path, Stat* out);
         int (*readdir)(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
     };
-
-    // ============================================================================
-    // MountPoint
-    // ============================================================================
 
     /**
      * @brief A filesystem mounted at a path.

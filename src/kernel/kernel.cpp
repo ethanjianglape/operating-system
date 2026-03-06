@@ -1,5 +1,3 @@
-#include "fs/devfs/dev_tty.hpp"
-#include "scheduler/scheduler.hpp"
 #include <arch/x86_64/drivers/keyboard/keyboard.hpp>
 #include <arch/x86_64/trap/syscall_entry.hpp>
 #include <arch/x86_64/percpu/percpu.hpp>
@@ -14,7 +12,8 @@
 #include <console/console.hpp>
 #include <log/log.hpp>
 #include <framebuffer/framebuffer.hpp>
-
+#include <fs/devfs/dev_tty.hpp>
+#include <scheduler/scheduler.hpp>
 #include <containers/kstring.hpp>
 
 #ifdef KERNEL_TESTS

@@ -57,9 +57,9 @@ namespace framebuffer {
         const auto green = (color >> 8) & 0xFF;
         const auto red = (color >> 16) & 0xFF;
 
-        vram[offset + 0] = blue;
-        vram[offset + 1] = green;
-        vram[offset + 2] = red;
+        vram[offset + RGB_OFFB] = blue;
+        vram[offset + RGB_OFFG] = green;
+        vram[offset + RGB_OFFR] = red;
     }
 
     void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h) {
@@ -83,9 +83,9 @@ namespace framebuffer {
         std::uint32_t pixel = 0x00000000;
         const auto offset = get_pixel_offset(x, y);
 
-        pixel |= vram[offset + 0];
-        pixel |= vram[offset + 1] << 8;
-        pixel |= vram[offset + 2] << 16;
+        pixel |= vram[offset + RGB_OFFB];
+        pixel |= vram[offset + RGB_OFFG] << 8;
+        pixel |= vram[offset + RGB_OFFR] << 16;
 
         return pixel;
     }

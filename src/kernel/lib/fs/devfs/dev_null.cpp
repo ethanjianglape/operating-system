@@ -3,11 +3,11 @@
 
 namespace fs::devfs::null {
     static int null_read(FileDescriptor*, void*, std::size_t) {
-        return 0;  // EOF
+        return 0; // EOF
     }
 
     static int null_write(FileDescriptor*, const void*, std::size_t count) {
-        return count;  // Discard, report success
+        return count; // Discard, report success
     }
 
     static int null_close(FileDescriptor*) {

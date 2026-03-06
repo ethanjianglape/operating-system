@@ -105,7 +105,7 @@ namespace console::ansi {
         }
 
         if (iter == str_end) {
-            log::warn("Unsupported ANSI escape sequence 123");
+            log::warn("Unsupported ANSI escape sequence");
             return 0;
         }
 
@@ -131,7 +131,6 @@ namespace console::ansi {
 
         log::debug("ANSI code: ", code);
         log::debug("Default arg: ", default_arg);
-
 
         for (const auto& arg : args) {
             log::debug("Arg: ", arg);

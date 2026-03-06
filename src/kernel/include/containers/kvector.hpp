@@ -9,7 +9,6 @@
 #include <utility>
 #include <initializer_list>
 #include <new> // IWYU pragma: keep (required for placement new)
-#include <arch.hpp>
 
 #ifdef KERNEL_DEBUG
 #include <kpanic/kpanic.hpp>
@@ -43,8 +42,6 @@ private:
     void grow() {
         std::size_t new_capacity = _capacity == 0 ? INITIAL_CAPACITY : _capacity * GROWTH_RATE;
 
-        arch::cpu::cli();
-
         T* new_data = kalloc<T>(new_capacity);
 
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -62,8 +59,6 @@ private:
         kfree(_data);
         _data = new_data;
         _capacity = new_capacity;
-
-        arch::cpu::sti();
     }
 
   public:

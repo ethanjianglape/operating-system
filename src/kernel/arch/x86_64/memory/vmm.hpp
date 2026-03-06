@@ -7,8 +7,8 @@
 namespace x86_64::vmm {
     extern "C" char KERNEL_VIRT_BASE[];
     
-    constexpr std::size_t NUM_PT_ENTRIES  = 512;
-    constexpr std::size_t PAGE_SIZE       = 4096;
+    constexpr std::size_t NUM_PT_ENTRIES = 512;
+    constexpr std::size_t PAGE_SIZE      = 4096;
 
     constexpr std::uint32_t PAGE_PRESENT       = 0x01; // p
     constexpr std::uint32_t PAGE_WRITE         = 0x02; // rw
@@ -31,7 +31,7 @@ namespace x86_64::vmm {
         std::uint64_t nx   : 1;
     };
 
-    static_assert(sizeof(PageTableEntry) == 8, "PTE must be 32 bits");
+    static_assert(sizeof(PageTableEntry) == 8, "PageTableEntry must be 32 bits");
 
     struct MemoryAllocation {
         std::uintptr_t virt_addr;

@@ -9,6 +9,10 @@ namespace console {
         std::uint32_t fg;
         std::uint32_t bg;
         bool dirty;
+
+        ConsoleChar(char c, std::uint32_t fg, std::uint32_t bg, bool dirty)
+        : c{c}, fg{fg}, bg{bg}, dirty{dirty}
+        {}
     };
     
     enum class RgbColor : std::uint32_t {
