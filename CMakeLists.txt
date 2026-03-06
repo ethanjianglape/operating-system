@@ -75,7 +75,6 @@ add_custom_command(
         "$<TARGET_OBJECTS:crti_obj>"
         "$<TARGET_OBJECTS:boot_objs>"
         "$<TARGET_OBJECTS:kernel_objs>"
-        "$<TARGET_OBJECTS:acpica_objs>"
         "$<TARGET_OBJECTS:crtn_obj>"
         -lgcc
     COMMAND ${CMAKE_OBJCOPY} -O binary kernel.elf kernel.bin
@@ -84,10 +83,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy kernel.elf ${SYSROOT}/boot/kernel.elf
     COMMAND ${CMAKE_COMMAND} -E copy kernel.bin ${SYSROOT}/boot/kernel.bin
     COMMAND ${CMAKE_COMMAND} -E touch .kernel_stamp
-    DEPENDS boot_objs kernel_objs acpica_objs crti_obj crtn_obj
+    DEPENDS boot_objs kernel_objs crti_obj crtn_obj
         $<TARGET_OBJECTS:boot_objs>
         $<TARGET_OBJECTS:kernel_objs>
-        $<TARGET_OBJECTS:acpica_objs>
         $<TARGET_OBJECTS:crti_obj>
         $<TARGET_OBJECTS:crtn_obj>
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

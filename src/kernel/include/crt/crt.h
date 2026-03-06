@@ -1,6 +1,6 @@
 #pragma once
 
-// C Runtime (crt) functions required by GCC and ACPICA
+// C Runtime (crt) functions required by GCC
 
 #include <stddef.h>
 
@@ -21,17 +21,6 @@ int strncmp(const char* str1, const char* str2, size_t n);
 char* strcpy(char* dest, const char* src);
 char* strncpy(char* dest, const char* src, size_t n);
 char* strcat(char* dest, const char* src);
-
-// Character classification (ctype)
-int isprint(int c);
-int isspace(int c);
-int isdigit(int c);
-int isxdigit(int c);
-int isupper(int c);
-int islower(int c);
-int isalpha(int c);
-int toupper(int c);
-int tolower(int c);
 
 #ifdef __cplusplus
 }
