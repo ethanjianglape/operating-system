@@ -1,123 +1,101 @@
 #include <crt/crt.h>
 
 // =============================================================================
-// Character Classification (ctype)
+// Memory Functions
 // =============================================================================
+//
+// Required by GCC in freestanding mode. The compiler may emit calls to these
+// even without explicit use in source code (e.g., struct copies, zeroing).
 
-int isprint(int c) {
-    return (c >= 0x20 && c <= 0x7E);
+void* memcpy(void* dest, const void* src, size_t count) {
+    unsigned char* d = (unsigned char*)dest;
+    const unsigned char* s = (const unsigned char*)src;
+    for (size_t i = 0; i < count; i++) {
+        d[i] = s[i];
+    }
+    return dest;
 }
 
-int isspace(int c) {
-    return (c == ' ' || c == '\t' || c == '\n' ||
-            c == '\r' || c == '\f' || c == '\v');
-}
-
-int isdigit(int c) {
-    return (c >= '0' && c <= '9');
-}
-
-int isxdigit(int c) {
-    return isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-}
-
-int isupper(int c) {
-    return (c >= 'A' && c <= 'Z');
-}
-
-int islower(int c) {
-    return (c >= 'a' && c <= 'z');
-}
-
-int isalpha(int c) {
-    return isupper(c) || islower(c);
-}
-
-// =============================================================================
-// glibc ctype compatibility
-// These are internal glibc functions that ctype.h macros call.
-// =============================================================================
-
-// Character class bits used by glibc
-#define _ISupper  256
-#define _ISlower  512
-#define _ISalpha  1024
-#define _ISdigit  2048
-#define _ISxdigit 4096
-#define _ISspace  8192
-#define _ISprint  16384
-#define _ISgraph  32768
-#define _ISblank  1
-#define _IScntrl  2
-#define _ISpunct  4
-#define _ISalnum  8
-
-static unsigned short ctype_table[384];
-static int toupper_table[384];
-static int tolower_table[384];
-static int ctype_initialized = 0;
-
-static void init_ctype_tables(void) {
-    if (ctype_initialized) return;
-
-    for (int i = 0; i < 384; i++) {
-        int c = i - 128;
-        ctype_table[i] = 0;
-        toupper_table[i] = c;
-        tolower_table[i] = c;
-
-        if (c >= 0 && c <= 127) {
-            if (c >= 'A' && c <= 'Z') {
-                ctype_table[i] |= _ISupper | _ISalpha | _ISprint | _ISgraph | _ISalnum;
-                if (c <= 'F') ctype_table[i] |= _ISxdigit;
-                tolower_table[i] = c - 'A' + 'a';
-            }
-            if (c >= 'a' && c <= 'z') {
-                ctype_table[i] |= _ISlower | _ISalpha | _ISprint | _ISgraph | _ISalnum;
-                if (c <= 'f') ctype_table[i] |= _ISxdigit;
-                toupper_table[i] = c - 'a' + 'A';
-            }
-            if (c >= '0' && c <= '9') {
-                ctype_table[i] |= _ISdigit | _ISxdigit | _ISprint | _ISgraph | _ISalnum;
-            }
-            if (c == ' ' || c == '\t') {
-                ctype_table[i] |= _ISspace | _ISblank | _ISprint;
-            }
-            if (c == '\n' || c == '\r' || c == '\f' || c == '\v') {
-                ctype_table[i] |= _ISspace;
-            }
-            if (c >= 0x21 && c <= 0x7e && !((ctype_table[i] & (_ISalnum)))) {
-                ctype_table[i] |= _ISpunct | _ISprint | _ISgraph;
-            }
-            if (c == ' ') {
-                ctype_table[i] |= _ISprint;
-            }
-            if (c < 0x20 || c == 0x7f) {
-                ctype_table[i] |= _IScntrl;
-            }
+void* memmove(void* dest, const void* src, size_t count) {
+    unsigned char* d = (unsigned char*)dest;
+    const unsigned char* s = (const unsigned char*)src;
+    if (d < s) {
+        for (size_t i = 0; i < count; i++) {
+            d[i] = s[i];
+        }
+    } else {
+        for (size_t i = count; i > 0; i--) {
+            d[i - 1] = s[i - 1];
         }
     }
-    ctype_initialized = 1;
+    return dest;
 }
 
-static const unsigned short *ctype_b_ptr;
-static const int *toupper_ptr;
-static const int *tolower_ptr;
-
-const unsigned short **__ctype_b_loc(void) {
-    init_ctype_tables();
-    ctype_b_ptr = &ctype_table[128];
-    return &ctype_b_ptr;
+void* memset(void* dest, int val, size_t count) {
+    unsigned char* d = (unsigned char*)dest;
+    for (size_t i = 0; i < count; i++) {
+        d[i] = (unsigned char)val;
+    }
+    return dest;
 }
 
-const int **__ctype_toupper_loc(void) {
-    init_ctype_tables();
-    toupper_ptr = &toupper_table[128];
-    return &toupper_ptr;
+int memcmp(const void* s1, const void* s2, size_t count) {
+    const unsigned char* a = (const unsigned char*)s1;
+    const unsigned char* b = (const unsigned char*)s2;
+    for (size_t i = 0; i < count; i++) {
+        if (a[i] != b[i]) {
+            return a[i] - b[i];
+        }
+    }
+    return 0;
 }
 
-const int **__ctype_tolower_loc(void) {
-    init_ctype_tables();
-    tolower_ptr = &tolower_table[128];
-    return &tolower_ptr;
+// =============================================================================
+// String Functions
+// =============================================================================
+
+size_t strlen(const char* str) {
+    size_t len = 0;
+    while (str[len]) len++;
+    return len;
+}
+
+int strcmp(const char* s1, const char* s2) {
+    while (*s1 && *s1 == *s2) {
+        s1++;
+        s2++;
+    }
+    return (unsigned char)*s1 - (unsigned char)*s2;
+}
+
+int strncmp(const char* s1, const char* s2, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (s1[i] != s2[i] || s1[i] == '\0') {
+            return (unsigned char)s1[i] - (unsigned char)s2[i];
+        }
+    }
+    return 0;
+}
+
+char* strcpy(char* dest, const char* src) {
+    char* d = dest;
+    while ((*d++ = *src++));
+    return dest;
+}
+
+char* strncpy(char* dest, const char* src, size_t n) {
+    size_t i;
+    for (i = 0; i < n && src[i]; i++) {
+        dest[i] = src[i];
+    }
+    for (; i < n; i++) {
+        dest[i] = '\0';
+    }
+    return dest;
+}
+
+char* strcat(char* dest, const char* src) {
+    char* d = dest + strlen(dest);
+    while ((*d++ = *src++));
+    return dest;
 }
