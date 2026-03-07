@@ -15,7 +15,9 @@
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
 - [x] [Process Termination and Cleanup](#process-termination-and-cleanup)
-- [ ] [Linux Binary Compatibility](#linux-binary-compatibility)
+- [x] [Basic Linux Binary Compatibility](#basic-linux-binary-compatibility)
+- [ ] [Tmpfs (In-Memory Read/Write Filesystem)](#tmpfs-in-memory-readwrite-filesystem)
+- [ ] [FAT32 Filesystem](#fat32-filesystem)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -482,41 +484,115 @@ Remove from scheduler queue
 
 ---
 
-## Linux Binary Compatibility
+## Basic Linux Binary Compatibility
 
-**Status:** Not started
+**Status:** Complete
 
-**Goal:** Run a standard C "hello world" compiled with GCC targeting Linux, statically linked with musl libc. This proves the OS implements a real, standard syscall ABI rather than a custom toy interface.
+**Goal:** Run standard C programs compiled with GCC targeting Linux, statically linked with musl libc. This proves the OS implements a real, standard syscall ABI rather than a custom toy interface.
 
-**What already works:**
+**Implemented:**
 - Syscall entry via SYSCALL/SYSRET with correct Linux x86_64 register convention
-- Most syscall numbers already match Linux: read(0), write(1), open(2), close(3), stat(4), fstat(5), lseek(8), mmap(9), munmap(11), brk(12), getpid(39), exit(60), getcwd(79), chdir(80), fchdir(81)
+- Syscall numbers match Linux: read(0), write(1), open(2), close(3), stat(4), fstat(5), lseek(8), mmap(9), munmap(11), brk(12), ioctl(16), writev(20), nanosleep(35), getpid(39), exit(60), getcwd(79), chdir(80), fchdir(81), arch_prctl(158), set_tid_address(218), exit_group(231)
 - ELF64 loader handles static ET_EXEC binaries
 - Per-process address spaces with user/kernel separation
 - brk and mmap (anonymous) for heap allocation
+- arch_prctl (ARCH_SET_FS) for TLS support
+- ioctl TIOCGWINSZ for terminal detection (enables musl stdio line buffering)
+- writev for musl's printf/puts output path
+- fd 0/1/2 (stdin/stdout/stderr) initialized to /dev/tty1
 
-**Missing syscalls (required by musl libc init):**
+**Linux ABI layer (`include/linux/`):**
+- `linux::` namespace separates Linux-specific constants from generic kernel code
+- `syscall.hpp` — syscall numbers
+- `mman.hpp` — mmap/mprotect constants
+- `ioctl.hpp` — ioctl constants, struct winsize, struct iovec
 
-| Syscall | Number | Purpose | Difficulty |
-|---------|--------|---------|------------|
-| `arch_prctl` | 158 | Set FS base for TLS (`ARCH_SET_FS`) | Small - write to FS base MSR |
-| `set_tid_address` | 218 | Thread ID tracking | Trivial - stub returning PID |
-| `exit_group` | 231 | Exit all threads | Trivial - forward to sys_exit |
-
-**Other required changes:**
-
-- **Standardize fd 0/1/2 setup:** `create_process()` doesn't initialize stdin/stdout/stderr. Currently only `run_tty_program()` sets these up manually. Generic process creation needs to open `/dev/tty1` for fd 0, 1, 2.
-- **Remap SYS_SLEEP_MS:** Currently uses syscall number 35, which conflicts with Linux's `nanosleep(35)`. Move to a custom range (e.g., 1000+) or implement `nanosleep` at 35 and update existing user programs.
-
-**Verification approach:**
-1. Compile hello world: `musl-gcc -static -o hello hello.c`
-2. Run `strace ./hello` on Linux to confirm exact syscall sequence
-3. Implement/stub each syscall the trace shows
-4. Load the unmodified Linux binary via initramfs
+**Shell compiled with musl:** The interactive shell (`src/user/shell.c`) is compiled with `musl-gcc -static` and uses standard libc (stdio.h, string.h, unistd.h, sys/mman.h). It runs unmodified on the kernel.
 
 **Why musl over glibc:** musl's static initialization is minimal (arch_prctl, set_tid_address, then straight to main). glibc does significantly more during init (mprotect, mmap, multiple brk calls, etc.).
 
-**Educational value:** This milestone demonstrates that the OS implements enough of the Linux syscall ABI to run unmodified binaries compiled on a standard Linux system. Same ELF format, same x86-64 ABI, same syscall convention - the program doesn't know (or care) that it's not running on Linux.
+**Educational value:** This milestone demonstrates that the OS implements enough of the Linux syscall ABI to run unmodified binaries compiled on a standard Linux system. Same ELF format, same x86-64 ABI, same syscall convention — the program doesn't know (or care) that it's not running on Linux.
+
+---
+
+## Tmpfs (In-Memory Read/Write Filesystem)
+
+**Status:** Not started
+
+**Prerequisite:** VFS infrastructure (already complete)
+
+**Goal:** A read/write in-memory filesystem mounted at `/tmp`, giving userspace programs the ability to create, write, read, and delete files.
+
+**Why needed:** The current filesystem is read-only (initramfs) or device-only (devfs). Userspace programs have no way to create or write files. Tmpfs fills this gap without requiring a disk driver.
+
+**Required syscalls/features:**
+- `sys_open` with `O_CREAT`, `O_WRONLY`, `O_RDWR`, `O_TRUNC`, `O_APPEND` flags
+- `sys_write` to regular files (growing file data dynamically)
+- `sys_mkdir` for directory creation
+- `sys_unlink` for file deletion
+- `sys_stat` on tmpfs files
+
+**Architecture:**
+```
+VFS mount table
+    │
+    ├── /      → initramfs (read-only)
+    ├── /dev   → devfs (char devices)
+    └── /tmp   → tmpfs (read/write, in-memory)
+
+tmpfs internals:
+    TmpfsNode (directory)
+      ├── "hello.txt" → TmpfsNode (file, data = kmalloc'd buffer)
+      ├── "subdir"    → TmpfsNode (directory)
+      │     └── ...
+      └── ...
+```
+
+**Key design decisions:**
+- Tree of `TmpfsNode` structs, each with name, type, children (dir) or data buffer (file)
+- File data backed by kmalloc — grows dynamically on write
+- Implements `FileSystem` interface (open, stat, readdir) + read/write `FileOps`
+- No size limits (bounded only by available kernel memory)
+
+**Verification:** Userspace test program compiled with musl that creates a file in `/tmp`, writes to it, closes it, reopens for reading, reads it back, and verifies contents.
+
+**Educational value:** Teaches the write side of filesystem operations — the same structural concepts (directory entries, file data management, inode allocation) that apply to on-disk filesystems, just backed by memory instead of disk blocks.
+
+---
+
+## FAT32 Filesystem
+
+**Status:** Not started (future milestone)
+
+**Prerequisite:** Tmpfs (to establish read/write VFS patterns), block device driver
+
+**Goal:** Read/write FAT32 filesystem support, enabling persistent storage across reboots.
+
+**Why FAT32:**
+- Well-documented, simple on-disk structures
+- Universal compatibility (USB drives, SD cards, EFI System Partition)
+- Straightforward enough to diagram and explain
+- No journaling complexity
+
+**Required components:**
+1. **Block device driver** — virtio-blk for QEMU testing, AHCI for real hardware
+2. **Partition table parsing** — GPT or MBR to find FAT32 partitions
+3. **FAT32 driver** — BPB parsing, FAT chain traversal, directory entry reading/writing, cluster allocation
+
+**On-disk structures:**
+```
+Boot sector (BPB)
+    │
+    ├── FAT (File Allocation Table) — linked list of clusters
+    │     cluster 2 → 3 → 7 → EOF
+    │
+    └── Data region — actual file/directory contents
+          cluster 2: [first 4096 bytes of file]
+          cluster 3: [next 4096 bytes]
+          cluster 7: [final bytes]
+```
+
+**Bridge to real systems:** Linux's FAT32 implementation (`fs/fat/`) does the same thing with additional concerns: long filename support (VFAT), character encoding, mount options, permissions mapping. Same core idea, more production concerns.
 
 ---
 
