@@ -5,6 +5,7 @@
 #include <log/log.hpp>
 #include <syscall/sys_fd.hpp>
 #include <fs/fs.hpp>
+#include <console/console.hpp>
 
 #include <cerrno>
 
@@ -72,6 +73,58 @@ namespace syscall {
         return desc->inode->ops->write(desc, buffer, count);
     }
 
+    int sys_writev(int fd, const linux::iovec* iov, int iovcnt) {
+        fs::FileDescriptor* desc = get_fd(fd);
+
+        log::debug("sys_writev fd=", fd, " iovcnt=", iovcnt);
+
+        if (!desc) {
+            log::debug("sys_writev fd = null");
+            return -EBADF;
+        }
+
+        if (iovcnt < 0) {
+            log::debug("sys_writev iovcnt < 0");
+            return -EINVAL;
+        }
+
+        int total = 0;
+
+        for (int i = 0; i < iovcnt; i++) {
+            if (iov[i].iov_len == 0) continue;
+
+            int written = desc->inode->ops->write(desc, iov[i].iov_base, iov[i].iov_len);
+
+            if (written < 0) {
+                return total > 0 ? total : written;
+            }
+
+            total += written;
+        }
+
+        return total;
+    }
+
+    int sys_ioctl(int fd, unsigned long request, void* arg) {
+        fs::FileDescriptor* desc = get_fd(fd);
+
+        if (!desc) {
+            return -EBADF;
+        }
+
+        if (request == linux::TIOCGWINSZ && desc->inode->type == fs::FileType::CHAR_DEVICE) {
+            auto* ws = reinterpret_cast<linux::winsize*>(arg);
+            ws->ws_row = console::get_screen_rows();
+            ws->ws_col = console::get_screen_cols();
+            ws->ws_xpixel = 0;
+            ws->ws_ypixel = 0;
+
+            return 0;
+        }
+
+        return -ENOTTY;
+    }
+
     int sys_close(int fd) {
         process::Process* process = arch::percpu::current_process();
         fs::FileDescriptor* desc = get_fd(fd);
@@ -111,23 +164,23 @@ namespace syscall {
         return desc->inode->ops->lseek(desc, offset, whence);
     }
 
-    int sys_getcwd(char* buffer, std::size_t size) {
+    long sys_getcwd(char* buffer, std::size_t size) {
         process::Process* proc = arch::percpu::current_process();
         std::size_t len = proc->working_dir.length();
 
-        if (len >= size) {
+        if (len + 1 > size) {
             return -ERANGE;
         }
 
         memcpy(buffer, proc->working_dir.c_str(), len);
         buffer[len] = '\0';
 
-        return 0;
+        return reinterpret_cast<long>(buffer);
     }
 
-    int sys_chdir(const char* buffer, std::size_t size) {
+    int sys_chdir(const char* buffer) {
         process::Process* proc = arch::percpu::current_process();
-        kstring path{buffer, size};
+        kstring path{buffer};
         fs::Stat stat;
 
         int stat_res = fs::stat(path, &stat);

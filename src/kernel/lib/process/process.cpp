@@ -1,5 +1,7 @@
 #include "containers/kvector.hpp"
 #include "fmt/fmt.hpp"
+#include "fs/devfs/dev_tty.hpp"
+#include "fs/fs.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <process/process.hpp>
@@ -48,6 +50,8 @@ namespace process {
         p->has_user_context = true;
         p->working_dir = "/";
         p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
+        p->fs_base = 0;
+        p->tidptr = 0;
 
         for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
             auto virt = header.p_vaddr;
@@ -57,8 +61,10 @@ namespace process {
 
             std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
+            log::debug("mapping user mem at ", fmt::hex{virt}, " len = ", mem_size);
+
             p->allocations.push_back(ProcessAllocation{
-                .virt_addr = virt,
+                .virt_addr = virt & ~0xFFFUL,
                 .num_pages = code_pages
             });
 
@@ -87,8 +93,19 @@ namespace process {
         // Initial instruction pointer
         p->rip = file.entry;
 
-        // User stack pointer
-        p->rsp = USER_STACK_TOP;
+        // Set up initial stack for Linux ABI compatibility
+        // musl libc expects: argc, argv[], NULL, envp[], NULL, auxv[], AT_NULL
+        // All zeros: argc=0, argv/envp terminated by NULL, auxv terminated by AT_NULL(0,0)
+        // 6 entries = 48 bytes ensures 16-byte alignment (required by System V ABI)
+        auto* stack = reinterpret_cast<std::uint64_t*>(USER_STACK_TOP);
+        *(--stack) = 0;  // padding for 16-byte alignment
+        *(--stack) = 0;  // AT_NULL value
+        *(--stack) = 0;  // AT_NULL type
+        *(--stack) = 0;  // envp terminator (NULL)
+        *(--stack) = 0;  // argv terminator (NULL)
+        *(--stack) = 0;  // argc = 0
+
+        p->rsp = reinterpret_cast<std::uintptr_t>(stack);
 
         // IF enabled, reserved bit 1 set
         p->rflags = 0x202;
@@ -123,6 +140,12 @@ namespace process {
         p->context_frame->rbx = 0x12345678;
         p->context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
         p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+
+        fs::Inode* tty_inode = fs::devfs::tty::get_tty_inode();
+
+        p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stdin
+        p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stdout
+        p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stderr
 
         arch::vmm::switch_kernel_pml4();
 

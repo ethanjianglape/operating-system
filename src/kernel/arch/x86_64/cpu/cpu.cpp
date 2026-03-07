@@ -42,6 +42,14 @@ namespace x86_64::cpu {
         return value;
     }
 
+    static inline void write_cr0(std::uint64_t cr0) {
+        asm volatile("mov %0, %%cr0" : : "r"(cr0));
+    }
+
+    static inline void write_cr4(std::uint64_t cr4) {
+        asm volatile("mov %0, %%cr4" : : "r"(cr4));
+    }
+
     static inline std::uint64_t read_rflags() {
         std::uint64_t value;
         asm volatile("pushfq; pop %0" : "=r"(value));
@@ -120,6 +128,26 @@ namespace x86_64::cpu {
             (cr0 & (1UL << 30)) ? "CD " : "", // Cache Disable
             (cr0 & (1UL << 31)) ? "PG " : "", // Paging
             "]");
+    }
+
+    static void enable_sse() {
+        std::uint64_t cr0 = read_cr0();
+        std::uint64_t cr4 = read_cr4();
+
+        cr0 &= ~(1UL << 2);
+        cr0 |= (1 << 1);
+        cr4 |= (1 << 9) | (1 << 10);
+
+        write_cr4(cr4);
+        write_cr0(cr0);
+    }
+
+    void init() {
+        log::init_start("CPU");
+        
+        enable_sse();
+
+        log::init_end("CPU");
     }
 
     // =========================================================================

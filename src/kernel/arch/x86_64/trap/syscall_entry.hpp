@@ -14,23 +14,6 @@ namespace x86_64::trap {
     constexpr std::uint64_t SFMASK_DF = (1 << 10); // Direction Flag (ensure string ops go forward)
     constexpr std::uint64_t SFMASK_TF = (1 << 8);  // Trap Flag (Disable single-stepping)
 
-    constexpr std::uint64_t SYS_READ     = 0;
-    constexpr std::uint64_t SYS_WRITE    = 1;
-    constexpr std::uint64_t SYS_OPEN     = 2;
-    constexpr std::uint64_t SYS_CLOSE    = 3;
-    constexpr std::uint64_t SYS_STAT     = 4;
-    constexpr std::uint64_t SYS_FSTAT    = 5;
-    constexpr std::uint64_t SYS_LSEEK    = 8;
-    constexpr std::uint64_t SYS_MMAP     = 9;
-    constexpr std::uint64_t SYS_MUNMAP   = 11;
-    constexpr std::uint64_t SYS_BRK      = 12;
-    constexpr std::uint64_t SYS_SLEEP_MS = 35;
-    constexpr std::uint64_t SYS_GETPID   = 39;
-    constexpr std::uint64_t SYS_EXIT     = 60;
-    constexpr std::uint64_t SYS_GETCWD   = 79;
-    constexpr std::uint64_t SYS_CHDIR    = 80;
-    constexpr std::uint64_t SYS_FCHDIR   = 81;
-
     struct [[gnu::packed]] SyscallFrame {
         std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;
         std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;

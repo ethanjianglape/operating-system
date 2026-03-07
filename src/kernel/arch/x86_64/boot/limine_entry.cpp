@@ -8,7 +8,7 @@
  * RSDP, etc.). We just call kernel_main() and hang if it ever returns.
  *
  * Other bootloaders (GRUB, custom) would have their own entry files with
- * different setup requirements — Limine handles more for us than most.
+ * different setup requirements - Limine handles more for us than most.
  */
 
 #include <arch/x86_64/cpu/cpu.hpp>

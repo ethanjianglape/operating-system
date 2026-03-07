@@ -9,20 +9,13 @@ namespace x86_64::irq {
 }
 
 namespace x86_64::cpu {
-
-    // =========================================================================
-    // Debug Functions
-    // =========================================================================
+    void init();
 
     // Dump current CPU state (control regs, segment regs, flags)
     void dump();
 
     // Dump CPU state from an interrupt context (includes all GPRs, RIP, etc.)
     void dump(const irq::InterruptFrame* frame);
-
-    // =========================================================================
-    // I/O Port Functions
-    // =========================================================================
 
     [[gnu::always_inline]]
     inline void outb(const std::uint16_t port, const std::uint8_t value) {

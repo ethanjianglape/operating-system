@@ -37,7 +37,7 @@ namespace syscall {
         (void)fd;
         (void)offset;
         
-        if ((flags & MAP_ANONYMOUS) == 0) {
+        if ((flags & linux::MAP_ANONYMOUS) == 0) {
             log::warn("Invalid call to sys_mmap with flags = ", flags, ", only MAP_ANONYMOUS supported for now.");
             return static_cast<std::uintptr_t>(-1);
         }
