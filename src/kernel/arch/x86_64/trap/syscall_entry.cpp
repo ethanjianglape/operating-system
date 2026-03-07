@@ -92,10 +92,15 @@
  */
 
 #include "syscall_entry.hpp"
+#include "arch/x86_64/tls/tls.hpp"
 #include "syscall/sys_fd.hpp"
 #include "syscall/sys_mem.hpp"
+#include "syscall/sys_prctl.hpp"
 #include "syscall/sys_proc.hpp"
 #include "syscall/sys_sleep.hpp"
+#include "syscall/sys_thread.hpp"
+#include <linux/syscall.hpp>
+#include <linux/ioctl.hpp>
 
 #include <arch/x86_64/percpu/percpu.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
@@ -119,7 +124,7 @@ void syscall_entry();
  */
 extern "C"
 std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
-    using namespace x86_64::trap;
+    using namespace linux;
 
     auto* process = x86_64::percpu::current_process();
 
@@ -151,7 +156,7 @@ std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
         return syscall::sys_fstat(arg1, reinterpret_cast<fs::Stat*>(arg2));
     case SYS_LSEEK:
         return syscall::sys_lseek(arg1, arg2, arg3);
-    case SYS_SLEEP_MS:
+    case SYS_NANOSLEEP:
         return syscall::sys_sleep_ms(arg1);
     case SYS_GETPID:
         return syscall::sys_getpid();
@@ -159,14 +164,23 @@ std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
         return syscall::sys_mmap(reinterpret_cast<void*>(arg1), arg2, arg3, arg4, arg5, arg6);
     case SYS_MUNMAP:
         return syscall::sys_munmap(reinterpret_cast<void*>(arg1), arg2);
+    case SYS_IOCTL:
+        return syscall::sys_ioctl(arg1, arg2, reinterpret_cast<void*>(arg3));
+    case SYS_WRITEV:
+        return syscall::sys_writev(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
     case SYS_BRK:
         return syscall::sys_brk(reinterpret_cast<void*>(arg1));
     case SYS_EXIT:
+    case SYS_EXIT_GROUP:
         return syscall::sys_exit(arg1);
     case SYS_GETCWD:
         return syscall::sys_getcwd(reinterpret_cast<char*>(arg1), arg2);
     case SYS_CHDIR:
-        return syscall::sys_chdir(reinterpret_cast<char*>(arg1), arg2);
+        return syscall::sys_chdir(reinterpret_cast<const char*>(arg1));
+    case SYS_ARCH_PRCTL:
+        return syscall::sys_arch_prctl(arg1, arg2);
+    case SYS_SET_TID_ADDR:
+        return syscall::sys_set_tid_address(reinterpret_cast<int*>(arg1));
     case SYS_FCHDIR:
         return syscall::sys_fchdir(arg1);
     default:

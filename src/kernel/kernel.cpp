@@ -23,6 +23,7 @@
 [[noreturn]]
 void kernel_main() {
     x86_64::drivers::serial::init();
+    x86_64::cpu::init();
 
     log::info("MyOS Booted into kernel_main() using Limine.");
     log::info("Serial ouput on COM1 initialized");

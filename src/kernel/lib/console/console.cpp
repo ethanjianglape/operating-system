@@ -117,6 +117,7 @@ namespace console {
 
     std::size_t get_cursor_x() { return cursor_col; }
     std::size_t get_screen_cols() { return screen_cols; }
+    std::size_t get_screen_rows() { return screen_rows; }
 
     void set_cursor_x(std::uint32_t x) {
         set_cursor(x, cursor_row);

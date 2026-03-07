@@ -258,12 +258,6 @@ namespace fs::devfs::tty {
 
         process::Process* p = process::create_process(data, size);
         
-        Inode* tty = get_tty_inode();
-        
-        p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stdin
-        p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stdout
-        p->fd_table.push_back({.inode = tty, .offset = 0, .flags = O_RDONLY}); // stderr
-
         inode->ops->close(&fd);
 
         scheduler::add_process(p);
@@ -275,9 +269,7 @@ namespace fs::devfs::tty {
         buffer.reserve(128);
         
         run_tty_program("/bin/shell");
-        //run_tty_program("/bin/a");
-                //run_tty_program("/bin/b");
-        //run_tty_program("/bin/c");
+        //run_tty_program("/bin/musl");
 
         log::init_end("/dev/tty");
     }
@@ -342,6 +334,8 @@ namespace fs::devfs::tty {
     static int tty_write(FileDescriptor*, const void* buffer, std::size_t count) {
         const auto* cbuffer = reinterpret_cast<const char*>(buffer);
         kstring str(cbuffer, count);
+
+        log::debug("tty write: '", str, "', len = ", count);
 
         console::put(str);
         console::redraw();

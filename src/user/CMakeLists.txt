@@ -42,8 +42,17 @@ function(add_user_program name source)
     )
 endfunction()
 
+# Function to add a musl libc program (compiled with musl-gcc, statically linked)
+function(add_musl_program name source)
+    add_custom_command(
+        OUTPUT ${USER_BIN_DIR}/${name}
+        COMMAND musl-gcc -static -o ${USER_BIN_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+        COMMENT "Building musl program: ${name}"
+    )
+    add_custom_target(${name} ALL DEPENDS ${USER_BIN_DIR}/${name})
+endfunction()
+
 # Add userspace programs
-add_user_program(shell shell.c)
-add_user_program(a a.c)
-add_user_program(b b.c)
-add_user_program(c c.c)
+add_musl_program(shell shell.c)
+add_musl_program(musl musl.c)

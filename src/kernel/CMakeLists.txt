@@ -28,6 +28,7 @@ set(ARCH_KERNEL_SOURCES
   ${ARCH_DIR}/trap/syscall_entry.s
   ${ARCH_DIR}/percpu/percpu.cpp
   ${ARCH_DIR}/memory/vmm.cpp
+  ${ARCH_DIR}/tls/tls.cpp
   ${ARCH_DIR}/context/context_switch.s
 )
 
@@ -71,6 +72,8 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/syscall/sys_sleep.cpp
   ${LIB_DIR}/syscall/sys_proc.cpp
   ${LIB_DIR}/syscall/sys_mem.cpp
+  ${LIB_DIR}/syscall/sys_prctl.cpp
+  ${LIB_DIR}/syscall/sys_thread.cpp
   ${LIB_DIR}/scheduler/scheduler.cpp
 )
 

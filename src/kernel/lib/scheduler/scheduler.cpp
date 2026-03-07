@@ -1,4 +1,3 @@
-#include "arch/x86_64/cpu/cpu.hpp"
 #include "kpanic/kpanic.hpp"
 #include <scheduler/scheduler.hpp>
 #include <log/log.hpp>
@@ -127,6 +126,7 @@ namespace scheduler {
             per_cpu->kernel_rsp = p->kernel_rsp;
 
             arch::vmm::switch_pml4(p->pml4);
+            arch::tls::set_fs_base(p->fs_base);
 
             // Restore CPU state to interrupt frame
             frame->rip = p->rip;
@@ -207,6 +207,7 @@ namespace scheduler {
                 per_cpu->kernel_rsp = ready->kernel_rsp;
 
                 arch::vmm::switch_pml4(ready->pml4);
+                arch::tls::set_fs_base(ready->fs_base);
 
                 ready->state = process::ProcessState::RUNNING;
 
@@ -253,6 +254,7 @@ namespace scheduler {
                 per_cpu->kernel_rsp = ready->kernel_rsp;
                 
                 arch::vmm::switch_pml4(ready->pml4);
+                arch::tls::set_fs_base(ready->fs_base);
 
                 ready->state = process::ProcessState::RUNNING;
                 

@@ -15,6 +15,7 @@
 - [x] [Namespace Cleanup](#namespace-cleanup)
 - [x] [Arch Namespace Collisions](#arch-namespace-collisions)
 - [x] [Process Termination and Cleanup](#process-termination-and-cleanup)
+- [ ] [Linux Binary Compatibility](#linux-binary-compatibility)
 - [ ] [Documentation and References](#documentation-and-references)
 
 ---
@@ -478,6 +479,44 @@ Remove from scheduler queue
 - Parent-child relationships for `waitpid()`
 - Signal-based process termination (SIGKILL, SIGTERM)
 - Exit status retrieval by parent process
+
+---
+
+## Linux Binary Compatibility
+
+**Status:** Not started
+
+**Goal:** Run a standard C "hello world" compiled with GCC targeting Linux, statically linked with musl libc. This proves the OS implements a real, standard syscall ABI rather than a custom toy interface.
+
+**What already works:**
+- Syscall entry via SYSCALL/SYSRET with correct Linux x86_64 register convention
+- Most syscall numbers already match Linux: read(0), write(1), open(2), close(3), stat(4), fstat(5), lseek(8), mmap(9), munmap(11), brk(12), getpid(39), exit(60), getcwd(79), chdir(80), fchdir(81)
+- ELF64 loader handles static ET_EXEC binaries
+- Per-process address spaces with user/kernel separation
+- brk and mmap (anonymous) for heap allocation
+
+**Missing syscalls (required by musl libc init):**
+
+| Syscall | Number | Purpose | Difficulty |
+|---------|--------|---------|------------|
+| `arch_prctl` | 158 | Set FS base for TLS (`ARCH_SET_FS`) | Small - write to FS base MSR |
+| `set_tid_address` | 218 | Thread ID tracking | Trivial - stub returning PID |
+| `exit_group` | 231 | Exit all threads | Trivial - forward to sys_exit |
+
+**Other required changes:**
+
+- **Standardize fd 0/1/2 setup:** `create_process()` doesn't initialize stdin/stdout/stderr. Currently only `run_tty_program()` sets these up manually. Generic process creation needs to open `/dev/tty1` for fd 0, 1, 2.
+- **Remap SYS_SLEEP_MS:** Currently uses syscall number 35, which conflicts with Linux's `nanosleep(35)`. Move to a custom range (e.g., 1000+) or implement `nanosleep` at 35 and update existing user programs.
+
+**Verification approach:**
+1. Compile hello world: `musl-gcc -static -o hello hello.c`
+2. Run `strace ./hello` on Linux to confirm exact syscall sequence
+3. Implement/stub each syscall the trace shows
+4. Load the unmodified Linux binary via initramfs
+
+**Why musl over glibc:** musl's static initialization is minimal (arch_prctl, set_tid_address, then straight to main). glibc does significantly more during init (mprotect, mmap, multiple brk calls, etc.).
+
+**Educational value:** This milestone demonstrates that the OS implements enough of the Linux syscall ABI to run unmodified binaries compiled on a standard Linux system. Same ELF format, same x86-64 ABI, same syscall convention - the program doesn't know (or care) that it's not running on Linux.
 
 ---
 

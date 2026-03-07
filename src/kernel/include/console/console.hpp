@@ -30,6 +30,7 @@ namespace console {
 
     std::size_t get_cursor_x();
     std::size_t get_screen_cols();
+    std::size_t get_screen_rows();
 
     void set_cursor(std::uint32_t x, std::uint32_t y);
     void set_cursor_x(std::uint32_t x);

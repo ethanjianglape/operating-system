@@ -79,7 +79,10 @@ namespace process::elf {
         }
 
         for (const auto& segment : file.program_headers) {
-            log::debug("segment flags = ", fmt::bin{segment.p_flags}, " vaddr = ", fmt::hex{segment.p_vaddr}, " file sz = ", segment.p_filesz, " mem sz = ", segment.p_memsz);
+            log::debug("segment flags = ", fmt::bin{segment.p_flags},
+                       " vaddr = ", fmt::hex{segment.p_vaddr},
+                       " file sz = ", segment.p_filesz,
+                       " mem sz = ", segment.p_memsz);
         }
 
         log::success("Valid ELF File found!");

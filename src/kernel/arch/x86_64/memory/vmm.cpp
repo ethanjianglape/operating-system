@@ -312,18 +312,20 @@ namespace x86_64::vmm {
      * physical contiguity doesn't matter but virtual contiguity does.
      *
      * @param pml4 Page table to modify.
-     * @param virt Starting virtual address (must be page-aligned).
+     * @param virt Starting virtual address (may be unaligned; page-aligns down).
      * @param bytes Number of bytes to map.
      * @param flags Page flags (PAGE_USER, PAGE_WRITE, etc.).
      * @return Number of pages mapped (needed for unmap_mem_at).
      */
     std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags) {
-        std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+        std::uintptr_t page_start = virt & ~(PAGE_SIZE - 1);
+        std::uintptr_t page_end = (virt + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+        std::size_t num_pages = (page_end - page_start) / PAGE_SIZE;
 
         for (std::size_t page = 0; page < num_pages; page++){
             auto phys = pmm::alloc_frame<std::uintptr_t>();
 
-            map_page(pml4, virt + (page * PAGE_SIZE), phys, flags);
+            map_page(pml4, page_start + (page * PAGE_SIZE), phys, flags);
         }
 
         return num_pages;
