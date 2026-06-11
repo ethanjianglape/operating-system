@@ -105,4 +105,20 @@ namespace fs {
 
         return mp->filesystem->readdir(mp->filesystem, relative, out);
     }
+
+    int mkdir(const kstring& path, int mode) {
+        kstring canonical = canonicalize(path);
+        MountPoint* mp = find_mount(canonical);
+
+        if (!mp) {
+            return -1;
+        }
+
+        if (!mp->filesystem->mkdir) {
+            return -1;
+        }
+
+        kstring relative = strip_mount_prefix(canonical, mp);
+        return mp->filesystem->mkdir(mp->filesystem, relative, mode);
+    }
 }

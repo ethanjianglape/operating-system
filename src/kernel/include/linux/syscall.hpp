@@ -29,6 +29,7 @@ namespace linux {
     constexpr std::uint64_t SYS_GETCWD     = 79;
     constexpr std::uint64_t SYS_CHDIR      = 80;
     constexpr std::uint64_t SYS_FCHDIR     = 81;
+    constexpr std::uint64_t SYS_MKDIR      = 83;
     constexpr std::uint64_t SYS_ARCH_PRCTL = 158;
     constexpr std::uint64_t SYS_SET_TID_ADDR = 218;
     constexpr std::uint64_t SYS_EXIT_GROUP = 231;

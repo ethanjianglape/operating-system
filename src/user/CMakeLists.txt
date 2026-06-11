@@ -11,7 +11,6 @@ set(USER_BIN_DIR "${CMAKE_SOURCE_DIR}/initramfs/bin")
 # Linker script
 set(USER_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
 
-# Function to add a userspace program
 function(add_user_program name source)
     add_executable(${name} ${source})
 
@@ -46,7 +45,7 @@ endfunction()
 function(add_musl_program name source)
     add_custom_command(
         OUTPUT ${USER_BIN_DIR}/${name}
-        COMMAND musl-gcc -static -o ${USER_BIN_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${source}
+        COMMAND musl-gcc -fno-link-libatomic -static -o ${USER_BIN_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${source}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
         COMMENT "Building musl program: ${name}"
     )

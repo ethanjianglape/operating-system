@@ -7,6 +7,7 @@
 #include <fmt/fmt.hpp>
 #include <fs/initramfs/initramfs.hpp>
 #include <fs/devfs/devfs.hpp>
+#include <fs/tmpfs/tmpfs.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
 #include <kpanic/kpanic.hpp>
@@ -185,6 +186,7 @@ void init_modules() {
     }
 
     fs::devfs::init();
+    fs::tmpfs::init();
 }
 
 namespace boot {

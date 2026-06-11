@@ -1,3 +1,4 @@
+#include "arch/x86_64/percpu/percpu.hpp"
 #include "containers/kstring.hpp"
 #include <arch.hpp>
 #include <cstddef>
@@ -33,8 +34,6 @@ namespace syscall {
     }
 
     int sys_open(const char* path, int flags) {
-        log::debug("sys_open: ", path);
-
         process::Process* process = arch::percpu::current_process();
 
         fs::Inode* inode = fs::open(path, flags);
@@ -75,8 +74,6 @@ namespace syscall {
 
     int sys_writev(int fd, const linux::iovec* iov, int iovcnt) {
         fs::FileDescriptor* desc = get_fd(fd);
-
-        log::debug("sys_writev fd=", fd, " iovcnt=", iovcnt);
 
         if (!desc) {
             log::debug("sys_writev fd = null");
@@ -213,5 +210,10 @@ namespace syscall {
         proc->working_dir = desc->path;
 
         return 0;
+    }
+
+    int sys_mkdir(const char* path, int mode) {
+        log::debug("sys_mkdir: ", path);
+        return fs::mkdir(path, mode);
     }
 }

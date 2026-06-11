@@ -42,6 +42,31 @@ class kstring final {
         _capacity = new_capacity;
     }
 
+    kstring trim(bool front, bool back, char c) const {
+        if (!front && !back) {
+            return *this;
+        }
+        
+        auto b = begin();
+        auto e = end();
+
+        while (front && *b == c && b < e) ++b;
+        while (back && *e == c && e > b) --e;
+
+        if (b >= e) {
+            return "";
+        }
+
+        kstring result;
+        result.reserve(e - b);
+
+        while (b < e) {
+            result.push_back(*b++);
+        }
+
+        return result;
+    }
+
   public:
     class iterator {
       private:
@@ -99,9 +124,19 @@ class kstring final {
             _ptr++;
             return *this;
         }
+        const_iterator operator++(int) {
+            const auto val = *this;
+            _ptr++;
+            return val;
+        }
         const_iterator& operator--() {
             _ptr--;
             return *this;
+        }
+        const_iterator operator--(int) {
+            const auto val = *this;
+            _ptr--;
+            return val;
         }
         const_iterator& operator+=(std::size_t n) {
             _ptr += n;
@@ -113,6 +148,10 @@ class kstring final {
         }
         bool operator==(const const_iterator& other) const { return _ptr == other._ptr; }
         bool operator!=(const const_iterator& other) const { return _ptr != other._ptr; }
+        bool operator<(const const_iterator& other) const { return _ptr < other._ptr; }
+        bool operator>(const const_iterator& other) const { return _ptr > other._ptr; }
+        bool operator<=(const const_iterator& other) const { return _ptr <= other._ptr; }
+        bool operator>=(const const_iterator& other) const { return _ptr >= other._ptr; }
     };
 
     static constexpr std::size_t npos = -1;
@@ -240,6 +279,47 @@ class kstring final {
     const char* c_str() const { return _data ? _data : ""; }
     char* data() { return _data; }
     const char* data() const { return _data; }
+
+    std::size_t find(const char* str) const {
+        if (!str) {
+            return npos;
+        }
+
+        const std::size_t len = strlen(str);
+
+        if (len == 0 || len > _length) {
+            return npos;
+        }
+
+        for (std::size_t i = 0; i + len - 1 < _length; i++) {
+            bool found = true;
+            
+            for (std::size_t j = 0; j < len; j++) {
+                if (_data[i + j] != str[j]) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                return i;
+            }
+        }
+
+        return npos;
+    }
+
+    kstring trim_front(char c = ' ') const {
+        return trim(true, false, c);
+    }
+
+    kstring trim_back(char c = ' ') const {
+        return trim(false, true, c);
+    }
+
+    kstring trim(char c = ' ') const {
+        return trim(true, true, c);
+    }
 
     // Modifiers
     char& push_back(char c) {

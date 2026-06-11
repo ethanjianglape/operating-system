@@ -10,13 +10,15 @@ namespace fs::initramfs {
     static Inode* initramfs_open(FileSystem* self, const kstring& path, int flags);
     static int initramfs_stat(FileSystem* self, const kstring& path, Stat* out);
     static int initramfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
-
+    static int initramfs_mkdir(FileSystem* self, const kstring& path, int mode);
+    
     static FileSystem initramfs_fs = {
         .name = "initramfs",
         .private_data = nullptr,
         .open = initramfs_open,
         .stat = initramfs_stat,
         .readdir = initramfs_readdir,
+        .mkdir = initramfs_mkdir
     };
 
     void init(std::uint8_t* addr, std::size_t) {
@@ -84,6 +86,10 @@ namespace fs::initramfs {
             });
         }
 
+        return 0;
+    }
+
+    static int initramfs_mkdir(FileSystem*, const kstring&, int) {
         return 0;
     }
 }

@@ -17,4 +17,5 @@ namespace syscall {
     long sys_getcwd(char* buffer, std::size_t size);
     int sys_chdir(const char* buffer);
     int sys_fchdir(int fd);
+    int sys_mkdir(const char* path, int mode);
 }

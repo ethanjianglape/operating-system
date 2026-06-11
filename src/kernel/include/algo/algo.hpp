@@ -21,7 +21,30 @@ namespace algo {
                               char delim = ' ');
     
     kvector<kstring> split(const kstring& str, char delim = ' ');
-    kstring join(const kvector<kstring>& parts, char delim = ' ');
+
+    template <typename Iter>
+    kstring join(Iter begin,
+                 Iter end,
+                 char delim = ' ') {
+        kstring result;
+
+        while (begin != end) {
+            result += *begin;
+            result += delim;
+            ++begin;
+        }
+
+        if (!result.empty()) {
+            result.pop_back();
+        }
+
+        return result;
+    }
+
+    template <typename T>
+    kstring join(const kvector<T>& v, char delim = ' ') {
+        return join(v.begin(), v.end(), delim);
+    }
 
     template <typename T>
     kstring join(const klist<T>& list, char delim = ' ') {

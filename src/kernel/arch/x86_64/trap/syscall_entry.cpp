@@ -92,7 +92,6 @@
  */
 
 #include "syscall_entry.hpp"
-#include "arch/x86_64/tls/tls.hpp"
 #include "syscall/sys_fd.hpp"
 #include "syscall/sys_mem.hpp"
 #include "syscall/sys_prctl.hpp"
@@ -177,6 +176,8 @@ std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
         return syscall::sys_getcwd(reinterpret_cast<char*>(arg1), arg2);
     case SYS_CHDIR:
         return syscall::sys_chdir(reinterpret_cast<const char*>(arg1));
+    case SYS_MKDIR:
+        return syscall::sys_mkdir(reinterpret_cast<const char*>(arg1), arg2);
     case SYS_ARCH_PRCTL:
         return syscall::sys_arch_prctl(arg1, arg2);
     case SYS_SET_TID_ADDR:

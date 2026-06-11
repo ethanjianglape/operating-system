@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 
 // ============================================================================
 // Shell commands
@@ -22,6 +23,7 @@ void cmd_help(void) {
     puts("  cd PATH  - Change directory");
     puts("  pid      - Show process ID");
     puts("  mmap     - Test mmap syscall");
+    puts("  mkdir    - Test mkdir syscall");
     puts("  exit     - Exit shell");
 }
 
@@ -79,6 +81,14 @@ void cmd_mmap(void) {
     }
 }
 
+void cmd_mkdir() {
+    puts("testing mkdir");
+    mkdir("/tmp/dir/test/a", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    mkdir("/tmp/dir/test/b", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    mkdir("/tmp/dir/test/c", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    mkdir("/tmp/dir/files", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+}
+
 // ============================================================================
 // Command parser
 // ============================================================================
@@ -86,13 +96,13 @@ void cmd_mmap(void) {
 void process_command(char* cmd) {
     // Skip leading whitespace
     while (*cmd == ' ') cmd++;
-
+    
     // Empty command
     if (*cmd == '\0') return;
 
     // Parse command and argument
     char* arg = cmd;
-    while (*arg && *arg != ' ') arg++;
+    while (*arg && *arg != ' ' && *arg != '\n') arg++;
     if (*arg == ' ') {
         *arg++ = '\0';
         while (*arg == ' ') arg++;
@@ -101,6 +111,8 @@ void process_command(char* cmd) {
     // Dispatch
     if (strcmp(cmd, "help") == 0) {
         cmd_help();
+    } else if (strcmp(cmd, "mkdir") == 0) {
+        cmd_mkdir();
     } else if (strcmp(cmd, "pwd") == 0) {
         cmd_pwd();
     } else if (strcmp(cmd, "cd") == 0) {

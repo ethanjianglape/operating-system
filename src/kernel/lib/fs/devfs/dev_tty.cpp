@@ -335,8 +335,6 @@ namespace fs::devfs::tty {
         const auto* cbuffer = reinterpret_cast<const char*>(buffer);
         kstring str(cbuffer, count);
 
-        log::debug("tty write: '", str, "', len = ", count);
-
         console::put(str);
         console::redraw();
 

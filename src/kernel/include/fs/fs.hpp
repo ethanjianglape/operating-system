@@ -89,6 +89,7 @@ namespace fs {
         Inode* (*open)(FileSystem* self, const kstring& path, int flags);
         int (*stat)(FileSystem* self, const kstring& path, Stat* out);
         int (*readdir)(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
+        int (*mkdir)(FileSystem* self, const kstring& path, int mode);
     };
 
     /**
@@ -108,4 +109,5 @@ namespace fs {
     Inode* open(const kstring& path, int flags);
     int stat(const kstring& path, Stat* out);
     int readdir(const kstring& path, kvector<DirEntry>& out);
+    int mkdir(const kstring& path, int mode);
 }

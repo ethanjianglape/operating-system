@@ -37,4 +37,11 @@ namespace log {
     void debug(Ts... args) {
         kprintln("[DEBUG] ", args...);
     }
+
+    template <typename T, typename... Rest>
+    void debugf(const kstring& format, T first, Rest... rest) {
+        kprint("[DEBUG] ");
+        kprintf(format, first, rest...);
+        kprintln();
+    }
 }
