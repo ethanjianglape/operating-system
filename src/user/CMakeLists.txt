@@ -11,36 +11,6 @@ set(USER_BIN_DIR "${CMAKE_SOURCE_DIR}/initramfs/bin")
 # Linker script
 set(USER_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
 
-function(add_user_program name source)
-    add_executable(${name} ${source})
-
-    # Remove inherited kernel flags and set userspace flags
-    set_target_properties(${name} PROPERTIES
-        COMPILE_OPTIONS ""
-        RUNTIME_OUTPUT_DIRECTORY ${USER_BIN_DIR}
-    )
-
-    # Userspace compile flags (override any inherited flags)
-    target_compile_options(${name} PRIVATE
-        -m64
-        -march=x86-64
-        -ffreestanding
-        -fno-stack-protector
-        -fno-pic
-        -nostdlib
-        -mno-red-zone
-        -Wall
-        -Wextra
-    )
-
-    # Linker flags
-    target_link_options(${name} PRIVATE
-        -nostdlib
-        -static
-        -T ${USER_LINKER_SCRIPT}
-    )
-endfunction()
-
 # Function to add a musl libc program (compiled with musl-gcc, statically linked)
 function(add_musl_program name source)
     add_custom_command(
