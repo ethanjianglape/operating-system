@@ -1,15 +1,16 @@
 #include "memory/slab.hpp"
-#include <memory/memory.hpp>
-#include <log/log.hpp>
 #include <arch.hpp>
+#include <log/log.hpp>
+#include <memory/memory.hpp>
 
 #include <cstddef>
 
-void* kmalloc(std::size_t size) {
+void* kmalloc(std::size_t size)
+{
     arch::cpu::cli();
 
     void* ret = nullptr;
-    
+
     if (size == 0) {
         log::warn("kmalloc(0) returns NULL");
     } else if (slab::can_alloc(size)) {
@@ -23,7 +24,8 @@ void* kmalloc(std::size_t size) {
     return ret;
 }
 
-void kfree(void* ptr) {
+void kfree(void* ptr)
+{
     if (ptr == nullptr) {
         return;
     }
@@ -33,7 +35,7 @@ void kfree(void* ptr) {
     if (slab::is_slab(ptr)) {
         slab::free(ptr);
     } else {
-        arch::vmm::free_contiguous_kmem(ptr);        
+        arch::vmm::free_contiguous_kmem(ptr);
     }
 
     arch::cpu::sti();

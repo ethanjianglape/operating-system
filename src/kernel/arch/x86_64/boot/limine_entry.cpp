@@ -16,7 +16,8 @@
 extern void kernel_main();
 
 extern "C" [[noreturn]]
-void _start(void) {
+void _start(void)
+{
     kernel_main();
 
     while (true) {

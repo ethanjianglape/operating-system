@@ -1,16 +1,16 @@
 #include <boot/boot.hpp>
 #include <boot/limine.h>
 
-#include <arch.hpp>
 #include <acpi/acpi.hpp>
-#include <framebuffer/framebuffer.hpp>
+#include <arch.hpp>
 #include <fmt/fmt.hpp>
-#include <fs/initramfs/initramfs.hpp>
+#include <framebuffer/framebuffer.hpp>
 #include <fs/devfs/devfs.hpp>
+#include <fs/initramfs/initramfs.hpp>
 #include <fs/tmpfs/tmpfs.hpp>
+#include <kpanic/kpanic.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
-#include <kpanic/kpanic.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -27,78 +27,97 @@
 // ============================================================================
 
 [[gnu::used, gnu::section(".limine_requests_start")]]
-static volatile std::uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
+static volatile std::uint64_t limine_requests_start_marker[]
+    = LIMINE_REQUESTS_START_MARKER;
 
 [[gnu::used, gnu::section(".limine_requests")]]
-static volatile std::uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(4);
+static volatile std::uint64_t limine_base_revision[]
+    = LIMINE_BASE_REVISION(4);
 
 [[gnu::used, gnu::section(".limine_requests")]]
-static volatile limine_framebuffer_request framebuffer_request = {
-    .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
-    .revision = 0,
-    .response = nullptr
-};
+static volatile limine_framebuffer_request framebuffer_request
+    = {
+          .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
+          .revision = 0,
+          .response = nullptr
+      };
 
 [[gnu::used, gnu::section(".limine_requests")]]
-static volatile limine_memmap_request memmap_request = {
-    .id = LIMINE_MEMMAP_REQUEST_ID,
-    .revision = 0,
-    .response = nullptr
-};
+static volatile limine_memmap_request memmap_request
+    = {
+          .id = LIMINE_MEMMAP_REQUEST_ID,
+          .revision = 0,
+          .response = nullptr
+      };
 
 [[gnu::used, gnu::section(".limine_requests")]]
-static volatile limine_hhdm_request hhdm_request = {
-    .id = LIMINE_HHDM_REQUEST_ID,
-    .revision = 0,
-    .response = nullptr
-};
+static volatile limine_hhdm_request hhdm_request
+    = {
+          .id = LIMINE_HHDM_REQUEST_ID,
+          .revision = 0,
+          .response = nullptr
+      };
 
 [[gnu::used, gnu::section(".limine_requests")]]
-static volatile limine_rsdp_request rsdp_request = {
-    .id = LIMINE_RSDP_REQUEST_ID,
-    .revision = 0,
-    .response = nullptr
-};
+static volatile limine_rsdp_request rsdp_request
+    = {
+          .id = LIMINE_RSDP_REQUEST_ID,
+          .revision = 0,
+          .response = nullptr
+      };
 
 [[gnu::used, gnu::section(".limine_requests")]]
-static volatile limine_module_request module_request = {
-    .id = LIMINE_MODULE_REQUEST_ID,
-    .revision = 0,
-    .response = nullptr,
-    .internal_module_count = 0,
-    .internal_modules = nullptr
-};
+static volatile limine_module_request module_request
+    = {
+          .id = LIMINE_MODULE_REQUEST_ID,
+          .revision = 0,
+          .response = nullptr,
+          .internal_module_count = 0,
+          .internal_modules = nullptr
+      };
 
 [[gnu::used, gnu::section(".limine_requests_end")]]
-static volatile std::uint64_t limine_requests_end_marker[] = LIMINE_REQUESTS_END_MARKER;
+static volatile std::uint64_t limine_requests_end_marker[]
+    = LIMINE_REQUESTS_END_MARKER;
 
-const char* memmap_type_to_string(std::uint64_t type) {
+const char* memmap_type_to_string(std::uint64_t type)
+{
     switch (type) {
-        case LIMINE_MEMMAP_USABLE:                  return "Usable";
-        case LIMINE_MEMMAP_RESERVED:                return "Reserved";
-        case LIMINE_MEMMAP_ACPI_RECLAIMABLE:        return "ACPI Reclaimable";
-        case LIMINE_MEMMAP_ACPI_NVS:                return "ACPI NVS";
-        case LIMINE_MEMMAP_BAD_MEMORY:              return "Bad Memory";
-        case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:  return "Bootloader Reclaimable";
-        case LIMINE_MEMMAP_EXECUTABLE_AND_MODULES:  return "Kernel and Modules";
-        case LIMINE_MEMMAP_FRAMEBUFFER:             return "Framebuffer";
-        default:                                    return "Unknown";
+    case LIMINE_MEMMAP_USABLE:
+        return "Usable";
+    case LIMINE_MEMMAP_RESERVED:
+        return "Reserved";
+    case LIMINE_MEMMAP_ACPI_RECLAIMABLE:
+        return "ACPI Reclaimable";
+    case LIMINE_MEMMAP_ACPI_NVS:
+        return "ACPI NVS";
+    case LIMINE_MEMMAP_BAD_MEMORY:
+        return "Bad Memory";
+    case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:
+        return "Bootloader Reclaimable";
+    case LIMINE_MEMMAP_EXECUTABLE_AND_MODULES:
+        return "Kernel and Modules";
+    case LIMINE_MEMMAP_FRAMEBUFFER:
+        return "Framebuffer";
+    default:
+        return "Unknown";
     }
 }
 
-void validate_limine_responses() {
+void validate_limine_responses()
+{
     if (framebuffer_request.response == nullptr) {
         kpanic("Limine framebuffer response is null");
     }
-    
+
     if (memmap_request.response == nullptr) {
         kpanic("Limine memory map response is null");
     }
-    
+
     if (hhdm_request.response == nullptr) {
         kpanic("Limine HHDM response is null");
     }
-    
+
     if (rsdp_request.response == nullptr) {
         kpanic("Limine RSDP response is null");
     }
@@ -106,7 +125,8 @@ void validate_limine_responses() {
     log::info("All required Limine responses present");
 }
 
-void init_framebuffer() {
+void init_framebuffer()
+{
     limine_framebuffer* fb = framebuffer_request.response->framebuffers[0];
 
     if (fb == nullptr) {
@@ -124,7 +144,8 @@ void init_framebuffer() {
     framebuffer::init(fb_info);
 }
 
-void init_memory() {
+void init_memory()
+{
     auto entry_count = memmap_request.response->entry_count;
     limine_memmap_entry** entries = memmap_request.response->entries;
 
@@ -140,8 +161,8 @@ void init_memory() {
         auto length = entries[i]->length;
         auto type = entries[i]->type;
 
-        log::info("  [", i, "] ", fmt::hex{base}, " - ", fmt::hex{base + length},
-                  " (", fmt::hex{length}, ") ", memmap_type_to_string(type));
+        log::info("  [", i, "] ", fmt::hex { base }, " - ", fmt::hex { base + length },
+            " (", fmt::hex { length }, ") ", memmap_type_to_string(type));
 
         if (type == LIMINE_MEMMAP_USABLE) {
             pmm::add_free_memory(base, length);
@@ -156,13 +177,15 @@ void init_memory() {
     arch::vmm::init(hhdm_offset);
 }
 
-void init_acpi() {
+void init_acpi()
+{
     void* rsdp_address = rsdp_request.response->address;
 
     acpi::init(rsdp_address);
 }
 
-void init_modules() {
+void init_modules()
+{
     limine_module_response* modules = module_request.response;
 
     if (modules == nullptr || modules->module_count == 0) {
@@ -190,15 +213,16 @@ void init_modules() {
 }
 
 namespace boot {
-    void init() {
-        log::init_start("Limine Boot");
+void init()
+{
+    log::init_start("Limine Boot");
 
-        validate_limine_responses();
-        init_framebuffer();
-        init_memory();
-        init_acpi();
-        init_modules();
+    validate_limine_responses();
+    init_framebuffer();
+    init_memory();
+    init_acpi();
+    init_modules();
 
-        log::init_end("Limine Boot");
-    }
+    log::init_end("Limine Boot");
+}
 }

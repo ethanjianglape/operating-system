@@ -1,124 +1,130 @@
+#include <algo/algo.hpp>
 #include <fs/fs.hpp>
 #include <log/log.hpp>
-#include <algo/algo.hpp>
 
 namespace fs {
-    static kvector<MountPoint> mount_points;
+static kvector<MountPoint> mount_points;
 
-    kstring canonicalize(const kstring& path) {
-        kvector<kstring> canonical;
-        kvector<kstring> parts = algo::split(path, '/');
+kstring canonicalize(const kstring& path)
+{
+    kvector<kstring> canonical;
+    kvector<kstring> parts = algo::split(path, '/');
 
-        for (const auto& part : parts) {
-            if (part.empty() || part == ".") {
-                continue;
-            }
-
-            if (part == "..") {
-                if (!canonical.empty()) {
-                    canonical.pop_back();
-                }
-            } else {
-                canonical.push_back(part);
-            }
+    for (const auto& part : parts) {
+        if (part.empty() || part == ".") {
+            continue;
         }
 
-        return "/" + algo::join(canonical, '/');
-    }
-
-    static MountPoint* find_mount(const kstring& path) {
-        MountPoint* best = nullptr;
-
-        for (auto& mp : mount_points) {
-            if (path.starts_with(mp.root)) {
-                if (!best || mp.root.size() > best->root.size()) {
-                    best = &mp;
-                }
+        if (part == "..") {
+            if (!canonical.empty()) {
+                canonical.pop_back();
             }
+        } else {
+            canonical.push_back(part);
         }
-
-        return best;
     }
 
-    static kstring strip_mount_prefix(const kstring& path, MountPoint* mp) {
-        return path.substr(mp->root.size());
-    }
+    return "/" + algo::join(canonical, '/');
+}
 
-    void mount(const kstring& path, FileSystem* fs) {
-        for (const auto& mp : mount_points) {
-            if (mp.root == path) {
-                log::warn("Filesystem already mounted at: ", path);
-                return;
+static MountPoint* find_mount(const kstring& path)
+{
+    MountPoint* best = nullptr;
+
+    for (auto& mp : mount_points) {
+        if (path.starts_with(mp.root)) {
+            if (!best || mp.root.size() > best->root.size()) {
+                best = &mp;
             }
         }
-
-        log::debug("fs: mounting ", fs->name, " at ", path);
-        mount_points.push_back({
-            .root = path,
-            .filesystem = fs
-        });
     }
 
-    Inode* open(const kstring& path, int flags) {
-        kstring canonical = canonicalize(path);
-        MountPoint* mp = find_mount(canonical);
+    return best;
+}
 
-        if (!mp) {
-            log::debug("fs::open: no mount for ", canonical);
-            return nullptr;
+static kstring strip_mount_prefix(const kstring& path, MountPoint* mp)
+{
+    return path.substr(mp->root.size());
+}
+
+void mount(const kstring& path, FileSystem* fs)
+{
+    for (const auto& mp : mount_points) {
+        if (mp.root == path) {
+            log::warn("Filesystem already mounted at: ", path);
+            return;
         }
-
-        kstring relative = strip_mount_prefix(canonical, mp);
-
-        return mp->filesystem->open(mp->filesystem, relative, flags);
     }
 
-    int stat(const kstring& path, Stat* out) {
-        kstring canonical = canonicalize(path);
-        MountPoint* mp = find_mount(canonical);
+    log::debug("fs: mounting ", fs->name, " at ", path);
+    mount_points.push_back({ .root = path,
+        .filesystem = fs });
+}
 
-        if (!mp) {
-            return -1;
-        }
+Inode* open(const kstring& path, int flags)
+{
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
 
-        if (!mp->filesystem->stat) {
-            return -1;
-        }
-
-        kstring relative = strip_mount_prefix(canonical, mp);
-        return mp->filesystem->stat(mp->filesystem, relative, out);
+    if (!mp) {
+        log::debug("fs::open: no mount for ", canonical);
+        return nullptr;
     }
 
-    int readdir(const kstring& path, kvector<DirEntry>& out) {
-        kstring canonical = canonicalize(path);
-        MountPoint* mp = find_mount(canonical);
+    kstring relative = strip_mount_prefix(canonical, mp);
 
-        if (!mp) {
-            return -1;
-        }
+    return mp->filesystem->open(mp->filesystem, relative, flags);
+}
 
-        if (!mp->filesystem->readdir) {
-            return -1;
-        }
+int stat(const kstring& path, Stat* out)
+{
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
 
-        kstring relative = strip_mount_prefix(canonical, mp);
-
-        return mp->filesystem->readdir(mp->filesystem, relative, out);
+    if (!mp) {
+        return -1;
     }
 
-    int mkdir(const kstring& path, int mode) {
-        kstring canonical = canonicalize(path);
-        MountPoint* mp = find_mount(canonical);
-
-        if (!mp) {
-            return -1;
-        }
-
-        if (!mp->filesystem->mkdir) {
-            return -1;
-        }
-
-        kstring relative = strip_mount_prefix(canonical, mp);
-        return mp->filesystem->mkdir(mp->filesystem, relative, mode);
+    if (!mp->filesystem->stat) {
+        return -1;
     }
+
+    kstring relative = strip_mount_prefix(canonical, mp);
+    return mp->filesystem->stat(mp->filesystem, relative, out);
+}
+
+int readdir(const kstring& path, kvector<DirEntry>& out)
+{
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
+
+    if (!mp) {
+        return -1;
+    }
+
+    if (!mp->filesystem->readdir) {
+        return -1;
+    }
+
+    kstring relative = strip_mount_prefix(canonical, mp);
+
+    return mp->filesystem->readdir(mp->filesystem, relative, out);
+}
+
+int mkdir(const kstring& path, int mode)
+{
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
+
+    if (!mp) {
+        return -1;
+    }
+
+    if (!mp->filesystem->mkdir) {
+        return -1;
+    }
+
+    kstring relative = strip_mount_prefix(canonical, mp);
+    return mp->filesystem->mkdir(mp->filesystem, relative, mode);
+}
 }

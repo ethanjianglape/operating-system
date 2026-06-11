@@ -1,13 +1,13 @@
 #pragma once
 
-#include <memory/memory.hpp>
 #include <crt/crt.h>
+#include <memory/memory.hpp>
 
-#include <cstddef>
 #include <concepts>
-#include <type_traits>
+#include <cstddef>
 #include <initializer_list>
 #include <new> // IWYU pragma: keep (required for placement new)
+#include <type_traits>
 
 template <typename T>
 concept klist_storable = requires {
@@ -30,11 +30,12 @@ private:
 
     std::size_t _size;
 
-    bool remove_node(node* n) {
+    bool remove_node(node* n)
+    {
         if (empty() || n == nullptr) {
             return false;
         }
-        
+
         _size--;
 
         if (empty()) {
@@ -43,7 +44,7 @@ private:
             if (n == _head) {
                 _head = n->next;
             }
-            
+
             n->prev->next = n->next;
             n->next->prev = n->prev;
         }
@@ -51,27 +52,41 @@ private:
         delete n;
         return true;
     }
-public:
-    klist() : _head{nullptr}, _size{0} {}
 
-    klist(std::initializer_list<T> init) : klist{} {
+public:
+    klist()
+        : _head { nullptr }
+        , _size { 0 }
+    {
+    }
+
+    klist(std::initializer_list<T> init)
+        : klist {}
+    {
         for (const auto& val : init) {
             push_back(val);
         }
     }
 
-    explicit klist(std::size_t count, const T& value = {}) : klist{} {
+    explicit klist(std::size_t count, const T& value = {})
+        : klist {}
+    {
         while (count--) {
             push_back(value);
         }
     }
 
-    klist(klist&& other) : _head{other._head}, _size{other._size} {
+    klist(klist&& other)
+        : _head { other._head }
+        , _size { other._size }
+    {
         other._head = nullptr;
         other._size = 0;
     }
 
-    klist(const klist& other) : klist{} {
+    klist(const klist& other)
+        : klist {}
+    {
         if (other.empty()) {
             return;
         }
@@ -84,7 +99,8 @@ public:
         }
     }
 
-    klist& operator=(klist&& other) {
+    klist& operator=(klist&& other)
+    {
         if (this != &other) {
             clear();
             _head = other._head;
@@ -92,11 +108,12 @@ public:
             other._head = nullptr;
             other._size = 0;
         }
-        
+
         return *this;
     }
 
-    klist& operator=(const klist& other) {
+    klist& operator=(const klist& other)
+    {
         if (this != &other) {
             clear();
 
@@ -107,11 +124,12 @@ public:
                 n = n->next;
             }
         }
-        
+
         return *this;
     }
 
-    ~klist() {
+    ~klist()
+    {
         clear();
     }
 
@@ -125,7 +143,8 @@ public:
     T& back() { return _head->prev->data; }
     const T& back() const { return _head->prev->data; }
 
-    T& operator[](std::size_t pos) {
+    T& operator[](std::size_t pos)
+    {
         node* n = _head;
 
         while (pos--) {
@@ -135,7 +154,8 @@ public:
         return n->data;
     }
 
-    const T& operator[](std::size_t pos) const {
+    const T& operator[](std::size_t pos) const
+    {
         const node* n = _head;
 
         while (pos--) {
@@ -145,7 +165,8 @@ public:
         return n->data;
     }
 
-    void reverse() {
+    void reverse()
+    {
         if (empty()) {
             return;
         }
@@ -162,7 +183,8 @@ public:
         _head = _head->next;
     }
 
-    bool erase(std::size_t pos) {
+    bool erase(std::size_t pos)
+    {
         if (empty() || pos >= _size) {
             return false;
         }
@@ -176,31 +198,33 @@ public:
         return remove_node(n);
     }
 
-    bool remove(const T& t) {
+    bool remove(const T& t)
+    {
         if (empty()) {
             return false;
         }
-        
+
         node* n = _head;
 
         for (std::size_t i = 0; i < _size; i++) {
             if (n->data == t) {
                 return remove_node(n);
             }
-            
+
             n = n->next;
         }
 
         return false;
     }
 
-    void push_front(const T& t) {
-        auto* n = new node{};
+    void push_front(const T& t)
+    {
+        auto* n = new node {};
 
         if constexpr (std::is_trivially_copyable_v<T>) {
             n->data = t;
         } else {
-            new (&n->data) T{t};
+            new (&n->data) T { t };
         }
 
         if (empty()) {
@@ -219,13 +243,14 @@ public:
         _size++;
     }
 
-    void push_back(const T& t) {
+    void push_back(const T& t)
+    {
         auto* n = new node();
 
         if constexpr (std::is_trivially_copyable_v<T>) {
             n->data = t;
         } else {
-            new (&n->data) T{t};
+            new (&n->data) T { t };
         }
 
         if (empty()) {
@@ -243,7 +268,8 @@ public:
         _size++;
     }
 
-    void pop_front() {
+    void pop_front()
+    {
         if (empty()) {
             return;
         }
@@ -264,7 +290,8 @@ public:
         delete n;
     }
 
-    void pop_back() {
+    void pop_back()
+    {
         if (empty()) {
             return;
         }
@@ -283,19 +310,22 @@ public:
         delete n;
     }
 
-    void rotate_next() {
+    void rotate_next()
+    {
         if (!empty()) {
             _head = _head->next;
         }
     }
 
-    void rotate_prev() {
+    void rotate_prev()
+    {
         if (!empty()) {
             _head = _head->prev;
         }
     }
 
-    void clear() {
+    void clear()
+    {
         while (!empty()) {
             pop_back();
         }

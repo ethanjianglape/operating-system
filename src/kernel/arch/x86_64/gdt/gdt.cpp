@@ -124,149 +124,155 @@ extern "C" void load_gdt(x86_64::gdt::Gdtr* ptr);
 extern "C" void load_tss();
 
 namespace x86_64::gdt {
-    static GdtTable gdt_table;
-    static Gdtr gdtr;
-    static TssEntry tss;
+static GdtTable gdt_table;
+static Gdtr gdtr;
+static TssEntry tss;
 
-    // When transitioning from user to kernel code, this is the stack
-    // that the TSS will point to in TSS.RSP0. For now it is just a static
-    // 16KiB array.
-    alignas(16) static std::uint8_t kernel_stack[4096 * 4];
+// When transitioning from user to kernel code, this is the stack
+// that the TSS will point to in TSS.RSP0. For now it is just a static
+// 16KiB array.
+alignas(16) static std::uint8_t kernel_stack[4096 * 4];
 
-    /**
-     * @brief Constructs a GDT entry from its component fields.
-     * @param base Base address (ignored in 64-bit mode for code/data segments).
-     * @param limit Segment limit (ignored in 64-bit mode for code/data segments).
-     * @param access Access byte defining segment type and privilege level.
-     * @param flags Flags including granularity and 64-bit mode flag.
-     * @return The constructed GdtEntry.
-     */
-    GdtEntry make_gdt_entry(std::uint32_t base, std::uint32_t limit, std::uint8_t access, std::uint8_t flags) {
-        GdtEntry entry{};
+/**
+ * @brief Constructs a GDT entry from its component fields.
+ * @param base Base address (ignored in 64-bit mode for code/data segments).
+ * @param limit Segment limit (ignored in 64-bit mode for code/data segments).
+ * @param access Access byte defining segment type and privilege level.
+ * @param flags Flags including granularity and 64-bit mode flag.
+ * @return The constructed GdtEntry.
+ */
+GdtEntry make_gdt_entry(std::uint32_t base, std::uint32_t limit, std::uint8_t access, std::uint8_t flags)
+{
+    GdtEntry entry {};
 
-        // Base address is 32 bits split between 1 16-bit field and 2 8-bit fields
-        entry.base_low = base & 0xFFFF;
-        entry.base_mid = (base >> 16) & 0xFF;
-        entry.base_high = (base >> 24) & 0xFF;
+    // Base address is 32 bits split between 1 16-bit field and 2 8-bit fields
+    entry.base_low = base & 0xFFFF;
+    entry.base_mid = (base >> 16) & 0xFF;
+    entry.base_high = (base >> 24) & 0xFF;
 
-        // Limit is 20 bits split between 1 16-bit field and 1 4-bit field
-        entry.limit_low = limit & 0xFFFF;
-        entry.limit_high = (limit >> 16) & 0x0F;
+    // Limit is 20 bits split between 1 16-bit field and 1 4-bit field
+    entry.limit_low = limit & 0xFFFF;
+    entry.limit_high = (limit >> 16) & 0x0F;
 
-        entry.access = access;
-        entry.flags = flags;
+    entry.access = access;
+    entry.flags = flags;
 
-        return entry;
-    }
+    return entry;
+}
 
-    /**
-     * @brief Constructs the TSS descriptor for the GDT.
-     *
-     * The TSS descriptor is 16 bytes (spans 2 GDT slots) because it requires
-     * a full 64-bit base address to locate the TSS structure in memory.
-     *
-     * @return The constructed TssDescriptor.
-     */
-    TssDescriptor make_tss_descriptor() {
-        TssDescriptor desc{};
+/**
+ * @brief Constructs the TSS descriptor for the GDT.
+ *
+ * The TSS descriptor is 16 bytes (spans 2 GDT slots) because it requires
+ * a full 64-bit base address to locate the TSS structure in memory.
+ *
+ * @return The constructed TssDescriptor.
+ */
+TssDescriptor make_tss_descriptor()
+{
+    TssDescriptor desc {};
 
-        std::uint64_t base = reinterpret_cast<std::uint64_t>(&tss);
-        std::uint32_t limit = sizeof(TssEntry) - 1;
+    std::uint64_t base = reinterpret_cast<std::uint64_t>(&tss);
+    std::uint32_t limit = sizeof(TssEntry) - 1;
 
-        desc.limit_low = limit & 0xFFFF;
-        desc.base_low = base & 0xFFFF;
-        desc.base_mid = (base >> 16) & 0xFF;
-        desc.access = ACCESS_PRESENT | ACCESS_RING_0 | ACCESS_TSS;
-        desc.limit_flags = (limit >> 16) & 0x0F;
-        desc.base_high = (base >> 24) & 0xFF;
-        desc.base_upper = (base >> 32) & 0xFFFFFFFF;
-        desc.reserved = 0x0;
+    desc.limit_low = limit & 0xFFFF;
+    desc.base_low = base & 0xFFFF;
+    desc.base_mid = (base >> 16) & 0xFF;
+    desc.access = ACCESS_PRESENT | ACCESS_RING_0 | ACCESS_TSS;
+    desc.limit_flags = (limit >> 16) & 0x0F;
+    desc.base_high = (base >> 24) & 0xFF;
+    desc.base_upper = (base >> 32) & 0xFFFFFFFF;
+    desc.reserved = 0x0;
 
-        return desc;
-    }
+    return desc;
+}
 
-    /**
-     * @brief Populates the GDT with all segment descriptors.
-     *
-     * Creates the null descriptor, kernel code/data, user code/data, and TSS entries.
-     */
-    void init_gdt_table() {
-        // Entry 0: null descriptor
-        gdt_table.zero = {};
+/**
+ * @brief Populates the GDT with all segment descriptors.
+ *
+ * Creates the null descriptor, kernel code/data, user code/data, and TSS entries.
+ */
+void init_gdt_table()
+{
+    // Entry 0: null descriptor
+    gdt_table.zero = {};
 
-        // Entry 1: kernel code
-        gdt_table.kernel_code = make_gdt_entry(0, 0xFFFFF, KERNEL_CODE, FLAGS_64BIT_4KB);
+    // Entry 1: kernel code
+    gdt_table.kernel_code = make_gdt_entry(0, 0xFFFFF, KERNEL_CODE, FLAGS_64BIT_4KB);
 
-        // Entry 2: kernel data
-        gdt_table.kernel_data = make_gdt_entry(0, 0xFFFFF, KERNEL_DATA, FLAGS_64BIT_4KB);
+    // Entry 2: kernel data
+    gdt_table.kernel_data = make_gdt_entry(0, 0xFFFFF, KERNEL_DATA, FLAGS_64BIT_4KB);
 
-        // Entry 3: user data
-        gdt_table.user_data = make_gdt_entry(0, 0xFFFFF, USER_DATA, FLAGS_64BIT_4KB);
+    // Entry 3: user data
+    gdt_table.user_data = make_gdt_entry(0, 0xFFFFF, USER_DATA, FLAGS_64BIT_4KB);
 
-        // Entry 4: user code
-        gdt_table.user_code = make_gdt_entry(0, 0xFFFFF, USER_CODE, FLAGS_64BIT_4KB);
+    // Entry 4: user code
+    gdt_table.user_code = make_gdt_entry(0, 0xFFFFF, USER_CODE, FLAGS_64BIT_4KB);
 
-        // Entry 5-6: TSS
-        gdt_table.tss = make_tss_descriptor();
-    }
+    // Entry 5-6: TSS
+    gdt_table.tss = make_tss_descriptor();
+}
 
-    /**
-     * @brief Initializes the Task State Segment structure.
-     *
-     * Sets RSP0 to point to the kernel stack for ring 3 to ring 0 transitions.
-     */
-    void init_tss() {
-        tss = {};
+/**
+ * @brief Initializes the Task State Segment structure.
+ *
+ * Sets RSP0 to point to the kernel stack for ring 3 to ring 0 transitions.
+ */
+void init_tss()
+{
+    tss = {};
 
-        tss.rsp0 = reinterpret_cast<std::uint64_t>(kernel_stack) + sizeof(kernel_stack);
-        tss.iopb_offset = sizeof(TssEntry);
+    tss.rsp0 = reinterpret_cast<std::uint64_t>(kernel_stack) + sizeof(kernel_stack);
+    tss.iopb_offset = sizeof(TssEntry);
 
-        log::debug("TSS kernel_stack @ ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack)});
-        log::debug("TSS kernel_stack top = ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack + sizeof(kernel_stack))});
-    }
+    log::debug("TSS kernel_stack @ ", fmt::hex { reinterpret_cast<uint64_t>(kernel_stack) });
+    log::debug("TSS kernel_stack top = ", fmt::hex { reinterpret_cast<uint64_t>(kernel_stack + sizeof(kernel_stack)) });
+}
 
-    /**
-     * @brief Logs a GDT entry's fields for debugging.
-     * @param entry The GDT entry to log.
-     * @param i The index of the entry in the GDT.
-     * @param name Human-readable name for the entry.
-     */
-    void log_gdt_entry(GdtEntry& entry, int i, const char* name) {
-        log::info("GDT[", i, "]: ", name, " [base (", fmt::hex{entry.base_low}, ",",
-                  fmt::hex{entry.base_mid}, ",", fmt::hex{entry.base_high}, ") limit (",
-                  fmt::hex{entry.limit_low}, ",", fmt::hex{entry.limit_high}, ") flags (",
-                  fmt::bin{entry.flags}, ") access (", fmt::hex{entry.access}, ")]");
-    }
+/**
+ * @brief Logs a GDT entry's fields for debugging.
+ * @param entry The GDT entry to log.
+ * @param i The index of the entry in the GDT.
+ * @param name Human-readable name for the entry.
+ */
+void log_gdt_entry(GdtEntry& entry, int i, const char* name)
+{
+    log::info("GDT[", i, "]: ", name, " [base (", fmt::hex { entry.base_low }, ",",
+        fmt::hex { entry.base_mid }, ",", fmt::hex { entry.base_high }, ") limit (",
+        fmt::hex { entry.limit_low }, ",", fmt::hex { entry.limit_high }, ") flags (",
+        fmt::bin { entry.flags }, ") access (", fmt::hex { entry.access }, ")]");
+}
 
-    /**
-     * @brief Initializes the GDT and TSS, then loads them into the CPU.
-     *
-     * This is a one-time setup during boot. After LGDT and LTR are executed,
-     * the CPU uses these structures automatically for privilege checks and
-     * stack switching.
-     */
-    void init() {
-        log::init_start("GDT");
+/**
+ * @brief Initializes the GDT and TSS, then loads them into the CPU.
+ *
+ * This is a one-time setup during boot. After LGDT and LTR are executed,
+ * the CPU uses these structures automatically for privilege checks and
+ * stack switching.
+ */
+void init()
+{
+    log::init_start("GDT");
 
-        init_gdt_table();
-        init_tss();
+    init_gdt_table();
+    init_tss();
 
-        gdtr.limit = sizeof(gdt_table) - 1;
-        gdtr.base = reinterpret_cast<std::uint64_t>(&gdt_table);
+    gdtr.limit = sizeof(gdt_table) - 1;
+    gdtr.base = reinterpret_cast<std::uint64_t>(&gdt_table);
 
-        load_gdt(&gdtr);
-        load_tss();
+    load_gdt(&gdtr);
+    load_tss();
 
-        log::info("GDT created with 6 entries");
-        log::info("GDT.limit = ", fmt::hex{gdtr.limit});
-        log::info("GDT.base = ", fmt::hex{gdtr.base});
+    log::info("GDT created with 6 entries");
+    log::info("GDT.limit = ", fmt::hex { gdtr.limit });
+    log::info("GDT.base = ", fmt::hex { gdtr.base });
 
-        log_gdt_entry(gdt_table.zero, 0, "NULL");
-        log_gdt_entry(gdt_table.kernel_code, 1, "Kernel Code");
-        log_gdt_entry(gdt_table.kernel_data, 2, "Kernel Data");
-        log_gdt_entry(gdt_table.user_data, 3, "User Data");
-        log_gdt_entry(gdt_table.user_code, 4, "User Code");
+    log_gdt_entry(gdt_table.zero, 0, "NULL");
+    log_gdt_entry(gdt_table.kernel_code, 1, "Kernel Code");
+    log_gdt_entry(gdt_table.kernel_data, 2, "Kernel Data");
+    log_gdt_entry(gdt_table.user_data, 3, "User Data");
+    log_gdt_entry(gdt_table.user_code, 4, "User Code");
 
-        log::init_end("GDT");
-    }
+    log::init_end("GDT");
+}
 }

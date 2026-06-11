@@ -110,65 +110,66 @@
 
 #include "idt.hpp"
 
-#include <log/log.hpp>
 #include <cstdint>
+#include <log/log.hpp>
 
 extern "C" void* isr_stub_table[];
 
 namespace x86_64::idt {
-    alignas(16) static IdtEntry idt_entries[IDT_MAX_DESCRIPTORS];
-    alignas(16) static Idtr idtr;
+alignas(16) static IdtEntry idt_entries[IDT_MAX_DESCRIPTORS];
+alignas(16) static Idtr idtr;
 
-    /**
-     * @brief Configures an IDT entry for a specific interrupt vector.
-     * @param vector Interrupt vector number (0-255).
-     * @param isr_ptr Pointer to the interrupt service routine.
-     * @param ist Interrupt Stack Table index (0 = don't switch stacks, 1-7 = use IST entry).
-     * @param flags Attributes byte (IDT_KERNEL_INT or IDT_USER_INT).
-     */
-    void set_descriptor(std::uint8_t vector, void* isr_ptr, std::uint8_t ist, std::uint8_t flags) {
-        IdtEntry* desc = &idt_entries[vector];
+/**
+ * @brief Configures an IDT entry for a specific interrupt vector.
+ * @param vector Interrupt vector number (0-255).
+ * @param isr_ptr Pointer to the interrupt service routine.
+ * @param ist Interrupt Stack Table index (0 = don't switch stacks, 1-7 = use IST entry).
+ * @param flags Attributes byte (IDT_KERNEL_INT or IDT_USER_INT).
+ */
+void set_descriptor(std::uint8_t vector, void* isr_ptr, std::uint8_t ist, std::uint8_t flags)
+{
+    IdtEntry* desc = &idt_entries[vector];
 
-        const auto isr = reinterpret_cast<std::uintptr_t>(isr_ptr);
+    const auto isr = reinterpret_cast<std::uintptr_t>(isr_ptr);
 
-        // isr is the address of the actual code this IDT will execute when fired,
-        // it is split up into 3 chunks in the IDT entry:
-        desc->offset_low = isr & 0xFFFF;
-        desc->offset_mid = (isr >> 16) & 0xFFFF;
-        desc->offset_high = (isr >> 32) & 0xFFFFFFFF;
-        
-        desc->ist = ist & 0x7;
-        desc->selector = KERNEL_CODE_SEL;
-        desc->attributes = flags;
-        desc->reserved = 0x0;
-    }
+    // isr is the address of the actual code this IDT will execute when fired,
+    // it is split up into 3 chunks in the IDT entry:
+    desc->offset_low = isr & 0xFFFF;
+    desc->offset_mid = (isr >> 16) & 0xFFFF;
+    desc->offset_high = (isr >> 32) & 0xFFFFFFFF;
 
-    /**
-     * @brief Initializes all 256 IDT entries and loads the IDT into the CPU.
-     *
-     * All vectors default to kernel-only (DPL=0). Userspace uses the SYSCALL
-     * instruction (via LSTAR) rather than software interrupts.
-     */
-    void init() {
-        log::init_start("IDT");
-
-        // idtr is just a "pointer" to our entire list of 256 entries, we use this
-        // when calling the LIDT instruction so the CPU knows where to find them
-        idtr.base = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
-        idtr.limit = sizeof(IdtEntry) * IDT_MAX_DESCRIPTORS - 1;
-
-        for (std::size_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
-            std::uint8_t flags = IDT_KERNEL_INT;
-            std::uint8_t ist = 0x0;
-
-            set_descriptor(vector, isr_stub_table[vector], ist, flags);
-        }
-
-        // LIDT called a single time to tell the CPU where our IDT is located,
-        // this is never called again during the lifecycle of the OS
-        asm volatile("lidt %0" : : "m"(idtr));
-
-        log::init_end("IDT");
-    }
+    desc->ist = ist & 0x7;
+    desc->selector = KERNEL_CODE_SEL;
+    desc->attributes = flags;
+    desc->reserved = 0x0;
 }
 
+/**
+ * @brief Initializes all 256 IDT entries and loads the IDT into the CPU.
+ *
+ * All vectors default to kernel-only (DPL=0). Userspace uses the SYSCALL
+ * instruction (via LSTAR) rather than software interrupts.
+ */
+void init()
+{
+    log::init_start("IDT");
+
+    // idtr is just a "pointer" to our entire list of 256 entries, we use this
+    // when calling the LIDT instruction so the CPU knows where to find them
+    idtr.base = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
+    idtr.limit = sizeof(IdtEntry) * IDT_MAX_DESCRIPTORS - 1;
+
+    for (std::size_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
+        std::uint8_t flags = IDT_KERNEL_INT;
+        std::uint8_t ist = 0x0;
+
+        set_descriptor(vector, isr_stub_table[vector], ist, flags);
+    }
+
+    // LIDT called a single time to tell the CPU where our IDT is located,
+    // this is never called again during the lifecycle of the OS
+    asm volatile("lidt %0" : : "m"(idtr));
+
+    log::init_end("IDT");
+}
+}

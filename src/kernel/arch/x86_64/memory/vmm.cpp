@@ -48,7 +48,8 @@ std::uintptr_t get_hhdm_offset() { return hhdm_offset; }
 
 static std::size_t get_kernel_pml4_index() { return (hhdm_offset >> 39) & 0x1FF; }
 
-static PageTableEntry* get_table_from_pte(const PageTableEntry& pte) {
+static PageTableEntry* get_table_from_pte(const PageTableEntry& pte)
+{
     return phys_to_virt<PageTableEntry*>(pte.addr << 12);
 }
 
@@ -58,7 +59,8 @@ static PageTableEntry* get_table_from_pte(const PageTableEntry& pte) {
  * @param virt The virtual address to look up.
  * @return Pointer to the page table entry, or nullptr if not mapped.
  */
-static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt) {
+static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt)
+{
     const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
     const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
     const std::uintptr_t pd_idx = (virt >> 21) & 0x1FF;
@@ -95,7 +97,8 @@ static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt) {
  * @param phys Physical address to map (must be page-aligned).
  * @param flags Page flags (PAGE_PRESENT, PAGE_WRITE, PAGE_USER, etc.).
  */
-void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags) {
+void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags)
+{
     pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
     pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
     pte->us = (flags & PAGE_USER) ? 1 : 0;
@@ -103,13 +106,15 @@ void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags) {
     pte->addr = phys >> 12; // the bottom 12 bits of the physical address are not stored
 }
 
-void zero_page(std::uintptr_t* virt) {
+void zero_page(std::uintptr_t* virt)
+{
     for (std::size_t i = 0; i < NUM_PT_ENTRIES; i++) {
         virt[i] = 0x0;
     }
 }
 
-std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags) {
+std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags)
+{
     std::uintptr_t virt = get_hhdm_offset() + phys;
 
     map_kpage(virt, phys, flags);
@@ -127,7 +132,8 @@ std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags) {
  * @param pte Pointer to the page table entry to check/populate.
  * @param flags Flags to set on the entry if newly allocated.
  */
-void ensure_table_present(PageTableEntry* pte, std::uint32_t flags) {
+void ensure_table_present(PageTableEntry* pte, std::uint32_t flags)
+{
     if (!pte->p) {
         // Allocate a new 4KiB physical frame for this entry
         auto page_phys = pmm::alloc_frame<std::uintptr_t>();
@@ -151,7 +157,8 @@ void ensure_table_present(PageTableEntry* pte, std::uint32_t flags) {
  * @param phys Physical address to map to (must be page-aligned).
  * @param flags Page flags (PAGE_PRESENT, PAGE_WRITE, PAGE_USER, etc.).
  */
-void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
+void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags)
+{
     const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
     const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
     const std::uintptr_t pd_idx = (virt >> 21) & 0x1FF;
@@ -171,7 +178,8 @@ void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, st
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
 
-void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
+void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags)
+{
     map_page(kernel_pml4, virt, phys, flags);
 }
 
@@ -180,11 +188,12 @@ void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags) {
  * @param pml4 The page table to modify.
  * @param virt Virtual address to unmap.
  */
-void unmap_page(PageTableEntry* pml4, std::uintptr_t virt) {
+void unmap_page(PageTableEntry* pml4, std::uintptr_t virt)
+{
     PageTableEntry* pte = get_pte(pml4, virt);
 
     if (pte == nullptr) {
-        log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex{virt});
+        log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex { virt });
         return;
     }
 
@@ -204,12 +213,14 @@ void unmap_page(PageTableEntry* pml4, std::uintptr_t virt) {
  * Use free_kpage() to release. For allocations that need automatic size
  * tracking, use alloc_contiguous_kmem() instead.
  */
-void* alloc_kpage() {
+void* alloc_kpage()
+{
     auto phys = pmm::alloc_frame<std::uintptr_t>();
     return phys_to_virt<void*>(phys);
 }
 
-void free_kpage(void* virt) {
+void free_kpage(void* virt)
+{
     if (virt == nullptr) {
         return;
     }
@@ -235,7 +246,8 @@ void free_kpage(void* virt) {
  * @param bytes Number of bytes to allocate.
  * @return Pointer to usable memory (after the hidden header).
  */
-void* alloc_contiguous_kmem(std::size_t bytes) {
+void* alloc_contiguous_kmem(std::size_t bytes)
+{
     std::size_t total = bytes + sizeof(std::size_t);
     std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
 
@@ -253,7 +265,8 @@ void* alloc_contiguous_kmem(std::size_t bytes) {
  * Reads the page count from the hidden header before the pointer, then
  * frees that many contiguous frames. Only use with alloc_contiguous_kmem().
  */
-void free_contiguous_kmem(void* virt) {
+void free_contiguous_kmem(void* virt)
+{
     if (virt == nullptr) {
         return;
     }
@@ -264,7 +277,8 @@ void free_contiguous_kmem(void* virt) {
     pmm::free_contiguous_frames(hhdm_virt_to_phys(block), num_pages);
 }
 
-std::uintptr_t find_contiguous_unmapped_space(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t num_pages) {
+std::uintptr_t find_contiguous_unmapped_space(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t num_pages)
+{
     std::uintptr_t virt = virt_hint;
 
     while (virt + (num_pages * PAGE_SIZE) < hhdm_offset) {
@@ -289,7 +303,8 @@ std::uintptr_t find_contiguous_unmapped_space(PageTableEntry* pml4, std::uintptr
 }
 
 MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t bytes,
-                                std::uint32_t flags) {
+    std::uint32_t flags)
+{
     std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
     std::uintptr_t virt = find_contiguous_unmapped_space(pml4, virt_hint, num_pages);
 
@@ -299,7 +314,7 @@ MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, 
         map_page(pml4, virt + (page * PAGE_SIZE), phys, flags);
     }
 
-    return MemoryAllocation{.virt_addr = virt, .num_pages = num_pages};
+    return MemoryAllocation { .virt_addr = virt, .num_pages = num_pages };
 }
 
 /**
@@ -315,7 +330,8 @@ MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, 
  * @param flags Page flags (PAGE_USER, PAGE_WRITE, etc.).
  * @return Number of pages mapped (needed for unmap_mem_at).
  */
-std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags) {
+std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags)
+{
     std::uintptr_t page_start = virt & ~(PAGE_SIZE - 1);
     std::uintptr_t page_end = (virt + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
     std::size_t num_pages = (page_end - page_start) / PAGE_SIZE;
@@ -335,7 +351,8 @@ std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t by
  * @param virt Starting virtual address.
  * @param num_pages Number of pages to unmap (from map_mem_at return value).
  */
-void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages) {
+void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages)
+{
     for (std::size_t page = 0; page < num_pages; page++) {
         unmap_page(pml4, virt + (page * PAGE_SIZE));
     }
@@ -351,7 +368,8 @@ void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pag
  * @pre Leaf physical frames should already be freed via unmap_mem_at().
  * @param pml4 The top-level page table to free.
  */
-void free_page_tables(PageTableEntry* pml4) {
+void free_page_tables(PageTableEntry* pml4)
+{
     std::size_t kernel_pml4_idx = get_kernel_pml4_index();
 
     for (std::size_t pml4_idx = 0; pml4_idx < kernel_pml4_idx; pml4_idx++) {
@@ -387,7 +405,8 @@ void free_page_tables(PageTableEntry* pml4) {
 
 // Set our local pml4 to point to the pml4 created by Limine which
 // is stored in cr3 as a physical address
-void init_pml4() {
+void init_pml4()
+{
     std::uint64_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
 
@@ -395,7 +414,7 @@ void init_pml4() {
     constexpr std::uint64_t bottom_12_mask = ~0xFFF;
     kernel_pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
-    log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
+    log::info("VMM pml4 addr = ", fmt::hex { kernel_pml4 });
 }
 
 /**
@@ -407,7 +426,8 @@ void init_pml4() {
  *
  * @return Pointer to the new PML4 (virtual address).
  */
-PageTableEntry* create_user_pml4() {
+PageTableEntry* create_user_pml4()
+{
     auto phys = pmm::alloc_frame<std::uintptr_t>();
     auto* virt = phys_to_virt<std::uintptr_t*>(phys);
     auto* new_pml4 = reinterpret_cast<PageTableEntry*>(virt);
@@ -431,12 +451,13 @@ void switch_kernel_pml4() { switch_pml4(kernel_pml4); }
  * @brief Initializes the Virtual Memory Manager.
  * @param offset The HHDM offset provided by Limine.
  */
-void init(std::uintptr_t offset) {
+void init(std::uintptr_t offset)
+{
     log::init_start("VMM");
 
     hhdm_offset = offset;
 
-    log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
+    log::info("VMM HHDM addr = ", fmt::hex { hhdm_offset });
 
     init_pml4();
 

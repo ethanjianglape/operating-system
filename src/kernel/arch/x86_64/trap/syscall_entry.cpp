@@ -98,20 +98,19 @@
 #include "syscall/sys_proc.hpp"
 #include "syscall/sys_sleep.hpp"
 #include "syscall/sys_thread.hpp"
-#include <linux/syscall.hpp>
 #include <linux/ioctl.hpp>
+#include <linux/syscall.hpp>
 
-#include <arch/x86_64/percpu/percpu.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <process/process.hpp>
+#include <arch/x86_64/percpu/percpu.hpp>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
+#include <process/process.hpp>
 
-#include <cstdint>
 #include <cerrno>
+#include <cstdint>
 
-extern "C"
-void syscall_entry();
+extern "C" void syscall_entry();
 
 /**
  * @brief Routes syscalls to their implementations based on syscall number.
@@ -121,8 +120,8 @@ void syscall_entry();
  * Called from syscall_entry.s after registers are saved. The syscall number is
  * in frame->rax, arguments in frame->rdi, rsi, rdx (matching System V ABI).
  */
-extern "C"
-std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
+extern "C" std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame)
+{
     using namespace linux;
 
     auto* process = x86_64::percpu::current_process();
@@ -191,35 +190,36 @@ std::uint64_t syscall_dispatcher(x86_64::trap::SyscallFrame* frame) {
 }
 
 namespace x86_64::trap {
-    /**
-     * @brief Configures the CPU for SYSCALL/SYSRET operation.
-     *
-     * Programs the four MSRs that control SYSCALL behavior (see file header for
-     * detailed MSR documentation). Must be called once during boot, before any
-     * userspace code runs.
-     */
-    void init() {
-        log::init_start("Syscall");
+/**
+ * @brief Configures the CPU for SYSCALL/SYSRET operation.
+ *
+ * Programs the four MSRs that control SYSCALL behavior (see file header for
+ * detailed MSR documentation). Must be called once during boot, before any
+ * userspace code runs.
+ */
+void init()
+{
+    log::init_start("Syscall");
 
-        // STAR MSR encodes segment selectors for both SYSCALL and SYSRET:
-        //   [63:48] = 0x10: SYSRET base. CPU computes CS=base+16=0x20, SS=base+8=0x18
-        //   [47:32] = 0x08: SYSCALL target. CS=0x08 (kernel code), SS=CS+8=0x10 (kernel data)
-        // Note: SYSRET adds 16/8 and ORs with 3 for RPL, so user gets CS=0x23, SS=0x1B
-        std::uint64_t star   = (0x10UL << 48) | (0x08UL << 32);
-        std::uint64_t lstar  = reinterpret_cast<std::uint64_t>(syscall_entry);
-        std::uint64_t sfmask = SFMASK_DF | SFMASK_IF | SFMASK_TF;
-        std::uint64_t efer   = cpu::rdmsr(MSR_EFER) | EFER_SCE;
+    // STAR MSR encodes segment selectors for both SYSCALL and SYSRET:
+    //   [63:48] = 0x10: SYSRET base. CPU computes CS=base+16=0x20, SS=base+8=0x18
+    //   [47:32] = 0x08: SYSCALL target. CS=0x08 (kernel code), SS=CS+8=0x10 (kernel data)
+    // Note: SYSRET adds 16/8 and ORs with 3 for RPL, so user gets CS=0x23, SS=0x1B
+    std::uint64_t star = (0x10UL << 48) | (0x08UL << 32);
+    std::uint64_t lstar = reinterpret_cast<std::uint64_t>(syscall_entry);
+    std::uint64_t sfmask = SFMASK_DF | SFMASK_IF | SFMASK_TF;
+    std::uint64_t efer = cpu::rdmsr(MSR_EFER) | EFER_SCE;
 
-        cpu::wrmsr(MSR_STAR, star);
-        cpu::wrmsr(MSR_LSTAR, lstar);
-        cpu::wrmsr(MSR_SFMASK, sfmask);
-        cpu::wrmsr(MSR_EFER, efer);
+    cpu::wrmsr(MSR_STAR, star);
+    cpu::wrmsr(MSR_LSTAR, lstar);
+    cpu::wrmsr(MSR_SFMASK, sfmask);
+    cpu::wrmsr(MSR_EFER, efer);
 
-        log::info("STAR   = ", fmt::hex{star});
-        log::info("LSTAR  = ", fmt::hex{lstar});
-        log::info("SFMASK = ", fmt::hex{sfmask});
-        log::info("EFER   = ", fmt::hex{efer});
+    log::info("STAR   = ", fmt::hex { star });
+    log::info("LSTAR  = ", fmt::hex { lstar });
+    log::info("SFMASK = ", fmt::hex { sfmask });
+    log::info("EFER   = ", fmt::hex { efer });
 
-        log::init_end("Syscall");
-    }
+    log::init_end("Syscall");
+}
 }

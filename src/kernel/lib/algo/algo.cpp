@@ -1,63 +1,66 @@
 #include <algo/algo.hpp>
 
 namespace algo {
-    kvector<kstring> split(kstring::const_iterator begin,
-                           kstring::const_iterator end,
-                           char delim) {
-        kvector<kstring> result{};
-        kstring part = "";
+kvector<kstring> split(kstring::const_iterator begin,
+    kstring::const_iterator end,
+    char delim)
+{
+    kvector<kstring> result {};
+    kstring part = "";
 
-        while (begin != end) {
-            char c = *begin;
+    while (begin != end) {
+        char c = *begin;
 
-            if (c == delim) {
-                if (!part.empty()) {
-                    result.push_back(part);
-                    part = "";
-                }
-            } else {
-                part += c;
-            }
-
-            ++begin;
-        }
-
-        if (!part.empty()) {
-            result.push_back(part);
-        }
-
-        return result;
-    }
-
-    kvector<kstring> tokenize(kstring::const_iterator begin,
-                              kstring::const_iterator end,
-                              char delim) {
-        kvector<kstring> result{};
-        kstring part = "";
-        char last = '\0';
-
-        while (begin != end) {
-            char c = *begin;
-            last = c;
-
-            if (c == delim) {
+        if (c == delim) {
+            if (!part.empty()) {
                 result.push_back(part);
                 part = "";
-            } else {
-                part += c;
             }
-
-            ++begin;
+        } else {
+            part += c;
         }
 
-        if (!part.empty() || last == delim) {
+        ++begin;
+    }
+
+    if (!part.empty()) {
+        result.push_back(part);
+    }
+
+    return result;
+}
+
+kvector<kstring> tokenize(kstring::const_iterator begin,
+    kstring::const_iterator end,
+    char delim)
+{
+    kvector<kstring> result {};
+    kstring part = "";
+    char last = '\0';
+
+    while (begin != end) {
+        char c = *begin;
+        last = c;
+
+        if (c == delim) {
             result.push_back(part);
+            part = "";
+        } else {
+            part += c;
         }
 
-        return result;
+        ++begin;
     }
-    
-    kvector<kstring> split(const kstring& str, char delim) {
-        return split(str.begin(), str.end(), delim);
+
+    if (!part.empty() || last == delim) {
+        result.push_back(part);
     }
+
+    return result;
+}
+
+kvector<kstring> split(const kstring& str, char delim)
+{
+    return split(str.begin(), str.end(), delim);
+}
 }

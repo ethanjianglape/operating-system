@@ -21,7 +21,8 @@
 #endif
 
 [[noreturn]]
-void kernel_main() {
+void kernel_main()
+{
     x86_64::drivers::serial::init();
     x86_64::cpu::init();
 

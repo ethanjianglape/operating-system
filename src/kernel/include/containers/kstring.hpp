@@ -7,7 +7,7 @@
 #include <cstddef>
 
 class kstring final {
-  private:
+private:
     static constexpr std::size_t INITIAL_CAPACITY = 16;
     static constexpr std::size_t GROWTH_RATE = 2;
 
@@ -16,19 +16,22 @@ class kstring final {
     std::size_t _length;
     std::size_t _capacity;
 
-    void ensure_capacity(std::size_t new_size) {
+    void ensure_capacity(std::size_t new_size)
+    {
         while (_capacity < new_size) {
             grow();
         }
     }
 
-    void ensure_null_terminated() {
+    void ensure_null_terminated()
+    {
         if (_data) {
             _data[_length] = '\0';
         }
     }
 
-    void grow() {
+    void grow()
+    {
         std::size_t new_capacity = _capacity == 0 ? INITIAL_CAPACITY : _capacity * GROWTH_RATE;
 
         char* new_data = kalloc<char>(new_capacity);
@@ -42,7 +45,8 @@ class kstring final {
         _capacity = new_capacity;
     }
 
-    kstring trim(bool front, bool back, char c) const {
+    kstring trim(bool front, bool back, char c) const
+    {
         if (!front && !back) {
             return *this;
         }
@@ -69,28 +73,35 @@ class kstring final {
         return result;
     }
 
-  public:
+public:
     class iterator {
-      private:
+    private:
         char* _ptr;
 
-      public:
-        iterator(char* ptr) : _ptr{ptr} {}
+    public:
+        iterator(char* ptr)
+            : _ptr { ptr }
+        {
+        }
         char& operator*() const { return *_ptr; }
         char* operator->() const { return _ptr; }
-        iterator& operator++() {
+        iterator& operator++()
+        {
             _ptr++;
             return *this;
         }
-        iterator& operator--() {
+        iterator& operator--()
+        {
             _ptr--;
             return *this;
         }
-        iterator& operator+=(std::size_t n) {
+        iterator& operator+=(std::size_t n)
+        {
             _ptr += n;
             return *this;
         }
-        iterator& operator-=(std::size_t n) {
+        iterator& operator-=(std::size_t n)
+        {
             _ptr -= n;
             return *this;
         }
@@ -99,52 +110,64 @@ class kstring final {
     };
 
     class const_iterator {
-      private:
+    private:
         const char* _ptr;
 
-      public:
-        const_iterator(const char* ptr) : _ptr{ptr} {}
+    public:
+        const_iterator(const char* ptr)
+            : _ptr { ptr }
+        {
+        }
         const char& operator*() const { return *_ptr; }
         const char* operator->() const { return _ptr; }
-        const_iterator operator+(int n) {
+        const_iterator operator+(int n)
+        {
             auto result = *this;
             result._ptr += n;
             return result;
         }
-        const_iterator operator-(int n) {
+        const_iterator operator-(int n)
+        {
             auto result = *this;
             result._ptr -= n;
             return result;
         }
-        std::ptrdiff_t operator-(const const_iterator& other) {
+        std::ptrdiff_t operator-(const const_iterator& other)
+        {
             auto a = reinterpret_cast<std::uintptr_t>(this->_ptr);
             auto b = reinterpret_cast<std::uintptr_t>(other._ptr);
 
             return a - b;
         }
-        const_iterator& operator++() {
+        const_iterator& operator++()
+        {
             _ptr++;
             return *this;
         }
-        const_iterator operator++(int) {
+        const_iterator operator++(int)
+        {
             const auto val = *this;
             _ptr++;
             return val;
         }
-        const_iterator& operator--() {
+        const_iterator& operator--()
+        {
             _ptr--;
             return *this;
         }
-        const_iterator operator--(int) {
+        const_iterator operator--(int)
+        {
             const auto val = *this;
             _ptr--;
             return val;
         }
-        const_iterator& operator+=(std::size_t n) {
+        const_iterator& operator+=(std::size_t n)
+        {
             _ptr += n;
             return *this;
         }
-        const_iterator& operator-=(std::size_t n) {
+        const_iterator& operator-=(std::size_t n)
+        {
             _ptr -= n;
             return *this;
         }
@@ -159,10 +182,17 @@ class kstring final {
     static constexpr std::size_t npos = -1;
 
     // Default constructor
-    kstring() : _data{nullptr}, _length{0}, _capacity{0} {}
+    kstring()
+        : _data { nullptr }
+        , _length { 0 }
+        , _capacity { 0 }
+    {
+    }
 
     // Construct from C string
-    kstring(const char* s) : kstring{} {
+    kstring(const char* s)
+        : kstring {}
+    {
         if (s == nullptr) {
             return;
         }
@@ -174,7 +204,9 @@ class kstring final {
     }
 
     // Construct from C string of count length
-    kstring(const char* s, std::size_t count) : kstring{} {
+    kstring(const char* s, std::size_t count)
+        : kstring {}
+    {
         if (s == nullptr) {
             return;
         }
@@ -186,14 +218,20 @@ class kstring final {
     }
 
     // Move constructor
-    kstring(kstring&& other) noexcept : _data{other._data}, _length{other._length}, _capacity{other._capacity} {
+    kstring(kstring&& other) noexcept
+        : _data { other._data }
+        , _length { other._length }
+        , _capacity { other._capacity }
+    {
         other._data = nullptr;
         other._length = 0;
         other._capacity = 0;
     }
 
     // Copy constructor
-    kstring(const kstring& other) : kstring{} {
+    kstring(const kstring& other)
+        : kstring {}
+    {
         if (other.empty()) {
             return;
         }
@@ -204,7 +242,8 @@ class kstring final {
     }
 
     // Move assignment
-    kstring& operator=(kstring&& other) noexcept {
+    kstring& operator=(kstring&& other) noexcept
+    {
         if (this != &other) {
             kfree(_data);
             _data = other._data;
@@ -219,7 +258,8 @@ class kstring final {
     }
 
     // Copy assignment
-    kstring& operator=(const kstring& other) {
+    kstring& operator=(const kstring& other)
+    {
         if (this != &other) {
             kfree(_data);
             _data = nullptr;
@@ -237,7 +277,8 @@ class kstring final {
     }
 
     // Assign from C string
-    kstring& operator=(const char* s) {
+    kstring& operator=(const char* s)
+    {
         kfree(_data);
         _data = nullptr;
         _length = 0;
@@ -263,10 +304,10 @@ class kstring final {
     bool empty() const { return _length == 0; }
 
     // Iterators
-    iterator begin() { return iterator{_data}; }
-    iterator end() { return iterator{_data + _length}; }
-    const_iterator begin() const { return const_iterator{_data}; }
-    const_iterator end() const { return const_iterator{_data + _length}; }
+    iterator begin() { return iterator { _data }; }
+    iterator end() { return iterator { _data + _length }; }
+    const_iterator begin() const { return const_iterator { _data }; }
+    const_iterator end() const { return const_iterator { _data + _length }; }
 
     // Element access
     char& front() { return _data[0]; }
@@ -282,7 +323,8 @@ class kstring final {
     char* data() { return _data; }
     const char* data() const { return _data; }
 
-    std::size_t find(const char* str) const {
+    std::size_t find(const char* str) const
+    {
         if (!str) {
             return npos;
         }
@@ -318,14 +360,16 @@ class kstring final {
     kstring trim(char c = ' ') const { return trim(true, true, c); }
 
     // Modifiers
-    char& push_back(char c) {
+    char& push_back(char c)
+    {
         ensure_capacity(_length + 2); // +1 for char, +1 for null terminator
         _data[_length] = c;
         _data[_length + 1] = '\0';
         return _data[_length++];
     }
 
-    void pop_back() {
+    void pop_back()
+    {
         if (empty()) {
             return;
         }
@@ -335,13 +379,15 @@ class kstring final {
         ensure_null_terminated();
     }
 
-    void clear() {
+    void clear()
+    {
         _length = 0;
 
         ensure_null_terminated();
     }
 
-    void reverse() {
+    void reverse()
+    {
         if (empty()) {
             return;
         }
@@ -360,7 +406,8 @@ class kstring final {
     }
 
     // Inserts the char c at pos
-    void insert(std::size_t pos, char c) {
+    void insert(std::size_t pos, char c)
+    {
         if (pos > _length) {
             return;
         }
@@ -382,7 +429,8 @@ class kstring final {
     }
 
     // Removes the char as pos
-    void erase(std::size_t pos) {
+    void erase(std::size_t pos)
+    {
         if (pos >= _length) {
             return;
         }
@@ -399,7 +447,8 @@ class kstring final {
     // Truncates the string from [0, pos]
     // "abcdefg".truncate(0) -> ""
     // "abcdefg".truncate(3) -> "abc"
-    void truncate(std::size_t pos) {
+    void truncate(std::size_t pos)
+    {
         if (pos >= _length) {
             return;
         }
@@ -409,7 +458,8 @@ class kstring final {
         ensure_null_terminated();
     }
 
-    kstring substr(std::size_t pos, std::size_t len = npos) const {
+    kstring substr(std::size_t pos, std::size_t len = npos) const
+    {
         if (pos >= _length) {
             return "";
         }
@@ -426,7 +476,8 @@ class kstring final {
     }
 
     // Concatenation
-    kstring& operator+=(const kstring& other) {
+    kstring& operator+=(const kstring& other)
+    {
         if (other.empty()) {
             return *this;
         }
@@ -437,7 +488,8 @@ class kstring final {
         return *this;
     }
 
-    kstring& operator+=(const char* s) {
+    kstring& operator+=(const char* s)
+    {
         if (s == nullptr) {
             return *this;
         }
@@ -449,23 +501,27 @@ class kstring final {
         return *this;
     }
 
-    kstring& operator+=(char c) {
+    kstring& operator+=(char c)
+    {
         push_back(c);
         return *this;
     }
 
-    kstring operator+(const kstring& other) const {
-        kstring res{*this};
+    kstring operator+(const kstring& other) const
+    {
+        kstring res { *this };
         return res += other;
     }
 
-    kstring operator+(const char* s) const {
-        kstring res{*this};
+    kstring operator+(const char* s) const
+    {
+        kstring res { *this };
         return res += s;
     }
 
     // Comparison
-    bool operator==(const kstring& other) const {
+    bool operator==(const kstring& other) const
+    {
         if (_length != other._length) {
             return false;
         }
@@ -475,7 +531,8 @@ class kstring final {
 
     bool operator!=(const kstring& other) const { return !operator==(other); }
 
-    bool operator==(const char* s) const {
+    bool operator==(const char* s) const
+    {
         if (s == nullptr) {
             return empty();
         }
@@ -489,7 +546,8 @@ class kstring final {
 
     bool operator!=(const char* s) const { return !operator==(s); }
 
-    bool starts_with(const kstring& other) const {
+    bool starts_with(const kstring& other) const
+    {
         if (other.length() > _length) {
             return false;
         }
@@ -506,7 +564,8 @@ class kstring final {
     bool ends_with(char c) const { return _length > 0 && back() == c; }
 };
 
-inline kstring operator+(const char* lhs, const kstring& rhs) {
-    kstring res{lhs};
+inline kstring operator+(const char* lhs, const kstring& rhs)
+{
+    kstring res { lhs };
     return res += rhs;
 }

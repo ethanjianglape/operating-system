@@ -1,66 +1,69 @@
 #pragma once
 
 #include "fmt/fmt.hpp"
+#include <containers/klist.hpp>
 #include <containers/kstring.hpp>
 #include <containers/kvector.hpp>
-#include <containers/klist.hpp>
 
 namespace algo {
-    // Splits a string into components around a delim.
-    // Removes empty values.
-    // ex: split("a::b:c:::d", ':') -> ["a", "b", "c", "d"]
-    kvector<kstring> split(kstring::const_iterator begin,
-                           kstring::const_iterator end,
-                           char delim = ' ');
+// Splits a string into components around a delim.
+// Removes empty values.
+// ex: split("a::b:c:::d", ':') -> ["a", "b", "c", "d"]
+kvector<kstring> split(kstring::const_iterator begin,
+    kstring::const_iterator end,
+    char delim = ' ');
 
-    // Splits a string into components around a delim.
-    // Keeps empty values.
-    // ex: split("a::b:c:::d", ':') -> ["a", "", "b", "c", "", "", "d"]
-    kvector<kstring> tokenize(kstring::const_iterator begin,
-                              kstring::const_iterator end,
-                              char delim = ' ');
-    
-    kvector<kstring> split(const kstring& str, char delim = ' ');
+// Splits a string into components around a delim.
+// Keeps empty values.
+// ex: split("a::b:c:::d", ':') -> ["a", "", "b", "c", "", "", "d"]
+kvector<kstring> tokenize(kstring::const_iterator begin,
+    kstring::const_iterator end,
+    char delim = ' ');
 
-    template <typename Iter>
-    kstring join(Iter begin,
-                 Iter end,
-                 char delim = ' ') {
-        kstring result;
+kvector<kstring> split(const kstring& str, char delim = ' ');
 
-        while (begin != end) {
-            result += *begin;
-            result += delim;
-            ++begin;
-        }
+template <typename Iter>
+kstring join(Iter begin,
+    Iter end,
+    char delim = ' ')
+{
+    kstring result;
 
-        if (!result.empty()) {
-            result.pop_back();
-        }
-
-        return result;
+    while (begin != end) {
+        result += *begin;
+        result += delim;
+        ++begin;
     }
 
-    template <typename T>
-    kstring join(const kvector<T>& v, char delim = ' ') {
-        return join(v.begin(), v.end(), delim);
+    if (!result.empty()) {
+        result.pop_back();
     }
 
-    template <typename T>
-    kstring join(const klist<T>& list, char delim = ' ') {
-        kstring result;
+    return result;
+}
 
-        for (std::size_t i = 0; i < list.size(); i++) {
-            const T& item = list[i];
+template <typename T>
+kstring join(const kvector<T>& v, char delim = ' ')
+{
+    return join(v.begin(), v.end(), delim);
+}
 
-            result += fmt::to_string(item);
-            result.push_back(delim);
-        }
+template <typename T>
+kstring join(const klist<T>& list, char delim = ' ')
+{
+    kstring result;
 
-        if (!result.empty()) {
-            result.pop_back();
-        }
+    for (std::size_t i = 0; i < list.size(); i++) {
+        const T& item = list[i];
 
-        return result;
+        result += fmt::to_string(item);
+        result.push_back(delim);
     }
+
+    if (!result.empty()) {
+        result.pop_back();
+    }
+
+    return result;
+}
 }

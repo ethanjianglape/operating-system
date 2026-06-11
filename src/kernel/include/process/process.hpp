@@ -10,70 +10,70 @@
 #include <cstdint>
 
 namespace process {
-    enum class ProcessState : std::uint8_t {
-        RUNNING  = 1,
-        READY    = 2,
-        BLOCKED  = 3,
-        SLEEPING = 4,
-        DEAD     = 5,
-    };
+enum class ProcessState : std::uint8_t {
+    RUNNING = 1,
+    READY = 2,
+    BLOCKED = 3,
+    SLEEPING = 4,
+    DEAD = 5,
+};
 
-    enum class WaitReason : std::uint8_t {
-        NONE     = 0,
-        KEYBOARD = 1,
-        SLEEP    = 2,
-    };
-    
-    struct ProcessAllocation {
-        std::uintptr_t virt_addr;
-        std::size_t num_pages;
-    };
-    
-    struct Process {
-        // Process meta info
-        std::size_t pid;
-        ProcessState state;
-        WaitReason wait_reason;
-        int exit_status;
+enum class WaitReason : std::uint8_t {
+    NONE = 0,
+    KEYBOARD = 1,
+    SLEEP = 2,
+};
 
-        kstring working_dir;
+struct ProcessAllocation {
+    std::uintptr_t virt_addr;
+    std::size_t num_pages;
+};
 
-        // Address space
-        arch::vmm::PageTableEntry* pml4;
-        std::uintptr_t entry;
-        std::uintptr_t heap_break;
-        std::uintptr_t mmap_min_addr;
+struct Process {
+    // Process meta info
+    std::size_t pid;
+    ProcessState state;
+    WaitReason wait_reason;
+    int exit_status;
 
-        std::uint8_t* kernel_stack;      // Base of kernel stack
-        std::uintptr_t kernel_rsp;       // Top of stack (initially)
-        std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
-        arch::context::ContextFrame* context_frame;
-        bool has_kernel_context;  // Can be resumed via context_switch
-        bool has_user_context;    // Can be resumed via schedule/iretq
+    kstring working_dir;
 
-        // VMM page info
-        kvector<ProcessAllocation> allocations;
+    // Address space
+    arch::vmm::PageTableEntry* pml4;
+    std::uintptr_t entry;
+    std::uintptr_t heap_break;
+    std::uintptr_t mmap_min_addr;
 
-        // File Descriptors
-        kvector<fs::FileDescriptor> fd_table;
+    std::uint8_t* kernel_stack; // Base of kernel stack
+    std::uintptr_t kernel_rsp; // Top of stack (initially)
+    std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
+    arch::context::ContextFrame* context_frame;
+    bool has_kernel_context; // Can be resumed via context_switch
+    bool has_user_context; // Can be resumed via schedule/iretq
 
-        // Sleep
-        std::uint64_t wake_time_ms;
+    // VMM page info
+    kvector<ProcessAllocation> allocations;
 
-        // Save CPU state
-        std::uintptr_t rip;
-        std::uintptr_t rsp;
-        std::uintptr_t rflags;
+    // File Descriptors
+    kvector<fs::FileDescriptor> fd_table;
 
-        std::uint64_t cs, ss;
-        std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-        std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+    // Sleep
+    std::uint64_t wake_time_ms;
 
-        std::uint64_t fs_base; // For thread local storage (TLS)
-        int* tidptr;
-    };
-    
-    Process* create_process(std::uint8_t* buffer, std::size_t size);
+    // Save CPU state
+    std::uintptr_t rip;
+    std::uintptr_t rsp;
+    std::uintptr_t rflags;
 
-    void terminate_process(Process* process);
+    std::uint64_t cs, ss;
+    std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+    std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+
+    std::uint64_t fs_base; // For thread local storage (TLS)
+    int* tidptr;
+};
+
+Process* create_process(std::uint8_t* buffer, std::size_t size);
+
+void terminate_process(Process* process);
 }

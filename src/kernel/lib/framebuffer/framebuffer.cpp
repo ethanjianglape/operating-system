@@ -1,111 +1,122 @@
-#include <console/console.hpp>
-#include <framebuffer/framebuffer.hpp>
-#include <fmt/fmt.hpp>
-#include <log/log.hpp>
 #include <arch.hpp>
+#include <console/console.hpp>
 #include <crt/crt.h>
+#include <fmt/fmt.hpp>
+#include <framebuffer/framebuffer.hpp>
+#include <log/log.hpp>
 
 #include <cstdint>
 
 namespace framebuffer {
-    static std::uint64_t fb_width;
-    static std::uint64_t fb_height;
-    static std::uint64_t fb_num_pixels;
-    static std::uint64_t fb_pitch;
-    static std::uint16_t fb_bpp;
+static std::uint64_t fb_width;
+static std::uint64_t fb_height;
+static std::uint64_t fb_num_pixels;
+static std::uint64_t fb_pitch;
+static std::uint16_t fb_bpp;
 
-    static std::uint8_t* vram = nullptr;
-    static std::uint8_t* vram_end = nullptr;
-    static std::uint64_t vram_size;
+static std::uint8_t* vram = nullptr;
+static std::uint8_t* vram_end = nullptr;
+static std::uint64_t vram_size;
 
-    std::uint32_t get_screen_width() {
-        return fb_width;
-    }
+std::uint32_t get_screen_width()
+{
+    return fb_width;
+}
 
-    std::uint32_t get_screen_height() {
-        return fb_height;
-    }
+std::uint32_t get_screen_height()
+{
+    return fb_height;
+}
 
-    inline constexpr std::size_t get_pixel_offset(std::uint32_t x, std::uint32_t y) {
-        return (y * fb_pitch) + (x * (fb_bpp / 8));
-    }
+inline constexpr std::size_t get_pixel_offset(std::uint32_t x, std::uint32_t y)
+{
+    return (y * fb_pitch) + (x * (fb_bpp / 8));
+}
 
-    void init(const FrameBufferInfo& info) {
-        log::init_start("Framebuffer");
-        
-        fb_width = info.width;
-        fb_height = info.height;
-        fb_num_pixels = fb_width * fb_height;
-        fb_pitch = info.pitch;
-        fb_bpp = info.bpp;
-        
-        vram_size = fb_num_pixels * (fb_bpp / 8);
-        vram = info.vram;
-        vram_end = vram + vram_size;
+void init(const FrameBufferInfo& info)
+{
+    log::init_start("Framebuffer");
 
-        log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
-        log::info("Framebuffer # pixels: ", fb_num_pixels);
-        log::info("VRAM: ", fmt::hex{vram});
-        log::info("VRAM Size: ", vram_size);
+    fb_width = info.width;
+    fb_height = info.height;
+    fb_num_pixels = fb_width * fb_height;
+    fb_pitch = info.pitch;
+    fb_bpp = info.bpp;
 
-        log::init_end("Framebuffer");
-    }
+    vram_size = fb_num_pixels * (fb_bpp / 8);
+    vram = info.vram;
+    vram_end = vram + vram_size;
 
-    void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color) {
-        const auto offset = get_pixel_offset(x, y);
-        const auto blue = color & 0xFF;
-        const auto green = (color >> 8) & 0xFF;
-        const auto red = (color >> 16) & 0xFF;
+    log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
+    log::info("Framebuffer # pixels: ", fb_num_pixels);
+    log::info("VRAM: ", fmt::hex { vram });
+    log::info("VRAM Size: ", vram_size);
 
-        vram[offset + RGB_OFFB] = blue;
-        vram[offset + RGB_OFFG] = green;
-        vram[offset + RGB_OFFR] = red;
-    }
+    log::init_end("Framebuffer");
+}
 
-    void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h) {
-        for (std::uint32_t px = x; px < x + w; px++) {
-            for (std::uint32_t py = y; py < y + h; py++) {
-                const auto color = get_pixel(px, py);
-                draw_pixel(px, py, ~color);
-            }
+void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color)
+{
+    const auto offset = get_pixel_offset(x, y);
+    const auto blue = color & 0xFF;
+    const auto green = (color >> 8) & 0xFF;
+    const auto red = (color >> 16) & 0xFF;
+
+    vram[offset + RGB_OFFB] = blue;
+    vram[offset + RGB_OFFG] = green;
+    vram[offset + RGB_OFFR] = red;
+}
+
+void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h)
+{
+    for (std::uint32_t px = x; px < x + w; px++) {
+        for (std::uint32_t py = y; py < y + h; py++) {
+            const auto color = get_pixel(px, py);
+            draw_pixel(px, py, ~color);
         }
     }
+}
 
-    void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h, std::uint32_t color) {
-        for (std::uint32_t px = x; px < x + w; px++) {
-            for (std::uint32_t py = y; py < y + h; py++) {
-                draw_pixel(px, py, color);
-            }
+void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h, std::uint32_t color)
+{
+    for (std::uint32_t px = x; px < x + w; px++) {
+        for (std::uint32_t py = y; py < y + h; py++) {
+            draw_pixel(px, py, color);
         }
     }
+}
 
-    std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y) {
-        std::uint32_t pixel = 0x00000000;
-        const auto offset = get_pixel_offset(x, y);
+std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y)
+{
+    std::uint32_t pixel = 0x00000000;
+    const auto offset = get_pixel_offset(x, y);
 
-        pixel |= vram[offset + RGB_OFFB];
-        pixel |= vram[offset + RGB_OFFG] << 8;
-        pixel |= vram[offset + RGB_OFFR] << 16;
+    pixel |= vram[offset + RGB_OFFB];
+    pixel |= vram[offset + RGB_OFFG] << 8;
+    pixel |= vram[offset + RGB_OFFR] << 16;
 
-        return pixel;
+    return pixel;
+}
+
+void clear_black()
+{
+    clear(RGB_BLACK);
+}
+
+void clear(std::uint32_t color)
+{
+    auto* start = reinterpret_cast<std::uint32_t*>(vram);
+    auto* end = reinterpret_cast<std::uint32_t*>(vram_end);
+
+    while (start != end) {
+        *start = color;
+        start++;
     }
+}
 
-    void clear_black() {
-        clear(RGB_BLACK);
-    }
-
-    void clear(std::uint32_t color) {
-        auto* start = reinterpret_cast<std::uint32_t*>(vram);
-        auto* end = reinterpret_cast<std::uint32_t*>(vram_end);
-
-        while (start != end) {
-            *start = color;
-            start++;
-        }
-    }
-
-    void log() {
-        log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
-        log::info("VRAM   = ", fmt::hex{vram});
-    }
+void log()
+{
+    log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
+    log::info("VRAM   = ", fmt::hex { vram });
+}
 }

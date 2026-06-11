@@ -64,57 +64,60 @@
 #include "percpu.hpp"
 
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <process/process.hpp>
-#include <log/log.hpp>
 #include <fmt/fmt.hpp>
+#include <log/log.hpp>
+#include <process/process.hpp>
 
 namespace x86_64::percpu {
-    /**
-     * @brief Initializes per-CPU data for the bootstrap processor.
-     *
-     * Allocates a PerCPU struct and sets GS_BASE to point to it. At boot we're
-     * in kernel mode, so GS_BASE gets the kernel value. KERNEL_GS_BASE starts
-     * as 0 (unused until first SWAPGS when entering userspace).
-     */
-    void init() {
-        log::init_start("PerCPU");
+/**
+ * @brief Initializes per-CPU data for the bootstrap processor.
+ *
+ * Allocates a PerCPU struct and sets GS_BASE to point to it. At boot we're
+ * in kernel mode, so GS_BASE gets the kernel value. KERNEL_GS_BASE starts
+ * as 0 (unused until first SWAPGS when entering userspace).
+ */
+void init()
+{
+    log::init_start("PerCPU");
 
-        PerCPU* per_cpu_data = new PerCPU{};
+    PerCPU* per_cpu_data = new PerCPU {};
 
-        per_cpu_data->self = per_cpu_data;  // For C++ access via get()
-        per_cpu_data->kernel_rsp = 0;       // Set by scheduler before running process
-        per_cpu_data->user_rsp = 0;         // Saved by syscall_entry
-        per_cpu_data->process = nullptr;    // Set by scheduler
+    per_cpu_data->self = per_cpu_data; // For C++ access via get()
+    per_cpu_data->kernel_rsp = 0; // Set by scheduler before running process
+    per_cpu_data->user_rsp = 0; // Saved by syscall_entry
+    per_cpu_data->process = nullptr; // Set by scheduler
 
-        // Set GS_BASE to our per-CPU struct. We're in kernel mode at boot.
-        cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(per_cpu_data));
+    // Set GS_BASE to our per-CPU struct. We're in kernel mode at boot.
+    cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(per_cpu_data));
 
-        // KERNEL_GS_BASE is the "other" slot for SWAPGS. Starts unused.
-        cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
+    // KERNEL_GS_BASE is the "other" slot for SWAPGS. Starts unused.
+    cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
 
-        log::info("GS_BASE = ", fmt::hex{reinterpret_cast<std::uintptr_t>(per_cpu_data)});
+    log::info("GS_BASE = ", fmt::hex { reinterpret_cast<std::uintptr_t>(per_cpu_data) });
 
-        log::init_end("PerCPU");
-    }
+    log::init_end("PerCPU");
+}
 
-    /**
-     * @brief Returns a pointer to the current CPU's PerCPU struct.
-     *
-     * Uses inline assembly to read the self pointer from %gs:0. This is the
-     * only place we need inline asm — after this, normal C++ pointer access
-     * works for all fields.
-     */
-    PerCPU* get() {
-        constexpr std::size_t PER_CPU_SELF_OFFSET = offsetof(x86_64::percpu::PerCPU, self);
-        PerCPU* ptr;
+/**
+ * @brief Returns a pointer to the current CPU's PerCPU struct.
+ *
+ * Uses inline assembly to read the self pointer from %gs:0. This is the
+ * only place we need inline asm — after this, normal C++ pointer access
+ * works for all fields.
+ */
+PerCPU* get()
+{
+    constexpr std::size_t PER_CPU_SELF_OFFSET = offsetof(x86_64::percpu::PerCPU, self);
+    PerCPU* ptr;
 
-        // Read the self pointer from offset 0 of GS-relative memory
-        asm volatile("mov %%gs:%c1, %0" : "=r"(ptr) : "i"(PER_CPU_SELF_OFFSET) : "memory");
+    // Read the self pointer from offset 0 of GS-relative memory
+    asm volatile("mov %%gs:%c1, %0" : "=r"(ptr) : "i"(PER_CPU_SELF_OFFSET) : "memory");
 
-        return ptr;
-    }
+    return ptr;
+}
 
-    process::Process* current_process() {
-        return get()->process;
-    }
+process::Process* current_process()
+{
+    return get()->process;
+}
 }

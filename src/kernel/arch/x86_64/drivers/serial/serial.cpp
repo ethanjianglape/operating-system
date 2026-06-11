@@ -29,86 +29,93 @@
 
 #include "serial.hpp"
 
-#include <containers/kstring.hpp>
 #include <arch/x86_64/cpu/cpu.hpp>
 #include <console/console.hpp>
+#include <containers/kstring.hpp>
 
 namespace x86_64::drivers::serial {
-    /**
-     * @brief Checks if the UART transmit buffer is empty and ready for data.
-     * @return true if ready to transmit, false if busy.
-     */
-    static bool is_transmit_ready() {
-        return (cpu::inb(COM1 + LINE_STATUS) & LSR_TRANSMIT_EMPTY) != 0;
+/**
+ * @brief Checks if the UART transmit buffer is empty and ready for data.
+ * @return true if ready to transmit, false if busy.
+ */
+static bool is_transmit_ready()
+{
+    return (cpu::inb(COM1 + LINE_STATUS) & LSR_TRANSMIT_EMPTY) != 0;
+}
+
+/**
+ * @brief Initializes COM1 serial port to 38400 baud, 8N1 configuration.
+ *
+ * The initialization sequence:
+ *   1. Disable interrupts (we poll instead)
+ *   2. Enable DLAB to set baud rate divisor
+ *   3. Set divisor to 3 (115200/3 = 38400 baud)
+ *   4. Disable DLAB, set 8 data bits, no parity, 1 stop bit
+ *   5. Enable and clear FIFOs
+ *   6. Set modem control lines
+ */
+void init()
+{
+    cpu::outb(COM1 + INT_ENABLE, 0x00); // Disable interrupts
+    cpu::outb(COM1 + LINE_CTRL, 0x80); // Enable DLAB (set baud rate divisor)
+    cpu::outb(COM1 + DATA, 0x03); // Divisor low byte (38400 baud)
+    cpu::outb(COM1 + INT_ENABLE, 0x00); // Divisor high byte
+    cpu::outb(COM1 + LINE_CTRL, 0x03); // 8 bits, no parity, one stop bit (8N1)
+    cpu::outb(COM1 + FIFO_CTRL, 0xC7); // Enable FIFO, clear, 14-byte threshold
+    cpu::outb(COM1 + MODEM_CTRL, 0x0B); // IRQs enabled, RTS/DSR set
+}
+
+/**
+ * @brief Writes a single character to the serial port.
+ *
+ * Blocks until the transmit buffer is ready. Converts LF to CRLF
+ * for proper terminal line endings.
+ *
+ * @param c Character to write.
+ * @return Always returns 1.
+ */
+int putchar(char c)
+{
+    while (!is_transmit_ready())
+        ;
+
+    if (c == '\n') {
+        cpu::outb(COM1 + DATA, '\r');
     }
 
-    /**
-     * @brief Initializes COM1 serial port to 38400 baud, 8N1 configuration.
-     *
-     * The initialization sequence:
-     *   1. Disable interrupts (we poll instead)
-     *   2. Enable DLAB to set baud rate divisor
-     *   3. Set divisor to 3 (115200/3 = 38400 baud)
-     *   4. Disable DLAB, set 8 data bits, no parity, 1 stop bit
-     *   5. Enable and clear FIFOs
-     *   6. Set modem control lines
-     */
-    void init() {
-        cpu::outb(COM1 + INT_ENABLE, 0x00); // Disable interrupts
-        cpu::outb(COM1 + LINE_CTRL, 0x80);  // Enable DLAB (set baud rate divisor)
-        cpu::outb(COM1 + DATA, 0x03);       // Divisor low byte (38400 baud)
-        cpu::outb(COM1 + INT_ENABLE, 0x00); // Divisor high byte
-        cpu::outb(COM1 + LINE_CTRL, 0x03);  // 8 bits, no parity, one stop bit (8N1)
-        cpu::outb(COM1 + FIFO_CTRL, 0xC7);  // Enable FIFO, clear, 14-byte threshold
-        cpu::outb(COM1 + MODEM_CTRL, 0x0B); // IRQs enabled, RTS/DSR set
+    cpu::outb(COM1 + DATA, c);
+
+    return 1;
+}
+
+int puts(const kstring& str)
+{
+    for (char c : str) {
+        putchar(c);
     }
 
-    /**
-     * @brief Writes a single character to the serial port.
-     *
-     * Blocks until the transmit buffer is ready. Converts LF to CRLF
-     * for proper terminal line endings.
-     *
-     * @param c Character to write.
-     * @return Always returns 1.
-     */
-    int putchar(char c) {
-        while (!is_transmit_ready());
+    return str.size();
+}
 
-        if (c == '\n') {
-            cpu::outb(COM1 + DATA, '\r');
-        }
+int puts(const char* str)
+{
+    int written = 0;
 
-        cpu::outb(COM1 + DATA, c);
-
-        return 1;
+    while (*str) {
+        written += putchar(*str++);
     }
 
-    int puts(const kstring& str) {
-        for (char c : str) {
-            putchar(c);
-        }
+    return written;
+}
 
-        return str.size();
+int puts(const unsigned char* str)
+{
+    int written = 0;
+
+    while (*str) {
+        written += putchar(*str++);
     }
 
-    int puts(const char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += putchar(*str++);
-        }
-
-        return written;
-    }
-
-    int puts(const unsigned char* str) {
-        int written = 0;
-        
-        while (*str) {
-            written += putchar(*str++);
-        }
-
-        return written;
-    }
+    return written;
+}
 }

@@ -2,629 +2,663 @@
 
 #ifdef KERNEL_TESTS
 
-#include <test/test.hpp>
 #include <containers/kvector.hpp>
 #include <log/log.hpp>
+#include <test/test.hpp>
 
 namespace test_kvector {
-    void test_default_constructor() {
-        kvector<int> v;
-        test::assert_true(v.empty(), "default constructed kvector is empty");
-        test::assert_eq(v.size(), 0ul, "default constructed kvector has size 0");
+void test_default_constructor()
+{
+    kvector<int> v;
+    test::assert_true(v.empty(), "default constructed kvector is empty");
+    test::assert_eq(v.size(), 0ul, "default constructed kvector has size 0");
+}
+
+void test_initializer_list_constructor()
+{
+    kvector<int> v = { 1, 2, 3, 4, 5 };
+    test::assert_eq(v.size(), 5ul, "initializer list kvector has correct size");
+    test::assert_eq(v[0], 1, "initializer list kvector[0] is correct");
+    test::assert_eq(v[4], 5, "initializer list kvector[4] is correct");
+}
+
+void test_count_constructor()
+{
+    kvector<int> v(5, 42);
+    test::assert_eq(v.size(), 5ul, "count constructor creates correct size");
+    test::assert_eq(v[0], 42, "count constructor fills with value");
+    test::assert_eq(v[4], 42, "count constructor fills all elements");
+}
+
+void test_push_back()
+{
+    kvector<int> v;
+    v.push_back(10);
+    v.push_back(20);
+    v.push_back(30);
+    test::assert_eq(v.size(), 3ul, "push_back increases size");
+    test::assert_eq(v[0], 10, "push_back stores first value");
+    test::assert_eq(v[2], 30, "push_back stores last value");
+}
+
+void test_pop_back()
+{
+    kvector<int> v = { 1, 2, 3 };
+    v.pop_back();
+    test::assert_eq(v.size(), 2ul, "pop_back decreases size");
+    test::assert_eq(v.back(), 2, "pop_back removes last element");
+}
+
+void test_pop_back_empty()
+{
+    kvector<int> v;
+    v.pop_back(); // Should not crash
+    test::assert_true(v.empty(), "pop_back on empty vector is safe");
+}
+
+void test_front_back()
+{
+    kvector<int> v = { 10, 20, 30 };
+    test::assert_eq(v.front(), 10, "front() returns first element");
+    test::assert_eq(v.back(), 30, "back() returns last element");
+}
+
+void test_operator_bracket()
+{
+    kvector<int> v = { 5, 10, 15 };
+    test::assert_eq(v[1], 10, "operator[] reads correctly");
+    v[1] = 100;
+    test::assert_eq(v[1], 100, "operator[] writes correctly");
+}
+
+void test_clear()
+{
+    kvector<int> v = { 1, 2, 3, 4, 5 };
+    v.clear();
+    test::assert_true(v.empty(), "clear() empties vector");
+    test::assert_eq(v.size(), 0ul, "clear() sets size to 0");
+}
+
+void test_iterator()
+{
+    kvector<int> v = { 1, 2, 3 };
+    int sum = 0;
+    for (auto& val : v) {
+        sum += val;
+    }
+    test::assert_eq(sum, 6, "range-based for loop works");
+}
+
+void test_copy_constructor()
+{
+    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v2(v1);
+    test::assert_eq(v2.size(), 3ul, "copy constructor copies size");
+    test::assert_eq(v2[0], 1, "copy constructor copies elements");
+    v2[0] = 100;
+    test::assert_eq(v1[0], 1, "copy constructor creates independent copy");
+}
+
+void test_move_constructor()
+{
+    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v2(static_cast<kvector<int>&&>(v1));
+    test::assert_eq(v2.size(), 3ul, "move constructor transfers size");
+    test::assert_eq(v2[0], 1, "move constructor transfers elements");
+    test::assert_true(v1.empty(), "move constructor empties source");
+}
+
+void test_copy_assignment()
+{
+    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v2;
+    v2 = v1;
+    test::assert_eq(v2.size(), 3ul, "copy assignment copies size");
+    test::assert_eq(v2[1], 2, "copy assignment copies elements");
+}
+
+void test_move_assignment()
+{
+    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v2;
+    v2 = static_cast<kvector<int>&&>(v1);
+    test::assert_eq(v2.size(), 3ul, "move assignment transfers size");
+    test::assert_true(v1.empty(), "move assignment empties source");
+}
+
+void test_emplace_back()
+{
+    kvector<int> v;
+    v.emplace_back(42);
+    test::assert_eq(v.size(), 1ul, "emplace_back increases size");
+    test::assert_eq(v[0], 42, "emplace_back constructs element");
+}
+
+void test_reserve_and_grow()
+{
+    kvector<int> v;
+    v.reserve(100);
+    for (int i = 0; i < 100; i++) {
+        v.push_back(i);
+    }
+    test::assert_eq(v.size(), 100ul, "vector grows to hold 100 elements");
+    test::assert_eq(v[99], 99, "vector stores all elements correctly");
+}
+
+void test_initializer_list_assignment()
+{
+    kvector<int> v = { 1, 2, 3 };
+    v = { 10, 20 };
+    test::assert_eq(v.size(), 2ul, "initializer list assignment updates size");
+    test::assert_eq(v[0], 10, "initializer list assignment updates elements");
+}
+
+void test_large_allocation_uses_vmm()
+{
+    // Each element is 512 bytes, 4 elements = 2048 bytes > 1024, uses VMM
+    struct LargeStruct {
+        std::uint8_t data[512];
+    };
+
+    kvector<LargeStruct> v;
+    for (int i = 0; i < 4; i++) {
+        LargeStruct s {};
+        s.data[0] = static_cast<std::uint8_t>(i);
+        s.data[511] = static_cast<std::uint8_t>(i * 2);
+        v.push_back(s);
     }
 
-    void test_initializer_list_constructor() {
-        kvector<int> v = {1, 2, 3, 4, 5};
-        test::assert_eq(v.size(), 5ul, "initializer list kvector has correct size");
-        test::assert_eq(v[0], 1, "initializer list kvector[0] is correct");
-        test::assert_eq(v[4], 5, "initializer list kvector[4] is correct");
-    }
+    test::assert_eq(v.size(), 4ul, "large struct vector has correct size");
+    test::assert_eq(v[0].data[0], (std::uint8_t)0, "large struct vector stores first element");
+    test::assert_eq(v[3].data[511], (std::uint8_t)6, "large struct vector stores last element");
+}
 
-    void test_count_constructor() {
-        kvector<int> v(5, 42);
-        test::assert_eq(v.size(), 5ul, "count constructor creates correct size");
-        test::assert_eq(v[0], 42, "count constructor fills with value");
-        test::assert_eq(v[4], 42, "count constructor fills all elements");
-    }
+void test_erase()
+{
+    kvector<int> v = { 1, 2, 3, 4, 5 };
+    v.erase(2);
+    test::assert_eq(v.size(), 4ul, "erase() decreases size");
+    test::assert_eq(v[0], 1, "erase() keeps elements before");
+    test::assert_eq(v[1], 2, "erase() keeps element before position");
+    test::assert_eq(v[2], 4, "erase() shifts elements after position");
+    test::assert_eq(v[3], 5, "erase() shifts last element");
+}
 
-    void test_push_back() {
-        kvector<int> v;
-        v.push_back(10);
-        v.push_back(20);
-        v.push_back(30);
-        test::assert_eq(v.size(), 3ul, "push_back increases size");
-        test::assert_eq(v[0], 10, "push_back stores first value");
-        test::assert_eq(v[2], 30, "push_back stores last value");
-    }
+void test_erase_first()
+{
+    kvector<int> v = { 10, 20, 30 };
+    v.erase(0);
+    test::assert_eq(v.size(), 2ul, "erase(0) decreases size");
+    test::assert_eq(v[0], 20, "erase(0) shifts first element");
+    test::assert_eq(v[1], 30, "erase(0) shifts second element");
+}
 
-    void test_pop_back() {
-        kvector<int> v = {1, 2, 3};
-        v.pop_back();
-        test::assert_eq(v.size(), 2ul, "pop_back decreases size");
-        test::assert_eq(v.back(), 2, "pop_back removes last element");
-    }
+void test_erase_last()
+{
+    kvector<int> v = { 10, 20, 30 };
+    v.erase(2);
+    test::assert_eq(v.size(), 2ul, "erase(last) decreases size");
+    test::assert_eq(v[0], 10, "erase(last) keeps first");
+    test::assert_eq(v[1], 20, "erase(last) keeps second");
+}
 
-    void test_pop_back_empty() {
-        kvector<int> v;
-        v.pop_back();  // Should not crash
-        test::assert_true(v.empty(), "pop_back on empty vector is safe");
-    }
+void test_erase_out_of_bounds()
+{
+    kvector<int> v = { 1, 2, 3 };
+    v.erase(10);
+    test::assert_eq(v.size(), 3ul, "erase() out of bounds does nothing");
+}
 
-    void test_front_back() {
-        kvector<int> v = {10, 20, 30};
-        test::assert_eq(v.front(), 10, "front() returns first element");
-        test::assert_eq(v.back(), 30, "back() returns last element");
-    }
+void test_move_to_end()
+{
+    kvector<int> v = { 1, 2, 3, 4, 5 };
+    v.move_to_end(1);
+    test::assert_eq(v.size(), 5ul, "move_to_end() keeps size");
+    test::assert_eq(v[0], 1, "move_to_end() keeps first");
+    test::assert_eq(v[1], 3, "move_to_end() shifts element");
+    test::assert_eq(v[2], 4, "move_to_end() shifts element");
+    test::assert_eq(v[3], 5, "move_to_end() shifts element");
+    test::assert_eq(v[4], 2, "move_to_end() moves element to end");
+}
 
-    void test_operator_bracket() {
-        kvector<int> v = {5, 10, 15};
-        test::assert_eq(v[1], 10, "operator[] reads correctly");
-        v[1] = 100;
-        test::assert_eq(v[1], 100, "operator[] writes correctly");
-    }
+void test_move_to_end_first()
+{
+    kvector<int> v = { 10, 20, 30 };
+    v.move_to_end(0);
+    test::assert_eq(v[0], 20, "move_to_end(0) shifts first");
+    test::assert_eq(v[1], 30, "move_to_end(0) shifts second");
+    test::assert_eq(v[2], 10, "move_to_end(0) moves to end");
+}
 
-    void test_clear() {
-        kvector<int> v = {1, 2, 3, 4, 5};
-        v.clear();
-        test::assert_true(v.empty(), "clear() empties vector");
-        test::assert_eq(v.size(), 0ul, "clear() sets size to 0");
-    }
+void test_data()
+{
+    kvector<int> v = { 1, 2, 3 };
+    int* ptr = v.data();
+    test::assert_eq(ptr[0], 1, "data() returns pointer to first element");
+    test::assert_eq(ptr[2], 3, "data() allows access to elements");
+    ptr[1] = 100;
+    test::assert_eq(v[1], 100, "data() allows modification");
+}
 
-    void test_iterator() {
-        kvector<int> v = {1, 2, 3};
-        int sum = 0;
-        for (auto& val : v) {
-            sum += val;
+void test_const_data()
+{
+    const kvector<int> v = { 5, 10, 15 };
+    const int* ptr = v.data();
+    test::assert_eq(ptr[0], 5, "const data() returns pointer");
+    test::assert_eq(ptr[2], 15, "const data() allows read access");
+}
+
+void test_const_iterator()
+{
+    const kvector<int> v = { 1, 2, 3 };
+    int sum = 0;
+    for (auto it = v.begin(); it != v.end(); ++it) {
+        sum += *it;
+    }
+    test::assert_eq(sum, 6, "const_iterator works for range iteration");
+}
+
+// ==========================================================================
+// Slab allocator boundary tests
+// ==========================================================================
+//
+// kvector uses kalloc which routes to slab (32-1024 bytes) or VMM (>1024).
+// With INITIAL_CAPACITY=16 and GROWTH_RATE=2, capacity goes: 16→32→64→128→256...
+// For kvector<uint8_t>: 16B→32B→64B→128B→256B→512B→1024B→2048B(VMM)
+// For kvector<uint64_t>: 128B→256B→512B→1024B→2048B(VMM)
+//
+// These tests verify data integrity when crossing slab size class boundaries.
+
+// Helper: verify sequential uint8_t data, returns index of first mismatch or -1
+int verify_sequential_u8(const kvector<std::uint8_t>& v, int count)
+{
+    for (int i = 0; i < count; i++) {
+        if (v[i] != static_cast<std::uint8_t>(i % 256)) {
+            return i;
         }
-        test::assert_eq(sum, 6, "range-based for loop works");
+    }
+    return -1;
+}
+
+void test_growth_through_slab_classes()
+{
+    // Test growth through all slab size classes in one test
+    // kvector<uint8_t> crosses: 32→64→128→256→512→1024→VMM
+    kvector<std::uint8_t> v;
+
+    // Fill to trigger multiple growths through all slab classes
+    for (int i = 0; i < 1025; i++) {
+        v.push_back(static_cast<std::uint8_t>(i % 256));
     }
 
-    void test_copy_constructor() {
-        kvector<int> v1 = {1, 2, 3};
-        kvector<int> v2(v1);
-        test::assert_eq(v2.size(), 3ul, "copy constructor copies size");
-        test::assert_eq(v2[0], 1, "copy constructor copies elements");
-        v2[0] = 100;
-        test::assert_eq(v1[0], 1, "copy constructor creates independent copy");
+    test::assert_eq(v.size(), 1025ul, "slab growth: final size correct");
+    int bad_idx = verify_sequential_u8(v, 1025);
+    test::assert_eq(bad_idx, -1, "slab growth: all data intact after crossing all boundaries");
+
+    // Spot check at key boundary points
+    test::assert_eq(v[16], (std::uint8_t)16, "slab growth: data at first grow point");
+    test::assert_eq(v[32], (std::uint8_t)32, "slab growth: data at 32→64 boundary");
+    test::assert_eq(v[64], (std::uint8_t)64, "slab growth: data at 64→128 boundary");
+    test::assert_eq(v[128], (std::uint8_t)128, "slab growth: data at 128→256 boundary");
+    test::assert_eq(v[256], (std::uint8_t)0, "slab growth: data at 256→512 boundary");
+    test::assert_eq(v[512], (std::uint8_t)0, "slab growth: data at 512→1024 boundary");
+    test::assert_eq(v[1024], (std::uint8_t)0, "slab growth: data at slab→VMM boundary");
+}
+
+void test_growth_with_uint64_elements()
+{
+    // With 8-byte elements, slab boundaries hit at different counts:
+    // 16 * 8 = 128 bytes, 32 * 8 = 256, 64 * 8 = 512, 128 * 8 = 1024, 256 * 8 = 2048 (VMM)
+    kvector<std::uint64_t> v;
+
+    for (std::uint64_t i = 0; i < 300; i++) {
+        v.push_back(i * 0x100000001ULL);
     }
 
-    void test_move_constructor() {
-        kvector<int> v1 = {1, 2, 3};
-        kvector<int> v2(static_cast<kvector<int>&&>(v1));
-        test::assert_eq(v2.size(), 3ul, "move constructor transfers size");
-        test::assert_eq(v2[0], 1, "move constructor transfers elements");
-        test::assert_true(v1.empty(), "move constructor empties source");
+    test::assert_eq(v.size(), 300ul, "uint64 growth: 300 elements");
+
+    // Verify data integrity with spot checks at boundary crossings
+    bool all_correct = true;
+    for (std::uint64_t i = 0; i < 300 && all_correct; i++) {
+        all_correct = (v[i] == i * 0x100000001ULL);
+    }
+    test::assert_true(all_correct, "uint64 growth: all data intact");
+
+    // Spot checks at growth boundaries (16, 32, 64, 128, 256)
+    test::assert_eq(v[15], 15ULL * 0x100000001ULL, "uint64 growth: before first grow");
+    test::assert_eq(v[31], 31ULL * 0x100000001ULL, "uint64 growth: at 256-byte boundary");
+    test::assert_eq(v[127], 127ULL * 0x100000001ULL, "uint64 growth: at 1024-byte boundary");
+    test::assert_eq(v[255], 255ULL * 0x100000001ULL, "uint64 growth: at VMM boundary");
+}
+
+// ==========================================================================
+// Nested kvector tests (simulates console's kvector<kvector<char>>)
+// ==========================================================================
+//
+// The console uses kvector<kvector<char>> for lines. When the outer vector
+// grows, it must correctly move-construct the inner vectors. This is the
+// non-trivially-copyable path in grow().
+
+void test_nested_kvector_basic()
+{
+    kvector<kvector<int>> outer;
+
+    kvector<int> inner1 = { 1, 2, 3 };
+    kvector<int> inner2 = { 4, 5, 6 };
+
+    outer.push_back(inner1);
+    outer.push_back(inner2);
+
+    test::assert_eq(outer.size(), 2ul, "nested basic: outer has 2 elements");
+    test::assert_eq(outer[0].size(), 3ul, "nested basic: inner[0] has 3 elements");
+    test::assert_eq(outer[0][0], 1, "nested basic: inner[0][0] correct");
+    test::assert_eq(outer[1][2], 6, "nested basic: inner[1][2] correct");
+}
+
+void test_nested_kvector_grow_outer()
+{
+    // Force outer vector to grow while containing inner vectors
+    kvector<kvector<int>> outer;
+
+    // Push 20 inner vectors to force growth (initial capacity 16)
+    for (int i = 0; i < 20; i++) {
+        kvector<int> inner;
+        inner.push_back(i * 10);
+        inner.push_back(i * 10 + 1);
+        inner.push_back(i * 10 + 2);
+        outer.push_back(static_cast<kvector<int>&&>(inner));
     }
 
-    void test_copy_assignment() {
-        kvector<int> v1 = {1, 2, 3};
-        kvector<int> v2;
-        v2 = v1;
-        test::assert_eq(v2.size(), 3ul, "copy assignment copies size");
-        test::assert_eq(v2[1], 2, "copy assignment copies elements");
+    test::assert_eq(outer.size(), 20ul, "nested grow outer: 20 inner vectors");
+
+    // Verify all inner vectors survived - single pass, single assert
+    bool all_correct = true;
+    for (int i = 0; i < 20 && all_correct; i++) {
+        all_correct = (outer[i].size() == 3ul && outer[i][0] == i * 10 && outer[i][1] == i * 10 + 1 && outer[i][2] == i * 10 + 2);
+    }
+    test::assert_true(all_correct, "nested grow outer: all inner vectors intact");
+}
+
+void test_nested_kvector_grow_inner_after_outer_grows()
+{
+    kvector<kvector<int>> outer;
+
+    // Push enough to trigger outer growth
+    for (int i = 0; i < 20; i++) {
+        kvector<int> inner;
+        inner.push_back(i);
+        outer.push_back(static_cast<kvector<int>&&>(inner));
     }
 
-    void test_move_assignment() {
-        kvector<int> v1 = {1, 2, 3};
-        kvector<int> v2;
-        v2 = static_cast<kvector<int>&&>(v1);
-        test::assert_eq(v2.size(), 3ul, "move assignment transfers size");
-        test::assert_true(v1.empty(), "move assignment empties source");
+    // Now grow an inner vector (tests that move left inner in valid state)
+    for (int i = 0; i < 100; i++) {
+        outer[5].push_back(i + 100);
     }
 
-    void test_emplace_back() {
-        kvector<int> v;
-        v.emplace_back(42);
-        test::assert_eq(v.size(), 1ul, "emplace_back increases size");
-        test::assert_eq(v[0], 42, "emplace_back constructs element");
+    test::assert_eq(outer[5].size(), 101ul, "nested grow inner: inner grew to 101");
+    test::assert_eq(outer[5][0], 5, "nested grow inner: original value intact");
+    test::assert_eq(outer[5][50], 149, "nested grow inner: new value correct");
+}
+
+void test_nested_kvector_multiple_grows()
+{
+    // Simulate console behavior: many lines, each line grows independently
+    kvector<kvector<std::uint8_t>> lines;
+
+    // Create 50 lines (forces outer to grow: 16→32→64)
+    for (int line = 0; line < 50; line++) {
+        kvector<std::uint8_t> new_line;
+        lines.push_back(static_cast<kvector<std::uint8_t>&&>(new_line));
     }
 
-    void test_reserve_and_grow() {
-        kvector<int> v;
-        v.reserve(100);
-        for (int i = 0; i < 100; i++) {
-            v.push_back(i);
+    test::assert_eq(lines.size(), 50ul, "nested multiple: 50 lines created");
+
+    // Add characters to each line (varying amounts to trigger inner growth)
+    for (int line = 0; line < 50; line++) {
+        int char_count = (line % 10) * 10 + 5;
+        for (int c = 0; c < char_count; c++) {
+            lines[line].push_back(static_cast<std::uint8_t>((line + c) % 256));
         }
-        test::assert_eq(v.size(), 100ul, "vector grows to hold 100 elements");
-        test::assert_eq(v[99], 99, "vector stores all elements correctly");
     }
 
-    void test_initializer_list_assignment() {
-        kvector<int> v = {1, 2, 3};
-        v = {10, 20};
-        test::assert_eq(v.size(), 2ul, "initializer list assignment updates size");
-        test::assert_eq(v[0], 10, "initializer list assignment updates elements");
+    // Verify all data in single pass
+    bool all_correct = true;
+    for (int line = 0; line < 50 && all_correct; line++) {
+        int expected_count = (line % 10) * 10 + 5;
+        all_correct = (lines[line].size() == static_cast<std::size_t>(expected_count) && lines[line][0] == static_cast<std::uint8_t>(line % 256) && lines[line][expected_count - 1] == static_cast<std::uint8_t>((line + expected_count - 1) % 256));
+    }
+    test::assert_true(all_correct, "nested multiple: all lines have correct size and content");
+}
+
+void test_nested_kvector_copy_line()
+{
+    kvector<kvector<int>> lines;
+
+    kvector<int> original = { 10, 20, 30, 40, 50 };
+    lines.push_back(original);
+    lines.push_back(original);
+
+    original.push_back(60);
+
+    test::assert_eq(lines[0].size(), 5ul, "nested copy: line 0 unchanged");
+    test::assert_eq(lines[1].size(), 5ul, "nested copy: line 1 unchanged");
+    test::assert_eq(original.size(), 6ul, "nested copy: original modified");
+}
+
+void test_nested_kvector_move_semantics()
+{
+    kvector<kvector<int>> outer;
+
+    bool all_moves_worked = true;
+    for (int i = 0; i < 20; i++) {
+        kvector<int> inner = { i, i + 1, i + 2 };
+        outer.push_back(static_cast<kvector<int>&&>(inner));
+        if (!inner.empty()) {
+            all_moves_worked = false;
+        }
     }
 
-    void test_large_allocation_uses_vmm() {
-        // Each element is 512 bytes, 4 elements = 2048 bytes > 1024, uses VMM
-        struct LargeStruct {
-            std::uint8_t data[512];
-        };
+    test::assert_true(all_moves_worked, "nested move: all sources emptied after push");
+    test::assert_eq(outer.size(), 20ul, "nested move: outer has all elements");
+    test::assert_eq(outer[10][0], 10, "nested move: data transferred correctly");
+}
 
-        kvector<LargeStruct> v;
-        for (int i = 0; i < 4; i++) {
-            LargeStruct s{};
-            s.data[0] = static_cast<std::uint8_t>(i);
-            s.data[511] = static_cast<std::uint8_t>(i * 2);
-            v.push_back(s);
+// ==========================================================================
+// Console-pattern tests (pre-filled lines with in-place modification)
+// ==========================================================================
+//
+// The console uses kvector<kvector<ConsoleChar>> where each line is
+// pre-filled to screen width. These tests verify that pattern works.
+
+void test_prefilled_inner_vectors()
+{
+    // Console pattern: create lines pre-filled to fixed width
+    kvector<kvector<int>> lines;
+    const std::size_t LINE_WIDTH = 80;
+    const std::size_t LINE_COUNT = 25;
+
+    // Create pre-filled lines (like console init)
+    for (std::size_t i = 0; i < LINE_COUNT; i++) {
+        kvector<int> line(LINE_WIDTH, 0); // Pre-fill with zeros
+        lines.push_back(static_cast<kvector<int>&&>(line));
+    }
+
+    test::assert_eq(lines.size(), LINE_COUNT, "prefilled: correct line count");
+    test::assert_eq(lines[0].size(), LINE_WIDTH, "prefilled: correct line width");
+
+    // Modify elements in-place (like console writing characters)
+    for (std::size_t row = 0; row < LINE_COUNT; row++) {
+        for (std::size_t col = 0; col < LINE_WIDTH; col++) {
+            lines[row][col] = static_cast<int>(row * 100 + col);
+        }
+    }
+
+    // Verify all modifications
+    bool all_correct = true;
+    for (std::size_t row = 0; row < LINE_COUNT && all_correct; row++) {
+        for (std::size_t col = 0; col < LINE_WIDTH && all_correct; col++) {
+            all_correct = (lines[row][col] == static_cast<int>(row * 100 + col));
+        }
+    }
+    test::assert_true(all_correct, "prefilled: in-place modifications preserved");
+}
+
+void test_grow_outer_with_prefilled_inner()
+{
+    // Start with some pre-filled lines, then grow outer
+    kvector<kvector<int>> lines;
+    const std::size_t LINE_WIDTH = 80;
+
+    // Initial lines
+    for (int i = 0; i < 10; i++) {
+        kvector<int> line(LINE_WIDTH, i);
+        lines.push_back(static_cast<kvector<int>&&>(line));
+    }
+
+    // Write to first 10 lines
+    for (int row = 0; row < 10; row++) {
+        lines[row][0] = row * 1000;
+    }
+
+    // Grow outer vector by adding more lines (triggers outer growth at 16)
+    for (int i = 10; i < 30; i++) {
+        kvector<int> line(LINE_WIDTH, i);
+        lines.push_back(static_cast<kvector<int>&&>(line));
+    }
+
+    // Verify original lines survived outer growth
+    bool original_intact = true;
+    for (int row = 0; row < 10 && original_intact; row++) {
+        original_intact = (lines[row][0] == row * 1000 && lines[row].size() == LINE_WIDTH);
+    }
+    test::assert_true(original_intact, "grow outer prefilled: original lines intact");
+
+    // Verify new lines are correct
+    bool new_correct = true;
+    for (int row = 10; row < 30 && new_correct; row++) {
+        new_correct = (lines[row].size() == LINE_WIDTH && lines[row][0] == row);
+    }
+    test::assert_true(new_correct, "grow outer prefilled: new lines correct");
+}
+
+void test_interleaved_access_and_growth()
+{
+    // Simulate typing into console: alternate between accessing existing
+    // lines and growing the buffer
+    kvector<kvector<int>> lines;
+
+    // Pattern: add line, write to it, add line, write to previous, etc.
+    for (int cycle = 0; cycle < 40; cycle++) {
+        // Add a new line
+        kvector<int> new_line;
+        new_line.push_back(cycle * 100);
+        lines.push_back(static_cast<kvector<int>&&>(new_line));
+
+        // Write to a previous line (if any exist)
+        if (cycle > 0) {
+            lines[cycle - 1].push_back(cycle);
         }
 
-        test::assert_eq(v.size(), 4ul, "large struct vector has correct size");
-        test::assert_eq(v[0].data[0], (std::uint8_t)0, "large struct vector stores first element");
-        test::assert_eq(v[3].data[511], (std::uint8_t)6, "large struct vector stores last element");
+        // Write more to current line
+        lines[cycle].push_back(cycle + 1);
+        lines[cycle].push_back(cycle + 2);
     }
 
-    void test_erase() {
-        kvector<int> v = {1, 2, 3, 4, 5};
-        v.erase(2);
-        test::assert_eq(v.size(), 4ul, "erase() decreases size");
-        test::assert_eq(v[0], 1, "erase() keeps elements before");
-        test::assert_eq(v[1], 2, "erase() keeps element before position");
-        test::assert_eq(v[2], 4, "erase() shifts elements after position");
-        test::assert_eq(v[3], 5, "erase() shifts last element");
+    // Verify structure
+    test::assert_eq(lines.size(), 40ul, "interleaved: 40 lines");
+
+    // Check first line: [0, 1, 2, 3] (initial + next cycle wrote 1)
+    // Actually: lines[0] = push(0), push(1), push(2), then cycle 1 writes push(1)
+    // So lines[0] = [0, 1, 2, 1]
+    test::assert_eq(lines[0].size(), 4ul, "interleaved: line 0 has 4 elements");
+    test::assert_eq(lines[0][0], 0, "interleaved: line 0 first element");
+    test::assert_eq(lines[0][3], 1, "interleaved: line 0 got write from next cycle");
+
+    // Check last line (no next cycle to write back)
+    test::assert_eq(lines[39].size(), 3ul, "interleaved: last line has 3 elements");
+}
+
+void test_stress_many_small_inner_grows()
+{
+    // Stress test: many small inner vector grows in sequence
+    kvector<kvector<std::uint8_t>> lines;
+
+    // Create 100 lines
+    for (int i = 0; i < 100; i++) {
+        kvector<std::uint8_t> line;
+        lines.push_back(static_cast<kvector<std::uint8_t>&&>(line));
     }
 
-    void test_erase_first() {
-        kvector<int> v = {10, 20, 30};
-        v.erase(0);
-        test::assert_eq(v.size(), 2ul, "erase(0) decreases size");
-        test::assert_eq(v[0], 20, "erase(0) shifts first element");
-        test::assert_eq(v[1], 30, "erase(0) shifts second element");
-    }
-
-    void test_erase_last() {
-        kvector<int> v = {10, 20, 30};
-        v.erase(2);
-        test::assert_eq(v.size(), 2ul, "erase(last) decreases size");
-        test::assert_eq(v[0], 10, "erase(last) keeps first");
-        test::assert_eq(v[1], 20, "erase(last) keeps second");
-    }
-
-    void test_erase_out_of_bounds() {
-        kvector<int> v = {1, 2, 3};
-        v.erase(10);
-        test::assert_eq(v.size(), 3ul, "erase() out of bounds does nothing");
-    }
-
-    void test_move_to_end() {
-        kvector<int> v = {1, 2, 3, 4, 5};
-        v.move_to_end(1);
-        test::assert_eq(v.size(), 5ul, "move_to_end() keeps size");
-        test::assert_eq(v[0], 1, "move_to_end() keeps first");
-        test::assert_eq(v[1], 3, "move_to_end() shifts element");
-        test::assert_eq(v[2], 4, "move_to_end() shifts element");
-        test::assert_eq(v[3], 5, "move_to_end() shifts element");
-        test::assert_eq(v[4], 2, "move_to_end() moves element to end");
-    }
-
-    void test_move_to_end_first() {
-        kvector<int> v = {10, 20, 30};
-        v.move_to_end(0);
-        test::assert_eq(v[0], 20, "move_to_end(0) shifts first");
-        test::assert_eq(v[1], 30, "move_to_end(0) shifts second");
-        test::assert_eq(v[2], 10, "move_to_end(0) moves to end");
-    }
-
-    void test_data() {
-        kvector<int> v = {1, 2, 3};
-        int* ptr = v.data();
-        test::assert_eq(ptr[0], 1, "data() returns pointer to first element");
-        test::assert_eq(ptr[2], 3, "data() allows access to elements");
-        ptr[1] = 100;
-        test::assert_eq(v[1], 100, "data() allows modification");
-    }
-
-    void test_const_data() {
-        const kvector<int> v = {5, 10, 15};
-        const int* ptr = v.data();
-        test::assert_eq(ptr[0], 5, "const data() returns pointer");
-        test::assert_eq(ptr[2], 15, "const data() allows read access");
-    }
-
-    void test_const_iterator() {
-        const kvector<int> v = {1, 2, 3};
-        int sum = 0;
-        for (auto it = v.begin(); it != v.end(); ++it) {
-            sum += *it;
+    // Grow each line by 1 element in round-robin fashion
+    // This creates many small allocations
+    for (int round = 0; round < 50; round++) {
+        for (int line = 0; line < 100; line++) {
+            lines[line].push_back(static_cast<std::uint8_t>((round * 100 + line) % 256));
         }
-        test::assert_eq(sum, 6, "const_iterator works for range iteration");
     }
 
-    // ==========================================================================
+    // Verify all lines have 50 elements with correct values
+    bool all_correct = true;
+    for (int line = 0; line < 100 && all_correct; line++) {
+        all_correct = (lines[line].size() == 50);
+        for (int i = 0; i < 50 && all_correct; i++) {
+            std::uint8_t expected = static_cast<std::uint8_t>((i * 100 + line) % 256);
+            all_correct = (lines[line][i] == expected);
+        }
+    }
+    test::assert_true(all_correct, "stress small grows: all data correct");
+}
+
+void run()
+{
+    log::info("Running kvector tests...");
+
+    test_default_constructor();
+    test_initializer_list_constructor();
+    test_count_constructor();
+    test_push_back();
+    test_pop_back();
+    test_pop_back_empty();
+    test_front_back();
+    test_operator_bracket();
+    test_clear();
+    test_iterator();
+    test_copy_constructor();
+    test_move_constructor();
+    test_copy_assignment();
+    test_move_assignment();
+    test_emplace_back();
+    test_reserve_and_grow();
+    test_initializer_list_assignment();
+    test_large_allocation_uses_vmm();
+    test_erase();
+    test_erase_first();
+    test_erase_last();
+    test_erase_out_of_bounds();
+    test_move_to_end();
+    test_move_to_end_first();
+    test_data();
+    test_const_data();
+    test_const_iterator();
+
     // Slab allocator boundary tests
-    // ==========================================================================
-    //
-    // kvector uses kalloc which routes to slab (32-1024 bytes) or VMM (>1024).
-    // With INITIAL_CAPACITY=16 and GROWTH_RATE=2, capacity goes: 16→32→64→128→256...
-    // For kvector<uint8_t>: 16B→32B→64B→128B→256B→512B→1024B→2048B(VMM)
-    // For kvector<uint64_t>: 128B→256B→512B→1024B→2048B(VMM)
-    //
-    // These tests verify data integrity when crossing slab size class boundaries.
+    test_growth_through_slab_classes();
+    test_growth_with_uint64_elements();
 
-    // Helper: verify sequential uint8_t data, returns index of first mismatch or -1
-    int verify_sequential_u8(const kvector<std::uint8_t>& v, int count) {
-        for (int i = 0; i < count; i++) {
-            if (v[i] != static_cast<std::uint8_t>(i % 256)) {
-                return i;
-            }
-        }
-        return -1;
-    }
+    // Nested kvector tests
+    test_nested_kvector_basic();
+    test_nested_kvector_grow_outer();
+    test_nested_kvector_grow_inner_after_outer_grows();
+    test_nested_kvector_multiple_grows();
+    test_nested_kvector_copy_line();
+    test_nested_kvector_move_semantics();
 
-    void test_growth_through_slab_classes() {
-        // Test growth through all slab size classes in one test
-        // kvector<uint8_t> crosses: 32→64→128→256→512→1024→VMM
-        kvector<std::uint8_t> v;
-
-        // Fill to trigger multiple growths through all slab classes
-        for (int i = 0; i < 1025; i++) {
-            v.push_back(static_cast<std::uint8_t>(i % 256));
-        }
-
-        test::assert_eq(v.size(), 1025ul, "slab growth: final size correct");
-        int bad_idx = verify_sequential_u8(v, 1025);
-        test::assert_eq(bad_idx, -1, "slab growth: all data intact after crossing all boundaries");
-
-        // Spot check at key boundary points
-        test::assert_eq(v[16], (std::uint8_t)16, "slab growth: data at first grow point");
-        test::assert_eq(v[32], (std::uint8_t)32, "slab growth: data at 32→64 boundary");
-        test::assert_eq(v[64], (std::uint8_t)64, "slab growth: data at 64→128 boundary");
-        test::assert_eq(v[128], (std::uint8_t)128, "slab growth: data at 128→256 boundary");
-        test::assert_eq(v[256], (std::uint8_t)0, "slab growth: data at 256→512 boundary");
-        test::assert_eq(v[512], (std::uint8_t)0, "slab growth: data at 512→1024 boundary");
-        test::assert_eq(v[1024], (std::uint8_t)0, "slab growth: data at slab→VMM boundary");
-    }
-
-    void test_growth_with_uint64_elements() {
-        // With 8-byte elements, slab boundaries hit at different counts:
-        // 16 * 8 = 128 bytes, 32 * 8 = 256, 64 * 8 = 512, 128 * 8 = 1024, 256 * 8 = 2048 (VMM)
-        kvector<std::uint64_t> v;
-
-        for (std::uint64_t i = 0; i < 300; i++) {
-            v.push_back(i * 0x100000001ULL);
-        }
-
-        test::assert_eq(v.size(), 300ul, "uint64 growth: 300 elements");
-
-        // Verify data integrity with spot checks at boundary crossings
-        bool all_correct = true;
-        for (std::uint64_t i = 0; i < 300 && all_correct; i++) {
-            all_correct = (v[i] == i * 0x100000001ULL);
-        }
-        test::assert_true(all_correct, "uint64 growth: all data intact");
-
-        // Spot checks at growth boundaries (16, 32, 64, 128, 256)
-        test::assert_eq(v[15], 15ULL * 0x100000001ULL, "uint64 growth: before first grow");
-        test::assert_eq(v[31], 31ULL * 0x100000001ULL, "uint64 growth: at 256-byte boundary");
-        test::assert_eq(v[127], 127ULL * 0x100000001ULL, "uint64 growth: at 1024-byte boundary");
-        test::assert_eq(v[255], 255ULL * 0x100000001ULL, "uint64 growth: at VMM boundary");
-    }
-
-    // ==========================================================================
-    // Nested kvector tests (simulates console's kvector<kvector<char>>)
-    // ==========================================================================
-    //
-    // The console uses kvector<kvector<char>> for lines. When the outer vector
-    // grows, it must correctly move-construct the inner vectors. This is the
-    // non-trivially-copyable path in grow().
-
-    void test_nested_kvector_basic() {
-        kvector<kvector<int>> outer;
-
-        kvector<int> inner1 = {1, 2, 3};
-        kvector<int> inner2 = {4, 5, 6};
-
-        outer.push_back(inner1);
-        outer.push_back(inner2);
-
-        test::assert_eq(outer.size(), 2ul, "nested basic: outer has 2 elements");
-        test::assert_eq(outer[0].size(), 3ul, "nested basic: inner[0] has 3 elements");
-        test::assert_eq(outer[0][0], 1, "nested basic: inner[0][0] correct");
-        test::assert_eq(outer[1][2], 6, "nested basic: inner[1][2] correct");
-    }
-
-    void test_nested_kvector_grow_outer() {
-        // Force outer vector to grow while containing inner vectors
-        kvector<kvector<int>> outer;
-
-        // Push 20 inner vectors to force growth (initial capacity 16)
-        for (int i = 0; i < 20; i++) {
-            kvector<int> inner;
-            inner.push_back(i * 10);
-            inner.push_back(i * 10 + 1);
-            inner.push_back(i * 10 + 2);
-            outer.push_back(static_cast<kvector<int>&&>(inner));
-        }
-
-        test::assert_eq(outer.size(), 20ul, "nested grow outer: 20 inner vectors");
-
-        // Verify all inner vectors survived - single pass, single assert
-        bool all_correct = true;
-        for (int i = 0; i < 20 && all_correct; i++) {
-            all_correct = (outer[i].size() == 3ul &&
-                          outer[i][0] == i * 10 &&
-                          outer[i][1] == i * 10 + 1 &&
-                          outer[i][2] == i * 10 + 2);
-        }
-        test::assert_true(all_correct, "nested grow outer: all inner vectors intact");
-    }
-
-    void test_nested_kvector_grow_inner_after_outer_grows() {
-        kvector<kvector<int>> outer;
-
-        // Push enough to trigger outer growth
-        for (int i = 0; i < 20; i++) {
-            kvector<int> inner;
-            inner.push_back(i);
-            outer.push_back(static_cast<kvector<int>&&>(inner));
-        }
-
-        // Now grow an inner vector (tests that move left inner in valid state)
-        for (int i = 0; i < 100; i++) {
-            outer[5].push_back(i + 100);
-        }
-
-        test::assert_eq(outer[5].size(), 101ul, "nested grow inner: inner grew to 101");
-        test::assert_eq(outer[5][0], 5, "nested grow inner: original value intact");
-        test::assert_eq(outer[5][50], 149, "nested grow inner: new value correct");
-    }
-
-    void test_nested_kvector_multiple_grows() {
-        // Simulate console behavior: many lines, each line grows independently
-        kvector<kvector<std::uint8_t>> lines;
-
-        // Create 50 lines (forces outer to grow: 16→32→64)
-        for (int line = 0; line < 50; line++) {
-            kvector<std::uint8_t> new_line;
-            lines.push_back(static_cast<kvector<std::uint8_t>&&>(new_line));
-        }
-
-        test::assert_eq(lines.size(), 50ul, "nested multiple: 50 lines created");
-
-        // Add characters to each line (varying amounts to trigger inner growth)
-        for (int line = 0; line < 50; line++) {
-            int char_count = (line % 10) * 10 + 5;
-            for (int c = 0; c < char_count; c++) {
-                lines[line].push_back(static_cast<std::uint8_t>((line + c) % 256));
-            }
-        }
-
-        // Verify all data in single pass
-        bool all_correct = true;
-        for (int line = 0; line < 50 && all_correct; line++) {
-            int expected_count = (line % 10) * 10 + 5;
-            all_correct = (lines[line].size() == static_cast<std::size_t>(expected_count) &&
-                          lines[line][0] == static_cast<std::uint8_t>(line % 256) &&
-                          lines[line][expected_count - 1] == static_cast<std::uint8_t>((line + expected_count - 1) % 256));
-        }
-        test::assert_true(all_correct, "nested multiple: all lines have correct size and content");
-    }
-
-    void test_nested_kvector_copy_line() {
-        kvector<kvector<int>> lines;
-
-        kvector<int> original = {10, 20, 30, 40, 50};
-        lines.push_back(original);
-        lines.push_back(original);
-
-        original.push_back(60);
-
-        test::assert_eq(lines[0].size(), 5ul, "nested copy: line 0 unchanged");
-        test::assert_eq(lines[1].size(), 5ul, "nested copy: line 1 unchanged");
-        test::assert_eq(original.size(), 6ul, "nested copy: original modified");
-    }
-
-    void test_nested_kvector_move_semantics() {
-        kvector<kvector<int>> outer;
-
-        bool all_moves_worked = true;
-        for (int i = 0; i < 20; i++) {
-            kvector<int> inner = {i, i+1, i+2};
-            outer.push_back(static_cast<kvector<int>&&>(inner));
-            if (!inner.empty()) {
-                all_moves_worked = false;
-            }
-        }
-
-        test::assert_true(all_moves_worked, "nested move: all sources emptied after push");
-        test::assert_eq(outer.size(), 20ul, "nested move: outer has all elements");
-        test::assert_eq(outer[10][0], 10, "nested move: data transferred correctly");
-    }
-
-    // ==========================================================================
-    // Console-pattern tests (pre-filled lines with in-place modification)
-    // ==========================================================================
-    //
-    // The console uses kvector<kvector<ConsoleChar>> where each line is
-    // pre-filled to screen width. These tests verify that pattern works.
-
-    void test_prefilled_inner_vectors() {
-        // Console pattern: create lines pre-filled to fixed width
-        kvector<kvector<int>> lines;
-        const std::size_t LINE_WIDTH = 80;
-        const std::size_t LINE_COUNT = 25;
-
-        // Create pre-filled lines (like console init)
-        for (std::size_t i = 0; i < LINE_COUNT; i++) {
-            kvector<int> line(LINE_WIDTH, 0);  // Pre-fill with zeros
-            lines.push_back(static_cast<kvector<int>&&>(line));
-        }
-
-        test::assert_eq(lines.size(), LINE_COUNT, "prefilled: correct line count");
-        test::assert_eq(lines[0].size(), LINE_WIDTH, "prefilled: correct line width");
-
-        // Modify elements in-place (like console writing characters)
-        for (std::size_t row = 0; row < LINE_COUNT; row++) {
-            for (std::size_t col = 0; col < LINE_WIDTH; col++) {
-                lines[row][col] = static_cast<int>(row * 100 + col);
-            }
-        }
-
-        // Verify all modifications
-        bool all_correct = true;
-        for (std::size_t row = 0; row < LINE_COUNT && all_correct; row++) {
-            for (std::size_t col = 0; col < LINE_WIDTH && all_correct; col++) {
-                all_correct = (lines[row][col] == static_cast<int>(row * 100 + col));
-            }
-        }
-        test::assert_true(all_correct, "prefilled: in-place modifications preserved");
-    }
-
-    void test_grow_outer_with_prefilled_inner() {
-        // Start with some pre-filled lines, then grow outer
-        kvector<kvector<int>> lines;
-        const std::size_t LINE_WIDTH = 80;
-
-        // Initial lines
-        for (int i = 0; i < 10; i++) {
-            kvector<int> line(LINE_WIDTH, i);
-            lines.push_back(static_cast<kvector<int>&&>(line));
-        }
-
-        // Write to first 10 lines
-        for (int row = 0; row < 10; row++) {
-            lines[row][0] = row * 1000;
-        }
-
-        // Grow outer vector by adding more lines (triggers outer growth at 16)
-        for (int i = 10; i < 30; i++) {
-            kvector<int> line(LINE_WIDTH, i);
-            lines.push_back(static_cast<kvector<int>&&>(line));
-        }
-
-        // Verify original lines survived outer growth
-        bool original_intact = true;
-        for (int row = 0; row < 10 && original_intact; row++) {
-            original_intact = (lines[row][0] == row * 1000 &&
-                              lines[row].size() == LINE_WIDTH);
-        }
-        test::assert_true(original_intact, "grow outer prefilled: original lines intact");
-
-        // Verify new lines are correct
-        bool new_correct = true;
-        for (int row = 10; row < 30 && new_correct; row++) {
-            new_correct = (lines[row].size() == LINE_WIDTH &&
-                          lines[row][0] == row);
-        }
-        test::assert_true(new_correct, "grow outer prefilled: new lines correct");
-    }
-
-    void test_interleaved_access_and_growth() {
-        // Simulate typing into console: alternate between accessing existing
-        // lines and growing the buffer
-        kvector<kvector<int>> lines;
-
-        // Pattern: add line, write to it, add line, write to previous, etc.
-        for (int cycle = 0; cycle < 40; cycle++) {
-            // Add a new line
-            kvector<int> new_line;
-            new_line.push_back(cycle * 100);
-            lines.push_back(static_cast<kvector<int>&&>(new_line));
-
-            // Write to a previous line (if any exist)
-            if (cycle > 0) {
-                lines[cycle - 1].push_back(cycle);
-            }
-
-            // Write more to current line
-            lines[cycle].push_back(cycle + 1);
-            lines[cycle].push_back(cycle + 2);
-        }
-
-        // Verify structure
-        test::assert_eq(lines.size(), 40ul, "interleaved: 40 lines");
-
-        // Check first line: [0, 1, 2, 3] (initial + next cycle wrote 1)
-        // Actually: lines[0] = push(0), push(1), push(2), then cycle 1 writes push(1)
-        // So lines[0] = [0, 1, 2, 1]
-        test::assert_eq(lines[0].size(), 4ul, "interleaved: line 0 has 4 elements");
-        test::assert_eq(lines[0][0], 0, "interleaved: line 0 first element");
-        test::assert_eq(lines[0][3], 1, "interleaved: line 0 got write from next cycle");
-
-        // Check last line (no next cycle to write back)
-        test::assert_eq(lines[39].size(), 3ul, "interleaved: last line has 3 elements");
-    }
-
-    void test_stress_many_small_inner_grows() {
-        // Stress test: many small inner vector grows in sequence
-        kvector<kvector<std::uint8_t>> lines;
-
-        // Create 100 lines
-        for (int i = 0; i < 100; i++) {
-            kvector<std::uint8_t> line;
-            lines.push_back(static_cast<kvector<std::uint8_t>&&>(line));
-        }
-
-        // Grow each line by 1 element in round-robin fashion
-        // This creates many small allocations
-        for (int round = 0; round < 50; round++) {
-            for (int line = 0; line < 100; line++) {
-                lines[line].push_back(static_cast<std::uint8_t>((round * 100 + line) % 256));
-            }
-        }
-
-        // Verify all lines have 50 elements with correct values
-        bool all_correct = true;
-        for (int line = 0; line < 100 && all_correct; line++) {
-            all_correct = (lines[line].size() == 50);
-            for (int i = 0; i < 50 && all_correct; i++) {
-                std::uint8_t expected = static_cast<std::uint8_t>((i * 100 + line) % 256);
-                all_correct = (lines[line][i] == expected);
-            }
-        }
-        test::assert_true(all_correct, "stress small grows: all data correct");
-    }
-
-    void run() {
-        log::info("Running kvector tests...");
-
-        test_default_constructor();
-        test_initializer_list_constructor();
-        test_count_constructor();
-        test_push_back();
-        test_pop_back();
-        test_pop_back_empty();
-        test_front_back();
-        test_operator_bracket();
-        test_clear();
-        test_iterator();
-        test_copy_constructor();
-        test_move_constructor();
-        test_copy_assignment();
-        test_move_assignment();
-        test_emplace_back();
-        test_reserve_and_grow();
-        test_initializer_list_assignment();
-        test_large_allocation_uses_vmm();
-        test_erase();
-        test_erase_first();
-        test_erase_last();
-        test_erase_out_of_bounds();
-        test_move_to_end();
-        test_move_to_end_first();
-        test_data();
-        test_const_data();
-        test_const_iterator();
-
-        // Slab allocator boundary tests
-        test_growth_through_slab_classes();
-        test_growth_with_uint64_elements();
-
-        // Nested kvector tests
-        test_nested_kvector_basic();
-        test_nested_kvector_grow_outer();
-        test_nested_kvector_grow_inner_after_outer_grows();
-        test_nested_kvector_multiple_grows();
-        test_nested_kvector_copy_line();
-        test_nested_kvector_move_semantics();
-
-        // Console-pattern tests
-        test_prefilled_inner_vectors();
-        test_grow_outer_with_prefilled_inner();
-        test_interleaved_access_and_growth();
-        test_stress_many_small_inner_grows();
-    }
+    // Console-pattern tests
+    test_prefilled_inner_vectors();
+    test_grow_outer_with_prefilled_inner();
+    test_interleaved_access_and_growth();
+    test_stress_many_small_inner_grows();
+}
 }
 
 #endif // KERNEL_TESTS

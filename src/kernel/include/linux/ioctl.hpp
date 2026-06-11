@@ -11,17 +11,17 @@
 #include <cstdint>
 
 namespace linux {
-    constexpr unsigned long TIOCGWINSZ = 0x5413;
+constexpr unsigned long TIOCGWINSZ = 0x5413;
 
-    struct winsize {
-        std::uint16_t ws_row;
-        std::uint16_t ws_col;
-        std::uint16_t ws_xpixel;
-        std::uint16_t ws_ypixel;
-    };
+struct winsize {
+    std::uint16_t ws_row;
+    std::uint16_t ws_col;
+    std::uint16_t ws_xpixel;
+    std::uint16_t ws_ypixel;
+};
 
-    struct iovec {
-        void*       iov_base;
-        std::size_t iov_len;
-    };
+struct iovec {
+    void* iov_base;
+    std::size_t iov_len;
+};
 }

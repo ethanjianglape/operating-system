@@ -1,14 +1,14 @@
 #pragma once
 
-#include <memory/memory.hpp>
 #include <crt/crt.h>
+#include <memory/memory.hpp>
 
-#include <cstddef>
 #include <concepts>
-#include <type_traits>
-#include <utility>
+#include <cstddef>
 #include <initializer_list>
 #include <new> // IWYU pragma: keep (required for placement new)
+#include <type_traits>
+#include <utility>
 
 #ifdef KERNEL_DEBUG
 #include <kpanic/kpanic.hpp>
@@ -33,13 +33,15 @@ private:
     std::size_t _size;
     std::size_t _capacity;
 
-    void ensure_capacity(std::size_t new_size) {
+    void ensure_capacity(std::size_t new_size)
+    {
         while (_capacity < new_size) {
             grow();
         }
     }
 
-    void grow() {
+    void grow()
+    {
         std::size_t new_capacity = _capacity == 0 ? INITIAL_CAPACITY : _capacity * GROWTH_RATE;
 
         T* new_data = kalloc<T>(new_capacity);
@@ -51,7 +53,7 @@ private:
                 new (&new_data[i]) T(std::move(_data[i]));
 
                 if constexpr (!std::is_trivially_destructible_v<T>) {
-                    _data[i].~T();                    
+                    _data[i].~T();
                 }
             }
         }
@@ -61,28 +63,35 @@ private:
         _capacity = new_capacity;
     }
 
-  public:
+public:
     class iterator {
-      private:
+    private:
         T* _ptr;
 
-      public:
-        iterator(T* ptr) : _ptr{ptr} {}
+    public:
+        iterator(T* ptr)
+            : _ptr { ptr }
+        {
+        }
         T& operator*() const { return *_ptr; }
         T* operator->() const { return _ptr; }
-        iterator& operator++() {
+        iterator& operator++()
+        {
             _ptr++;
             return *this;
         }
-        iterator& operator--() {
+        iterator& operator--()
+        {
             _ptr--;
             return *this;
         }
-        iterator& operator+=(std::size_t n) {
+        iterator& operator+=(std::size_t n)
+        {
             _ptr += n;
             return *this;
         }
-        iterator& operator-=(std::size_t n) {
+        iterator& operator-=(std::size_t n)
+        {
             _ptr -= n;
             return *this;
         }
@@ -91,26 +100,33 @@ private:
     };
 
     class const_iterator {
-      private:
+    private:
         const T* _ptr;
 
-      public:
-        const_iterator(const T* ptr) : _ptr{ptr} {}
+    public:
+        const_iterator(const T* ptr)
+            : _ptr { ptr }
+        {
+        }
         const T& operator*() const { return *_ptr; }
         const T* operator->() const { return _ptr; }
-        const_iterator& operator++() {
+        const_iterator& operator++()
+        {
             _ptr++;
             return *this;
         }
-        const_iterator& operator--() {
+        const_iterator& operator--()
+        {
             _ptr--;
             return *this;
         }
-        const_iterator& operator+=(std::size_t n) {
+        const_iterator& operator+=(std::size_t n)
+        {
             _ptr += n;
             return *this;
         }
-        const_iterator& operator-=(std::size_t n) {
+        const_iterator& operator-=(std::size_t n)
+        {
             _ptr -= n;
             return *this;
         }
@@ -118,13 +134,16 @@ private:
         bool operator!=(const const_iterator& other) const { return _ptr != other._ptr; }
     };
 
-    kvector() {
+    kvector()
+    {
         _data = nullptr;
         _size = 0;
         _capacity = 0;
     }
 
-    kvector(std::initializer_list<T> init) : kvector{} {
+    kvector(std::initializer_list<T> init)
+        : kvector {}
+    {
         ensure_capacity(init.size());
 
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -138,7 +157,9 @@ private:
         }
     }
 
-    explicit kvector(std::size_t count, const T& value = {}) : kvector{} {
+    explicit kvector(std::size_t count, const T& value = {})
+        : kvector {}
+    {
         ensure_capacity(count);
 
         for (std::size_t i = 0; i < count; i++) {
@@ -146,13 +167,19 @@ private:
         }
     }
 
-    kvector(kvector&& other) : _data{other._data}, _size{other._size}, _capacity{other._capacity} {
+    kvector(kvector&& other)
+        : _data { other._data }
+        , _size { other._size }
+        , _capacity { other._capacity }
+    {
         other._data = nullptr;
         other._size = 0;
         other._capacity = 0;
     }
 
-    kvector(const kvector& other) : kvector{} {
+    kvector(const kvector& other)
+        : kvector {}
+    {
         if (other.empty()) {
             return;
         }
@@ -170,7 +197,8 @@ private:
         _size = other.size();
     }
 
-    kvector& operator=(kvector&& other) {
+    kvector& operator=(kvector&& other)
+    {
         if (this != &other) {
             clear();
             kfree(_data);
@@ -185,7 +213,8 @@ private:
         return *this;
     }
 
-    kvector& operator=(const kvector& other) {
+    kvector& operator=(const kvector& other)
+    {
         if (this != &other) {
             clear();
             kfree(_data);
@@ -208,7 +237,8 @@ private:
         return *this;
     }
 
-    kvector& operator=(std::initializer_list<T> init) {
+    kvector& operator=(std::initializer_list<T> init)
+    {
         clear();
         ensure_capacity(init.size());
         for (const auto& val : init) {
@@ -217,7 +247,8 @@ private:
         return *this;
     }
 
-    ~kvector() {
+    ~kvector()
+    {
         clear();
         kfree(_data);
     }
@@ -229,11 +260,11 @@ private:
 
     bool empty() const { return _size == 0; }
 
-    iterator begin() { return iterator{_data}; }
-    iterator end() { return iterator{_data + _size}; }
+    iterator begin() { return iterator { _data }; }
+    iterator end() { return iterator { _data + _size }; }
 
-    const_iterator begin() const { return const_iterator{_data}; }
-    const_iterator end() const { return const_iterator{_data + _size}; }
+    const_iterator begin() const { return const_iterator { _data }; }
+    const_iterator end() const { return const_iterator { _data + _size }; }
 
     T* data() { return _data; }
     const T* data() const { return _data; }
@@ -244,7 +275,8 @@ private:
     T& back() { return _data[_size - 1]; }
     const T& back() const { return _data[_size - 1]; }
 
-    T& operator[](std::size_t i) {
+    T& operator[](std::size_t i)
+    {
 #ifdef KERNEL_DEBUG
         if (i >= _size) {
             kpanic("kvector: index ", i, " out of bounds (size=", _size, ")");
@@ -253,7 +285,8 @@ private:
         return _data[i];
     }
 
-    const T& operator[](std::size_t i) const {
+    const T& operator[](std::size_t i) const
+    {
 #ifdef KERNEL_DEBUG
         if (i >= _size) {
             kpanic("kvector: index ", i, " out of bounds (size=", _size, ")");
@@ -262,7 +295,8 @@ private:
         return _data[i];
     }
 
-    T& push_back(const T& t) {
+    T& push_back(const T& t)
+    {
         ensure_capacity(_size + 1);
 
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -274,7 +308,8 @@ private:
         return _data[_size++];
     }
 
-    T& push_back(T&& t) {
+    T& push_back(T&& t)
+    {
         ensure_capacity(_size + 1);
 
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -286,13 +321,16 @@ private:
         return _data[_size++];
     }
 
-    template <typename... Args> T& emplace_back(Args&&... args) {
+    template <typename... Args>
+    T& emplace_back(Args&&... args)
+    {
         ensure_capacity(_size + 1);
         new (&_data[_size]) T(std::forward<Args>(args)...);
         return _data[_size++];
     }
 
-    void pop_back() {
+    void pop_back()
+    {
         if (empty()) {
             return;
         }
@@ -304,7 +342,8 @@ private:
         }
     }
 
-    void clear() {
+    void clear()
+    {
         if (empty()) {
             return;
         }
@@ -318,7 +357,8 @@ private:
         _size = 0;
     }
 
-    void erase(std::size_t pos) {
+    void erase(std::size_t pos)
+    {
         if (pos >= _size) {
             return;
         }
@@ -330,7 +370,8 @@ private:
         _size--;
     }
 
-    void move_to_end(std::size_t pos) {
+    void move_to_end(std::size_t pos)
+    {
         for (std::size_t i = pos; i < _size - 1; i++) {
             T temp = _data[i];
             _data[i] = _data[i + 1];

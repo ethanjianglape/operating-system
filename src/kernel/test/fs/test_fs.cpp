@@ -2,224 +2,249 @@
 
 #ifdef KERNEL_TESTS
 
-#include <test/test.hpp>
 #include <fs/fs.hpp>
 #include <log/log.hpp>
+#include <test/test.hpp>
 
 namespace test_fs {
-    void test_open_existing_file() {
-        fs::Inode* inode = fs::open("/bin/a", fs::O_RDONLY);
-        test::assert_not_null(inode, "open existing file returns inode");
+void test_open_existing_file()
+{
+    fs::Inode* inode = fs::open("/bin/a", fs::O_RDONLY);
+    test::assert_not_null(inode, "open existing file returns inode");
 
-        if (inode && inode->ops && inode->ops->close) {
-            fs::FileDescriptor fd = {.inode = inode, .offset = 0, .flags = fs::O_RDONLY};
-            inode->ops->close(&fd);
+    if (inode && inode->ops && inode->ops->close) {
+        fs::FileDescriptor fd = { .inode = inode, .offset = 0, .flags = fs::O_RDONLY };
+        inode->ops->close(&fd);
+    }
+}
+
+void test_open_nonexistent_file()
+{
+    fs::Inode* inode = fs::open("/nonexistent/file/path", fs::O_RDONLY);
+    test::assert_null(inode, "open nonexistent file returns nullptr");
+}
+
+void test_open_dev_null()
+{
+    fs::Inode* inode = fs::open("/dev/null", fs::O_RDONLY);
+    test::assert_not_null(inode, "/dev/null opens successfully");
+    test::assert_eq(inode->type, fs::FileType::CHAR_DEVICE, "/dev/null is char device");
+}
+
+void test_dev_null_read_returns_eof()
+{
+    fs::Inode* inode = fs::open("/dev/null", fs::O_RDONLY);
+    test::assert_not_null(inode, "/dev/null opens for read test");
+
+    if (inode && inode->ops && inode->ops->read) {
+        char buf[16];
+        fs::FileDescriptor fd = { .inode = inode, .offset = 0, .flags = fs::O_RDONLY };
+        int result = inode->ops->read(&fd, buf, sizeof(buf));
+        test::assert_eq(result, 0, "/dev/null read returns 0 (EOF)");
+    }
+}
+
+void test_dev_null_write_succeeds()
+{
+    fs::Inode* inode = fs::open("/dev/null", fs::O_RDONLY);
+    test::assert_not_null(inode, "/dev/null opens for write test");
+
+    if (inode && inode->ops && inode->ops->write) {
+        const char* data = "test data";
+        fs::FileDescriptor fd = { .inode = inode, .offset = 0, .flags = fs::O_RDONLY };
+        int result = inode->ops->write(&fd, data, 9);
+        test::assert_eq(result, 9, "/dev/null write returns byte count");
+    }
+}
+
+void test_stat_existing_file()
+{
+    fs::Stat st;
+    int result = fs::stat("/bin/a", &st);
+    test::assert_eq(result, 0, "stat on existing file returns 0");
+    test::assert_eq(st.type, fs::FileType::REGULAR, "stat reports regular file");
+    test::assert_true(st.size > 0, "stat reports non-zero size for ELF");
+}
+
+void test_stat_nonexistent_file()
+{
+    fs::Stat st;
+    int result = fs::stat("/nonexistent/file", &st);
+    test::assert_ne(result, 0, "stat on nonexistent file returns error");
+}
+
+void test_stat_dev_null()
+{
+    fs::Stat st;
+    int result = fs::stat("/dev/null", &st);
+    test::assert_eq(result, 0, "stat on /dev/null returns 0");
+    test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "stat reports char device");
+}
+
+void test_readdir_root()
+{
+    kvector<fs::DirEntry> entries;
+    int result = fs::readdir("/", entries);
+    test::assert_eq(result, 0, "readdir on / returns 0");
+    test::assert_true(entries.size() > 0, "root has entries");
+}
+
+void test_readdir_bin()
+{
+    kvector<fs::DirEntry> entries;
+    int result = fs::readdir("/bin", entries);
+    test::assert_eq(result, 0, "readdir on /bin returns 0");
+    test::assert_true(entries.size() > 0, "/bin has entries");
+
+    bool found_a = false;
+    for (auto& entry : entries) {
+        if (entry.name == "a") {
+            found_a = true;
+            test::assert_eq(entry.type, fs::FileType::REGULAR, "/bin/a is regular file");
+            break;
         }
     }
+    test::assert_true(found_a, "/bin contains file 'a'");
+}
 
-    void test_open_nonexistent_file() {
-        fs::Inode* inode = fs::open("/nonexistent/file/path", fs::O_RDONLY);
-        test::assert_null(inode, "open nonexistent file returns nullptr");
-    }
+void test_readdir_dev()
+{
+    kvector<fs::DirEntry> entries;
+    int result = fs::readdir("/dev", entries);
+    test::assert_eq(result, 0, "readdir on /dev returns 0");
 
-    void test_open_dev_null() {
-        fs::Inode* inode = fs::open("/dev/null", fs::O_RDONLY);
-        test::assert_not_null(inode, "/dev/null opens successfully");
-        test::assert_eq(inode->type, fs::FileType::CHAR_DEVICE, "/dev/null is char device");
-    }
-
-    void test_dev_null_read_returns_eof() {
-        fs::Inode* inode = fs::open("/dev/null", fs::O_RDONLY);
-        test::assert_not_null(inode, "/dev/null opens for read test");
-
-        if (inode && inode->ops && inode->ops->read) {
-            char buf[16];
-            fs::FileDescriptor fd = {.inode = inode, .offset = 0, .flags = fs::O_RDONLY};
-            int result = inode->ops->read(&fd, buf, sizeof(buf));
-            test::assert_eq(result, 0, "/dev/null read returns 0 (EOF)");
+    bool found_null = false;
+    for (auto& entry : entries) {
+        if (entry.name == "null") {
+            found_null = true;
+            break;
         }
     }
+    test::assert_true(found_null, "/dev contains 'null'");
+}
 
-    void test_dev_null_write_succeeds() {
-        fs::Inode* inode = fs::open("/dev/null", fs::O_RDONLY);
-        test::assert_not_null(inode, "/dev/null opens for write test");
+void test_readdir_nonexistent()
+{
+    kvector<fs::DirEntry> entries;
+    int result = fs::readdir("/nonexistent", entries);
+    test::assert_ne(result, 0, "readdir on nonexistent dir returns error");
+}
 
-        if (inode && inode->ops && inode->ops->write) {
-            const char* data = "test data";
-            fs::FileDescriptor fd = {.inode = inode, .offset = 0, .flags = fs::O_RDONLY};
-            int result = inode->ops->write(&fd, data, 9);
-            test::assert_eq(result, 9, "/dev/null write returns byte count");
-        }
-    }
+// =========================================================================
+// canonicalize tests
+// =========================================================================
 
-    void test_stat_existing_file() {
-        fs::Stat st;
-        int result = fs::stat("/bin/a", &st);
-        test::assert_eq(result, 0, "stat on existing file returns 0");
-        test::assert_eq(st.type, fs::FileType::REGULAR, "stat reports regular file");
-        test::assert_true(st.size > 0, "stat reports non-zero size for ELF");
-    }
+void test_canonicalize_simple()
+{
+    kstring result = fs::canonicalize("/bin/a");
+    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize simple path unchanged");
+}
 
-    void test_stat_nonexistent_file() {
-        fs::Stat st;
-        int result = fs::stat("/nonexistent/file", &st);
-        test::assert_ne(result, 0, "stat on nonexistent file returns error");
-    }
+void test_canonicalize_trailing_slash()
+{
+    kstring result = fs::canonicalize("/bin/");
+    test::assert_eq(result, kstring { "/bin" }, "canonicalize removes trailing slash");
+}
 
-    void test_stat_dev_null() {
-        fs::Stat st;
-        int result = fs::stat("/dev/null", &st);
-        test::assert_eq(result, 0, "stat on /dev/null returns 0");
-        test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "stat reports char device");
-    }
+void test_canonicalize_double_slash()
+{
+    kstring result = fs::canonicalize("/bin//a");
+    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize removes double slashes");
+}
 
-    void test_readdir_root() {
-        kvector<fs::DirEntry> entries;
-        int result = fs::readdir("/", entries);
-        test::assert_eq(result, 0, "readdir on / returns 0");
-        test::assert_true(entries.size() > 0, "root has entries");
-    }
+void test_canonicalize_dot()
+{
+    kstring result = fs::canonicalize("/bin/./a");
+    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize removes . component");
+}
 
-    void test_readdir_bin() {
-        kvector<fs::DirEntry> entries;
-        int result = fs::readdir("/bin", entries);
-        test::assert_eq(result, 0, "readdir on /bin returns 0");
-        test::assert_true(entries.size() > 0, "/bin has entries");
+void test_canonicalize_dotdot()
+{
+    kstring result = fs::canonicalize("/bin/../dev/null");
+    test::assert_eq(result, kstring { "/dev/null" }, "canonicalize resolves .. component");
+}
 
-        bool found_a = false;
-        for (auto& entry : entries) {
-            if (entry.name == "a") {
-                found_a = true;
-                test::assert_eq(entry.type, fs::FileType::REGULAR, "/bin/a is regular file");
-                break;
-            }
-        }
-        test::assert_true(found_a, "/bin contains file 'a'");
-    }
+void test_canonicalize_dotdot_at_root()
+{
+    kstring result = fs::canonicalize("/../bin/a");
+    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize handles .. at root");
+}
 
-    void test_readdir_dev() {
-        kvector<fs::DirEntry> entries;
-        int result = fs::readdir("/dev", entries);
-        test::assert_eq(result, 0, "readdir on /dev returns 0");
+void test_canonicalize_multiple_dotdot()
+{
+    kstring result = fs::canonicalize("/a/b/c/../../d");
+    test::assert_eq(result, kstring { "/a/d" }, "canonicalize handles multiple ..");
+}
 
-        bool found_null = false;
-        for (auto& entry : entries) {
-            if (entry.name == "null") {
-                found_null = true;
-                break;
-            }
-        }
-        test::assert_true(found_null, "/dev contains 'null'");
-    }
+void test_canonicalize_root()
+{
+    kstring result = fs::canonicalize("/");
+    test::assert_eq(result, kstring { "/" }, "canonicalize root stays root");
+}
 
-    void test_readdir_nonexistent() {
-        kvector<fs::DirEntry> entries;
-        int result = fs::readdir("/nonexistent", entries);
-        test::assert_ne(result, 0, "readdir on nonexistent dir returns error");
-    }
+void test_canonicalize_complex()
+{
+    kstring result = fs::canonicalize("/a/./b/../c//d/");
+    test::assert_eq(result, kstring { "/a/c/d" }, "canonicalize handles complex path");
+}
 
-    // =========================================================================
-    // canonicalize tests
-    // =========================================================================
+// =========================================================================
+// Additional stat tests
+// =========================================================================
 
-    void test_canonicalize_simple() {
-        kstring result = fs::canonicalize("/bin/a");
-        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize simple path unchanged");
-    }
+void test_stat_directory()
+{
+    fs::Stat st;
+    int result = fs::stat("/bin", &st);
+    test::assert_eq(result, 0, "stat on /bin returns 0");
+    test::assert_eq(st.type, fs::FileType::DIRECTORY, "stat reports /bin as directory");
+}
 
-    void test_canonicalize_trailing_slash() {
-        kstring result = fs::canonicalize("/bin/");
-        test::assert_eq(result, kstring{"/bin"}, "canonicalize removes trailing slash");
-    }
+void test_stat_dev_tty()
+{
+    fs::Stat st;
+    int result = fs::stat("/dev/tty1", &st);
+    test::assert_eq(result, 0, "stat on /dev/tty1 returns 0");
+    test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "/dev/tty1 is char device");
+}
 
-    void test_canonicalize_double_slash() {
-        kstring result = fs::canonicalize("/bin//a");
-        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize removes double slashes");
-    }
+void test_stat_with_dotdot()
+{
+    fs::Stat st;
+    int result = fs::stat("/bin/../bin/a", &st);
+    test::assert_eq(result, 0, "stat with .. in path returns 0");
+    test::assert_eq(st.type, fs::FileType::REGULAR, "stat resolves .. correctly");
+}
 
-    void test_canonicalize_dot() {
-        kstring result = fs::canonicalize("/bin/./a");
-        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize removes . component");
-    }
+void run()
+{
+    log::info("Running filesystem tests...");
 
-    void test_canonicalize_dotdot() {
-        kstring result = fs::canonicalize("/bin/../dev/null");
-        test::assert_eq(result, kstring{"/dev/null"}, "canonicalize resolves .. component");
-    }
-
-    void test_canonicalize_dotdot_at_root() {
-        kstring result = fs::canonicalize("/../bin/a");
-        test::assert_eq(result, kstring{"/bin/a"}, "canonicalize handles .. at root");
-    }
-
-    void test_canonicalize_multiple_dotdot() {
-        kstring result = fs::canonicalize("/a/b/c/../../d");
-        test::assert_eq(result, kstring{"/a/d"}, "canonicalize handles multiple ..");
-    }
-
-    void test_canonicalize_root() {
-        kstring result = fs::canonicalize("/");
-        test::assert_eq(result, kstring{"/"}, "canonicalize root stays root");
-    }
-
-    void test_canonicalize_complex() {
-        kstring result = fs::canonicalize("/a/./b/../c//d/");
-        test::assert_eq(result, kstring{"/a/c/d"}, "canonicalize handles complex path");
-    }
-
-    // =========================================================================
-    // Additional stat tests
-    // =========================================================================
-
-    void test_stat_directory() {
-        fs::Stat st;
-        int result = fs::stat("/bin", &st);
-        test::assert_eq(result, 0, "stat on /bin returns 0");
-        test::assert_eq(st.type, fs::FileType::DIRECTORY, "stat reports /bin as directory");
-    }
-
-    void test_stat_dev_tty() {
-        fs::Stat st;
-        int result = fs::stat("/dev/tty1", &st);
-        test::assert_eq(result, 0, "stat on /dev/tty1 returns 0");
-        test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "/dev/tty1 is char device");
-    }
-
-    void test_stat_with_dotdot() {
-        fs::Stat st;
-        int result = fs::stat("/bin/../bin/a", &st);
-        test::assert_eq(result, 0, "stat with .. in path returns 0");
-        test::assert_eq(st.type, fs::FileType::REGULAR, "stat resolves .. correctly");
-    }
-
-    void run() {
-        log::info("Running filesystem tests...");
-
-        test_open_existing_file();
-        test_open_nonexistent_file();
-        test_open_dev_null();
-        test_dev_null_read_returns_eof();
-        test_dev_null_write_succeeds();
-        test_stat_existing_file();
-        test_stat_nonexistent_file();
-        test_stat_dev_null();
-        test_stat_directory();
-        test_stat_dev_tty();
-        test_stat_with_dotdot();
-        test_readdir_root();
-        test_readdir_bin();
-        test_readdir_dev();
-        test_readdir_nonexistent();
-        test_canonicalize_simple();
-        test_canonicalize_trailing_slash();
-        test_canonicalize_double_slash();
-        test_canonicalize_dot();
-        test_canonicalize_dotdot();
-        test_canonicalize_dotdot_at_root();
-        test_canonicalize_multiple_dotdot();
-        test_canonicalize_root();
-        test_canonicalize_complex();
-    }
+    test_open_existing_file();
+    test_open_nonexistent_file();
+    test_open_dev_null();
+    test_dev_null_read_returns_eof();
+    test_dev_null_write_succeeds();
+    test_stat_existing_file();
+    test_stat_nonexistent_file();
+    test_stat_dev_null();
+    test_stat_directory();
+    test_stat_dev_tty();
+    test_stat_with_dotdot();
+    test_readdir_root();
+    test_readdir_bin();
+    test_readdir_dev();
+    test_readdir_nonexistent();
+    test_canonicalize_simple();
+    test_canonicalize_trailing_slash();
+    test_canonicalize_double_slash();
+    test_canonicalize_dot();
+    test_canonicalize_dotdot();
+    test_canonicalize_dotdot_at_root();
+    test_canonicalize_multiple_dotdot();
+    test_canonicalize_root();
+    test_canonicalize_complex();
+}
 }
 
 #endif // KERNEL_TESTS

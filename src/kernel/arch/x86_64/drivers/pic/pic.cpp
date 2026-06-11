@@ -54,37 +54,38 @@
 #include "pic.hpp"
 
 #include <arch/x86_64/cpu/cpu.hpp>
-#include <log/log.hpp>
 #include <kpanic/kpanic.hpp>
+#include <log/log.hpp>
 
 namespace x86_64::drivers::pic {
-    /**
-     * @brief Disables the legacy PIC by masking all IRQ lines.
-     *
-     * Writes 0xFF to both PIC data ports to mask all interrupts, then verifies
-     * the masks were applied. This must be called before enabling the APIC.
-     *
-     * @return true if successfully disabled, false otherwise (also panics on failure).
-     */
-    bool init() {
-        log::init_start("Legacy PIC");
+/**
+ * @brief Disables the legacy PIC by masking all IRQ lines.
+ *
+ * Writes 0xFF to both PIC data ports to mask all interrupts, then verifies
+ * the masks were applied. This must be called before enabling the APIC.
+ *
+ * @return true if successfully disabled, false otherwise (also panics on failure).
+ */
+bool init()
+{
+    log::init_start("Legacy PIC");
 
-        // Mask all IRQs on both PICs (0xFF = all 8 bits set = all IRQs masked)
-        cpu::outb(PIC1_DATA, 0xFF);
-        cpu::outb(PIC2_DATA, 0xFF);
+    // Mask all IRQs on both PICs (0xFF = all 8 bits set = all IRQs masked)
+    cpu::outb(PIC1_DATA, 0xFF);
+    cpu::outb(PIC2_DATA, 0xFF);
 
-        // Verify the masks were set correctly
-        const auto master = cpu::inb(PIC1_DATA);
-        const auto slave = cpu::inb(PIC2_DATA);
-        const auto success = master == 0xFF && slave == 0xFF;
+    // Verify the masks were set correctly
+    const auto master = cpu::inb(PIC1_DATA);
+    const auto slave = cpu::inb(PIC2_DATA);
+    const auto success = master == 0xFF && slave == 0xFF;
 
-        if (!success) {
-            kpanic("Failed to disable legacy PIC");
-        }
-
-        log::info("Legacy PIC has been disabled");
-        log::init_end("Legacy PIC");
-
-        return success;
+    if (!success) {
+        kpanic("Failed to disable legacy PIC");
     }
+
+    log::info("Legacy PIC has been disabled");
+    log::init_end("Legacy PIC");
+
+    return success;
+}
 }
