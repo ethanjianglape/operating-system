@@ -90,10 +90,19 @@ mkdir -p isodir/boot/limine
 mkdir -p isodir/EFI/BOOT
 
 log_section "Copying limine BIOS and UEFI system files"
-cp /usr/share/limine/limine-bios.sys isodir/boot/limine
-cp /usr/share/limine/limine-bios-cd.bin isodir/boot/limine
-cp /usr/share/limine/limine-uefi-cd.bin isodir/boot/limine
-cp /usr/share/limine/BOOTX64.EFI isodir/EFI/BOOT
+
+if [ -f "/usr/local/share/limine/limine-bios.sys" ]; then
+    cp /usr/local/share/limine/limine-bios.sys isodir/boot/limine
+elif [ -f "/usr/share/limine/limine-bios.sys" ]; then
+    cp /usr/share/limine/limine-bios.sys isodir/boot/limine
+else
+    log_failure "Could not find limine-bios.sys!"
+    exit 1
+fi
+
+cp /usr/local/share/limine/limine-bios-cd.bin isodir/boot/limine
+cp /usr/local/share/limine/limine-uefi-cd.bin isodir/boot/limine
+cp /usr/local/share/limine/BOOTX64.EFI isodir/EFI/BOOT
 cp ../src/bootloader/limine/limine.conf isodir/limine.conf
 
 log_section "Using xorriso to build bootable ISO"

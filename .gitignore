@@ -3,6 +3,7 @@ build/
 sysroot/
 initramfs/
 cmake-build-*/
+cmake_build/
 .cache/*
 .claude*
 
