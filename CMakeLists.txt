@@ -69,6 +69,7 @@ add_custom_command(
         -static
         -Wl,-Map=kernel.map
         -Wl,--build-id=none
+        -z noexecstack
         -o kernel.elf
         "$<TARGET_OBJECTS:crti_obj>"
         "$<TARGET_OBJECTS:boot_objs>"

@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(USER_BIN_DIR "${CMAKE_SOURCE_DIR}/initramfs/bin")
 
 # Linker script
-set(USER_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
+#set(USER_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
 
 set(MUSL_GCC_FLAGS "-static")
 
