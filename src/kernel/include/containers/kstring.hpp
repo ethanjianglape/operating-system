@@ -24,7 +24,7 @@ class kstring final {
 
     void ensure_null_terminated() {
         if (_data) {
-            _data[_length] = '\0';            
+            _data[_length] = '\0';
         }
     }
 
@@ -46,12 +46,14 @@ class kstring final {
         if (!front && !back) {
             return *this;
         }
-        
+
         auto b = begin();
         auto e = end();
 
-        while (front && *b == c && b < e) ++b;
-        while (back && *e == c && e > b) --e;
+        while (front && *b == c && b < e)
+            ++b;
+        while (back && *e == c && e > b)
+            --e;
 
         if (b >= e) {
             return "";
@@ -172,8 +174,8 @@ class kstring final {
     }
 
     // Construct from C string of count length
-    kstring(const char* s, std::size_t count): kstring{} {
-        if (s == nullptr){
+    kstring(const char* s, std::size_t count) : kstring{} {
+        if (s == nullptr) {
             return;
         }
 
@@ -293,7 +295,7 @@ class kstring final {
 
         for (std::size_t i = 0; i + len - 1 < _length; i++) {
             bool found = true;
-            
+
             for (std::size_t j = 0; j < len; j++) {
                 if (_data[i + j] != str[j]) {
                     found = false;
@@ -309,17 +311,11 @@ class kstring final {
         return npos;
     }
 
-    kstring trim_front(char c = ' ') const {
-        return trim(true, false, c);
-    }
+    kstring trim_front(char c = ' ') const { return trim(true, false, c); }
 
-    kstring trim_back(char c = ' ') const {
-        return trim(false, true, c);
-    }
+    kstring trim_back(char c = ' ') const { return trim(false, true, c); }
 
-    kstring trim(char c = ' ') const {
-        return trim(true, true, c);
-    }
+    kstring trim(char c = ' ') const { return trim(true, true, c); }
 
     // Modifiers
     char& push_back(char c) {
@@ -483,11 +479,11 @@ class kstring final {
         if (s == nullptr) {
             return empty();
         }
-        
+
         if (empty()) {
             return *s == '\0';
         }
-        
+
         return strcmp(_data, s) == 0;
     }
 
@@ -497,7 +493,7 @@ class kstring final {
         if (other.length() > _length) {
             return false;
         }
-        
+
         for (std::size_t i = 0; i < other.length(); i++) {
             if (_data[i] != other[i]) {
                 return false;
@@ -507,9 +503,7 @@ class kstring final {
         return true;
     }
 
-    bool ends_with(char c) const {
-        return _length > 0 && back() == c;
-    }
+    bool ends_with(char c) const { return _length > 0 && back() == c; }
 };
 
 inline kstring operator+(const char* lhs, const kstring& rhs) {
