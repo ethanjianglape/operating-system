@@ -57,6 +57,7 @@ static TmpFile* create_file(const kstring& path, const kstring& name, FileType t
     return file;
 }
 
+[[maybe_unused]]
 static TmpFile* ensure_path_exists(const kstring& path)
 {
     kvector<kstring> parts = algo::split(path, '/');
@@ -92,7 +93,7 @@ static TmpFile* ensure_path_exists(const kstring& path)
     return parent;
 }
 
-static Inode* tmpfs_open(FileSystem* fs, const kstring& path, int flags)
+static Inode* tmpfs_open(FileSystem*, const kstring& path, int)
 {
     TmpFile* file = find_file_by_path(path);
 
@@ -114,7 +115,7 @@ static Inode* tmpfs_open(FileSystem* fs, const kstring& path, int flags)
     return inode;
 }
 
-static int tmpfs_stat(FileSystem* fs, const kstring& path, Stat* stat)
+static int tmpfs_stat(FileSystem*, const kstring& path, Stat* stat)
 {
     log::debugf("tmpfs state path = {}", path);
 
@@ -135,16 +136,16 @@ static int tmpfs_stat(FileSystem* fs, const kstring& path, Stat* stat)
     return -1;
 }
 
-static int tmpfs_readdir(FileSystem* fs, const kstring& path, kvector<DirEntry>& out)
+static int tmpfs_readdir(FileSystem*, const kstring&, kvector<DirEntry>&)
 {
     return 0;
 }
 
-static int tmpfs_mkdir(FileSystem* fs, const kstring& path, int mode)
+static int tmpfs_mkdir(FileSystem*, const kstring& path, int)
 {
     log::debug("/tmp mkdir: ", path);
 
-    TmpFile* parent = ensure_path_exists(path);
+    // TmpFile* parent = ensure_path_exists(path);
 
     return 0;
 

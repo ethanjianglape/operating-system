@@ -13,7 +13,7 @@ void test_open_existing_file()
     test::assert_not_null(inode, "open existing file returns inode");
 
     if (inode && inode->ops && inode->ops->close) {
-        fs::FileDescriptor fd = { .inode = inode, .offset = 0, .flags = fs::O_RDONLY };
+        fs::FileDescriptor fd = { .inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY };
         inode->ops->close(&fd);
     }
 }
@@ -37,9 +37,10 @@ void test_dev_null_read_returns_eof()
     test::assert_not_null(inode, "/dev/null opens for read test");
 
     if (inode && inode->ops && inode->ops->read) {
-        char               buf[16];
-        fs::FileDescriptor fd     = { .inode = inode, .offset = 0, .flags = fs::O_RDONLY };
-        int                result = inode->ops->read(&fd, buf, sizeof(buf));
+        fs::FileDescriptor fd = { .inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY };
+
+        char buf[16];
+        int  result = inode->ops->read(&fd, buf, sizeof(buf));
         test::assert_eq(result, 0, "/dev/null read returns 0 (EOF)");
     }
 }
@@ -50,9 +51,11 @@ void test_dev_null_write_succeeds()
     test::assert_not_null(inode, "/dev/null opens for write test");
 
     if (inode && inode->ops && inode->ops->write) {
-        const char*        data   = "test data";
-        fs::FileDescriptor fd     = { .inode = inode, .offset = 0, .flags = fs::O_RDONLY };
-        int                result = inode->ops->write(&fd, data, 9);
+        fs::FileDescriptor fd = { .inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY };
+
+        const char* data   = "test data";
+        int         result = inode->ops->write(&fd, data, 9);
+
         test::assert_eq(result, 9, "/dev/null write returns byte count");
     }
 }

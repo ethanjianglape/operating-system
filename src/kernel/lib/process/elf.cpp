@@ -33,7 +33,7 @@ Elf64_File invalid_file()
     };
 }
 
-Elf64_File parse_file(std::uint8_t* buffer, std::size_t size)
+Elf64_File parse_file(std::uint8_t* buffer, [[maybe_unused]] std::size_t size)
 {
     if (buffer == nullptr) {
         return invalid_file();

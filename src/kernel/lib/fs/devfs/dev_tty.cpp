@@ -267,9 +267,16 @@ void run_tty_program(const kstring& name)
         return;
     }
 
-    std::size_t    size = inode->size;
-    auto*          data = new std::uint8_t[size];
-    FileDescriptor fd   = { .inode = inode, .offset = 0, .flags = O_RDONLY };
+    std::size_t size = inode->size;
+    auto*       data = new std::uint8_t[size];
+
+    FileDescriptor fd = {
+        .inode  = inode,
+        .path   = "",
+        .offset = 0,
+        .flags  = O_RDONLY,
+    };
+
     inode->ops->read(&fd, data, size);
 
     process::Process* p = process::create_process(data, size);

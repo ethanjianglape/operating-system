@@ -34,6 +34,7 @@ static const FileOps random_ops = {
     .write = random_write,
     .close = random_close,
     .lseek = random_lseek,
+    .fstat = nullptr
 };
 
 static Inode random_inode = {
