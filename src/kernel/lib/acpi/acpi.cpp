@@ -24,7 +24,7 @@
  * parsers (e.g., madt.cpp) based on the 4-byte signature.
  */
 
-#include "arch/x86_64/memory/vmm.hpp"
+#include "arch/x64/memory/vmm.hpp"
 #include <acpi/acpi.hpp>
 #include <acpi/madt.hpp>
 #include <arch.hpp>

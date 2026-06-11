@@ -1,4 +1,4 @@
-#include "arch/x86_64/memory/vmm.hpp"
+#include "arch/x64/memory/vmm.hpp"
 #include "kpanic/kpanic.hpp"
 #include "log/log.hpp"
 #include <arch.hpp>

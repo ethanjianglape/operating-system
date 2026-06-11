@@ -1,6 +1,6 @@
 #pragma once
 
-#include "arch/x86_64/context/context.hpp"
+#include "arch/x64/context/context.hpp"
 #include "containers/kstring.hpp"
 #include "containers/kvector.hpp"
 #include "fs/fs.hpp"

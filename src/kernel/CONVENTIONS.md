@@ -12,10 +12,10 @@ namespace tty { }      // terminal
 namespace console { }  // framebuffer console
 ```
 
-Architecture-specific code uses `x86_64::` (or other arch):
+Architecture-specific code uses `x64::` (or other arch):
 ```cpp
-namespace x86_64::vmm { }
-namespace x86_64::drivers::apic { }
+namespace x64::vmm { }
+namespace x64::drivers::apic { }
 ```
 
 **Global utilities use k-prefix** (like Linux's `printk`):
@@ -31,24 +31,24 @@ namespace detail { }         // bad - ambiguous at global scope
 
 ## Architecture Abstraction
 
-`lib/` code must use the `arch::` abstraction, never `x86_64::` directly:
+`lib/` code must use the `arch::` abstraction, never `x64::` directly:
 ```cpp
 // in lib/panic/panic.cpp
 #include <arch.hpp>
 arch::cpu::cli();     // good
-x86_64::cpu::cli();   // bad - breaks portability
+x64::cpu::cli();   // bad - breaks portability
 ```
 
 Only `include/arch.hpp` bridges architectures:
 ```cpp
 namespace arch {
-    namespace vmm = ::x86_64::vmm;
-    namespace cpu = ::x86_64::cpu;
-    namespace drivers = ::x86_64::drivers;
+    namespace vmm = ::x64::vmm;
+    namespace cpu = ::x64::cpu;
+    namespace drivers = ::x64::drivers;
 }
 ```
 
-Arch code (`arch/x86_64/`) can use its own namespace directly.
+Arch code (`arch/x64/`) can use its own namespace directly.
 
 ## File Structure
 
@@ -62,7 +62,7 @@ kernel/
 ├── lib/              # implementations (mirrors include/)
 │   ├── log/log.cpp
 │   └── ...
-└── arch/x86_64/      # self-contained, headers next to source
+└── arch/x64/      # self-contained, headers next to source
     ├── vmm/
     │   ├── vmm.hpp
     │   └── vmm.cpp

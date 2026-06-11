@@ -1,12 +1,12 @@
-#include <arch/x86_64/cpu/cpu.hpp>
-#include <arch/x86_64/drivers/apic/apic.hpp>
-#include <arch/x86_64/drivers/keyboard/keyboard.hpp>
-#include <arch/x86_64/drivers/pic/pic.hpp>
-#include <arch/x86_64/drivers/serial/serial.hpp>
-#include <arch/x86_64/gdt/gdt.hpp>
-#include <arch/x86_64/interrupts/idt.hpp>
-#include <arch/x86_64/percpu/percpu.hpp>
-#include <arch/x86_64/trap/syscall_entry.hpp>
+#include <arch/x64/cpu/cpu.hpp>
+#include <arch/x64/drivers/apic/apic.hpp>
+#include <arch/x64/drivers/keyboard/keyboard.hpp>
+#include <arch/x64/drivers/pic/pic.hpp>
+#include <arch/x64/drivers/serial/serial.hpp>
+#include <arch/x64/gdt/gdt.hpp>
+#include <arch/x64/interrupts/idt.hpp>
+#include <arch/x64/percpu/percpu.hpp>
+#include <arch/x64/trap/syscall_entry.hpp>
 
 #include <boot/boot.hpp>
 #include <console/console.hpp>
@@ -23,24 +23,24 @@
 [[noreturn]]
 void kernel_main()
 {
-    x86_64::drivers::serial::init();
-    x86_64::cpu::init();
+    x64::drivers::serial::init();
+    x64::cpu::init();
 
     log::info("MyOS Booted into kernel_main() using Limine.");
     log::info("Serial ouput on COM1 initialized");
 
     boot::init();
 
-    x86_64::gdt::init();
-    x86_64::idt::init();
-    x86_64::percpu::init();
-    x86_64::trap::init();
+    x64::gdt::init();
+    x64::idt::init();
+    x64::percpu::init();
+    x64::trap::init();
 
-    x86_64::drivers::pic::init();
-    x86_64::drivers::apic::init();
-    x86_64::drivers::keyboard::init();
+    x64::drivers::pic::init();
+    x64::drivers::apic::init();
+    x64::drivers::keyboard::init();
 
-    x86_64::cpu::sti();
+    x64::cpu::sti();
 
     log::success("all core kernel features initialized!");
 
@@ -53,6 +53,6 @@ void kernel_main()
     scheduler::init();
 
     while (true) {
-        x86_64::cpu::hlt();
+        x64::cpu::hlt();
     }
 }

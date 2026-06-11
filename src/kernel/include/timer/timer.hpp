@@ -1,6 +1,6 @@
 #pragma once
 
-#include "arch/x86_64/interrupts/irq.hpp"
+#include "arch/x64/interrupts/irq.hpp"
 #include <arch.hpp>
 #include <cstdint>
 

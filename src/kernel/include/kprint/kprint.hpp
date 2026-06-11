@@ -1,7 +1,7 @@
 #pragma once
 
 #include "algo/algo.hpp"
-#include "arch/x86_64/drivers/serial/serial.hpp"
+#include "arch/x64/drivers/serial/serial.hpp"
 #include "containers/klist.hpp"
 #include "containers/kvector.hpp"
 #include <arch.hpp>

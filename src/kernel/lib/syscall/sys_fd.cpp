@@ -1,4 +1,4 @@
-#include "arch/x86_64/percpu/percpu.hpp"
+#include "arch/x64/percpu/percpu.hpp"
 #include "containers/kstring.hpp"
 #include <arch.hpp>
 #include <console/console.hpp>

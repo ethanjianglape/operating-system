@@ -5,7 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(kernel C CXX ASM)
 
 # Architecture-specific settings
-set(KERNEL_ARCH "x86_64" CACHE STRING "Target architecture")
+set(KERNEL_ARCH "x64" CACHE STRING "Target architecture")
 set(ARCH_DIR "arch/${KERNEL_ARCH}")
 set(ARCH_DRIVERS_DIR "arch/${KERNEL_ARCH}/drivers")
 set(LIB_DIR "lib/")
@@ -78,7 +78,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/scheduler/scheduler.cpp
 )
 
-# Test sources (compiled when KERNEL_TESTS is defined)
+#Test sources(compiled when KERNEL_TESTS is defined)
 file(GLOB_RECURSE TEST_SOURCES ${TEST_DIR}/*.cpp)
 
 # Architecture-specific boot files
@@ -98,7 +98,7 @@ set(LINKER_SCRIPT ${ARCH_DIR}/limine.ld)
 # Include directories
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/x86_64/..." includes
+  ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/x64/..." includes
 )
 
 # Set ASM flags for 64-bit assembly
