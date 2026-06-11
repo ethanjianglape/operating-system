@@ -31,7 +31,7 @@ static int null_fstat(FileDescriptor*, Stat* stat)
 }
 
 static const FileOps null_ops = {
-    .read = null_read,
+    .read  = null_read,
     .write = null_write,
     .close = null_close,
     .lseek = null_lseek,
@@ -39,9 +39,9 @@ static const FileOps null_ops = {
 };
 
 static Inode null_inode = {
-    .type = FileType::CHAR_DEVICE,
-    .size = 0,
-    .ops = &null_ops,
+    .type         = FileType::CHAR_DEVICE,
+    .size         = 0,
+    .ops          = &null_ops,
     .private_data = nullptr,
 };
 

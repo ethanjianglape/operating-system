@@ -18,7 +18,7 @@ void test_raw_page_returns_non_null()
 void test_raw_page_returns_aligned()
 {
     void* page = arch::vmm::alloc_kpage();
-    auto addr = reinterpret_cast<std::uintptr_t>(page);
+    auto  addr = reinterpret_cast<std::uintptr_t>(page);
     test::assert_eq(addr % arch::vmm::PAGE_SIZE, 0ul, "alloc_raw_page returns page-aligned address");
     arch::vmm::free_kpage(page);
 }
@@ -66,7 +66,7 @@ void test_contiguous_memory_returns_non_null()
 void test_contiguous_memory_is_writable()
 {
     constexpr std::size_t SIZE = 1024;
-    auto* mem = static_cast<std::uint8_t*>(arch::vmm::alloc_contiguous_kmem(SIZE));
+    auto*                 mem  = static_cast<std::uint8_t*>(arch::vmm::alloc_contiguous_kmem(SIZE));
 
     // Write pattern
     for (std::size_t i = 0; i < SIZE; i++) {

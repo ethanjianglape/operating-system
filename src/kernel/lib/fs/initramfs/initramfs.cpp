@@ -8,17 +8,17 @@
 
 namespace fs::initramfs {
 static Inode* initramfs_open(FileSystem* self, const kstring& path, int flags);
-static int initramfs_stat(FileSystem* self, const kstring& path, Stat* out);
-static int initramfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
-static int initramfs_mkdir(FileSystem* self, const kstring& path, int mode);
+static int    initramfs_stat(FileSystem* self, const kstring& path, Stat* out);
+static int    initramfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
+static int    initramfs_mkdir(FileSystem* self, const kstring& path, int mode);
 
 static FileSystem initramfs_fs = {
-    .name = "initramfs",
+    .name         = "initramfs",
     .private_data = nullptr,
-    .open = initramfs_open,
-    .stat = initramfs_stat,
-    .readdir = initramfs_readdir,
-    .mkdir = initramfs_mkdir
+    .open         = initramfs_open,
+    .stat         = initramfs_stat,
+    .readdir      = initramfs_readdir,
+    .mkdir        = initramfs_mkdir
 };
 
 void init(std::uint8_t* addr, std::size_t)
@@ -41,11 +41,11 @@ static Inode* initramfs_open(FileSystem*, const kstring& path, int)
     auto* inode = new Inode {};
     inode->type = type;
     inode->size = meta->size_bytes;
-    inode->ops = get_fs_file_ops();
+    inode->ops  = get_fs_file_ops();
 
-    auto* file_meta = new FsFileMeta {};
-    file_meta->data = meta->data;
-    file_meta->size = meta->size_bytes;
+    auto* file_meta     = new FsFileMeta {};
+    file_meta->data     = meta->data;
+    file_meta->size     = meta->size_bytes;
     inode->private_data = file_meta;
 
     return inode;
@@ -77,8 +77,8 @@ static int initramfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>
     kvector<tar::TarMeta*> metas = tar::list(path);
 
     for (tar::TarMeta* meta : metas) {
-        const kstring& fullpath = meta->filename_str;
-        std::size_t prefix_len = path.empty() ? 0 : path.length() + 1;
+        const kstring& fullpath   = meta->filename_str;
+        std::size_t    prefix_len = path.empty() ? 0 : path.length() + 1;
 
         kstring basename = fullpath.substr(prefix_len);
 

@@ -10,22 +10,22 @@ namespace algo {
 // Removes empty values.
 // ex: split("a::b:c:::d", ':') -> ["a", "b", "c", "d"]
 kvector<kstring> split(kstring::const_iterator begin,
-    kstring::const_iterator end,
-    char delim = ' ');
+    kstring::const_iterator                    end,
+    char                                       delim = ' ');
 
 // Splits a string into components around a delim.
 // Keeps empty values.
 // ex: split("a::b:c:::d", ':') -> ["a", "", "b", "c", "", "", "d"]
 kvector<kstring> tokenize(kstring::const_iterator begin,
-    kstring::const_iterator end,
-    char delim = ' ');
+    kstring::const_iterator                       end,
+    char                                          delim = ' ');
 
 kvector<kstring> split(const kstring& str, char delim = ' ');
 
 template <typename Iter>
 kstring join(Iter begin,
-    Iter end,
-    char delim = ' ')
+    Iter          end,
+    char          delim = ' ')
 {
     kstring result;
 

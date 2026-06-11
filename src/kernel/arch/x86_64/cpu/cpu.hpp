@@ -90,7 +90,7 @@ inline std::uint64_t rdmsr(std::uint32_t msr)
 [[gnu::always_inline]]
 inline void wrmsr(uint32_t msr, uint64_t value)
 {
-    const std::uint32_t low = value & 0xFFFFFFFF;
+    const std::uint32_t low  = value & 0xFFFFFFFF;
     const std::uint32_t high = value >> 32;
 
     asm volatile("wrmsr" : : "a"(low), "d"(high), "c"(msr) : "memory");

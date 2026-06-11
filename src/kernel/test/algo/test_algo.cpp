@@ -16,7 +16,7 @@ namespace test_algo {
 void test_join_empty()
 {
     klist<int> l;
-    kstring result = algo::join(l, ',');
+    kstring    result = algo::join(l, ',');
     test::assert_true(result.empty(), "join empty: result is empty string");
 }
 
@@ -94,23 +94,23 @@ void test_join_after_reverse()
 
 void test_split_empty()
 {
-    kstring s = "";
-    auto parts = algo::split(s, ',');
+    kstring s     = "";
+    auto    parts = algo::split(s, ',');
     test::assert_eq(parts.size(), 0ul, "split empty: no parts");
 }
 
 void test_split_no_delim()
 {
-    kstring s = "hello";
-    auto parts = algo::split(s, ',');
+    kstring s     = "hello";
+    auto    parts = algo::split(s, ',');
     test::assert_eq(parts.size(), 1ul, "split no delim: one part");
     test::assert_true(parts[0] == "hello", "split no delim: part is 'hello'");
 }
 
 void test_split_basic()
 {
-    kstring s = "a,b,c";
-    auto parts = algo::split(s, ',');
+    kstring s     = "a,b,c";
+    auto    parts = algo::split(s, ',');
     test::assert_eq(parts.size(), 3ul, "split basic: three parts");
     test::assert_true(parts[0] == "a", "split basic: [0] is 'a'");
     test::assert_true(parts[1] == "b", "split basic: [1] is 'b'");
@@ -119,8 +119,8 @@ void test_split_basic()
 
 void test_split_removes_empty()
 {
-    kstring s = "a::b:c:::d";
-    auto parts = algo::split(s, ':');
+    kstring s     = "a::b:c:::d";
+    auto    parts = algo::split(s, ':');
     test::assert_eq(parts.size(), 4ul, "split removes empty: four parts");
     test::assert_true(parts[0] == "a", "split removes empty: [0] is 'a'");
     test::assert_true(parts[1] == "b", "split removes empty: [1] is 'b'");
@@ -130,8 +130,8 @@ void test_split_removes_empty()
 
 void test_split_leading_trailing()
 {
-    kstring s = ",a,b,";
-    auto parts = algo::split(s, ',');
+    kstring s     = ",a,b,";
+    auto    parts = algo::split(s, ',');
     test::assert_eq(parts.size(), 2ul, "split leading/trailing: two parts");
     test::assert_true(parts[0] == "a", "split leading/trailing: [0] is 'a'");
     test::assert_true(parts[1] == "b", "split leading/trailing: [1] is 'b'");
@@ -139,8 +139,8 @@ void test_split_leading_trailing()
 
 void test_split_spaces()
 {
-    kstring s = "hello world test";
-    auto parts = algo::split(s, ' ');
+    kstring s     = "hello world test";
+    auto    parts = algo::split(s, ' ');
     test::assert_eq(parts.size(), 3ul, "split spaces: three parts");
     test::assert_true(parts[0] == "hello", "split spaces: [0] is 'hello'");
     test::assert_true(parts[1] == "world", "split spaces: [1] is 'world'");
@@ -153,23 +153,23 @@ void test_split_spaces()
 
 void test_tokenize_empty()
 {
-    const kstring s = "";
-    auto parts = algo::tokenize(s.begin(), s.end(), ',');
+    const kstring s     = "";
+    auto          parts = algo::tokenize(s.begin(), s.end(), ',');
     test::assert_eq(parts.size(), 0ul, "tokenize empty: no parts");
 }
 
 void test_tokenize_no_delim()
 {
-    const kstring s = "hello";
-    auto parts = algo::tokenize(s.begin(), s.end(), ',');
+    const kstring s     = "hello";
+    auto          parts = algo::tokenize(s.begin(), s.end(), ',');
     test::assert_eq(parts.size(), 1ul, "tokenize no delim: one part");
     test::assert_true(parts[0] == "hello", "tokenize no delim: part is 'hello'");
 }
 
 void test_tokenize_basic()
 {
-    const kstring s = "a,b,c";
-    auto parts = algo::tokenize(s.begin(), s.end(), ',');
+    const kstring s     = "a,b,c";
+    auto          parts = algo::tokenize(s.begin(), s.end(), ',');
     test::assert_eq(parts.size(), 3ul, "tokenize basic: three parts");
     test::assert_true(parts[0] == "a", "tokenize basic: [0] is 'a'");
     test::assert_true(parts[1] == "b", "tokenize basic: [1] is 'b'");
@@ -178,8 +178,8 @@ void test_tokenize_basic()
 
 void test_tokenize_keeps_empty()
 {
-    const kstring s = "a::b:c:::d";
-    auto parts = algo::tokenize(s.begin(), s.end(), ':');
+    const kstring s     = "a::b:c:::d";
+    auto          parts = algo::tokenize(s.begin(), s.end(), ':');
     test::assert_eq(parts.size(), 7ul, "tokenize keeps empty: seven parts");
     test::assert_true(parts[0] == "a", "tokenize keeps empty: [0] is 'a'");
     test::assert_true(parts[1] == "", "tokenize keeps empty: [1] is empty");
@@ -192,8 +192,8 @@ void test_tokenize_keeps_empty()
 
 void test_tokenize_leading_trailing()
 {
-    const kstring s = ",a,b,";
-    auto parts = algo::tokenize(s.begin(), s.end(), ',');
+    const kstring s     = ",a,b,";
+    auto          parts = algo::tokenize(s.begin(), s.end(), ',');
     test::assert_eq(parts.size(), 4ul, "tokenize leading/trailing: four parts");
     test::assert_true(parts[0] == "", "tokenize leading/trailing: [0] is empty");
     test::assert_true(parts[1] == "a", "tokenize leading/trailing: [1] is 'a'");

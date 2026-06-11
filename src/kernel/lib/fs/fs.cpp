@@ -58,13 +58,13 @@ void mount(const kstring& path, FileSystem* fs)
 
     log::debug("fs: mounting ", fs->name, " at ", path);
     mount_points.push_back({ .root = path,
-        .filesystem = fs });
+        .filesystem                = fs });
 }
 
 Inode* open(const kstring& path, int flags)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    kstring     canonical = canonicalize(path);
+    MountPoint* mp        = find_mount(canonical);
 
     if (!mp) {
         log::debug("fs::open: no mount for ", canonical);
@@ -78,8 +78,8 @@ Inode* open(const kstring& path, int flags)
 
 int stat(const kstring& path, Stat* out)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    kstring     canonical = canonicalize(path);
+    MountPoint* mp        = find_mount(canonical);
 
     if (!mp) {
         return -1;
@@ -95,8 +95,8 @@ int stat(const kstring& path, Stat* out)
 
 int readdir(const kstring& path, kvector<DirEntry>& out)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    kstring     canonical = canonicalize(path);
+    MountPoint* mp        = find_mount(canonical);
 
     if (!mp) {
         return -1;
@@ -113,8 +113,8 @@ int readdir(const kstring& path, kvector<DirEntry>& out)
 
 int mkdir(const kstring& path, int mode)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    kstring     canonical = canonicalize(path);
+    MountPoint* mp        = find_mount(canonical);
 
     if (!mp) {
         return -1;

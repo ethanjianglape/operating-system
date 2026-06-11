@@ -37,10 +37,10 @@
 namespace acpi::madt {
 // Storage for parsed MADT records (pointers into the memory-mapped MADT)
 // static kvector<const IOApic*> ioapics;
-static kvector<const IOApic*> ioapics;
+static kvector<const IOApic*>                  ioapics;
 static kvector<const InterruptSourceOverride*> overrides;
-static kvector<const LocalApic*> local_apics;
-static kvector<MappedIOApic> mapped_ioapics;
+static kvector<const LocalApic*>               local_apics;
+static kvector<MappedIOApic>                   mapped_ioapics;
 
 static std::uint64_t lapic_addr;
 
@@ -127,8 +127,8 @@ void parse(ACPIHeader* header)
     log_header(madt);
 
     std::uint8_t* madt_start = reinterpret_cast<std::uint8_t*>(madt);
-    std::uint8_t* madt_end = madt_start + madt->std_header.length;
-    auto* record = reinterpret_cast<RecordHeader*>(madt_start + RECORD_OFFSET);
+    std::uint8_t* madt_end   = madt_start + madt->std_header.length;
+    auto*         record     = reinterpret_cast<RecordHeader*>(madt_start + RECORD_OFFSET);
 
     lapic_addr = madt->lapic_addr;
 

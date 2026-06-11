@@ -176,7 +176,7 @@ static void handle_page_fault(std::uint64_t error)
 static void handle_exception(const InterruptFrame* frame)
 {
     const auto vector = frame->vector;
-    const auto error = frame->err;
+    const auto error  = frame->err;
 
     log::error("===== !!KERNEL PANIC!! =====");
     log::error("CPU Exception: ", exception_names[vector]);

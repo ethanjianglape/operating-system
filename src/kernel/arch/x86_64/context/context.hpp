@@ -30,7 +30,7 @@ namespace x86_64::context {
  */
 struct [[gnu::packed]] ContextFrame {
     std::uint64_t r15, r14, r13, r12; // Callee-saved (used by trampoline)
-    std::uint64_t rbx, rbp; // Callee-saved
-    std::uint64_t rip; // Return address (from 'call' insn)
+    std::uint64_t rbx, rbp;           // Callee-saved
+    std::uint64_t rip;                // Return address (from 'call' insn)
 };
 }

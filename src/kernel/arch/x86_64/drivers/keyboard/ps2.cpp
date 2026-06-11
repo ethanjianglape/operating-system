@@ -98,15 +98,15 @@ static void handle_scancode(std::uint8_t byte)
         return;
     }
 
-    bool released = (byte & RELEASE_MASK) != 0;
-    std::uint8_t code = byte & ~RELEASE_MASK;
+    bool         released = (byte & RELEASE_MASK) != 0;
+    std::uint8_t code     = byte & ~RELEASE_MASK;
 
-    ScanCode scancode = ScanCode::Nil;
+    ScanCode         scancode = ScanCode::Nil;
     ExtendedScanCode extended = ExtendedScanCode::Nil;
 
     if (extended_pending) {
         extended_pending = false;
-        extended = static_cast<ExtendedScanCode>(code);
+        extended         = static_cast<ExtendedScanCode>(code);
     } else {
         scancode = static_cast<ScanCode>(code);
     }
@@ -116,13 +116,13 @@ static void handle_scancode(std::uint8_t byte)
 
     // Build and push key event
     KeyEvent event {
-        .scancode = scancode,
+        .scancode          = scancode,
         .extended_scancode = extended,
-        .released = released,
-        .shift_held = is_shift_held(),
-        .control_held = is_control_held(),
-        .alt_held = is_alt_held(),
-        .caps_lock_on = is_caps_lock_on(),
+        .released          = released,
+        .shift_held        = is_shift_held(),
+        .control_held      = is_control_held(),
+        .alt_held          = is_alt_held(),
+        .caps_lock_on      = is_caps_lock_on(),
     };
 
     push_event(event);

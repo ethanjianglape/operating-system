@@ -70,7 +70,7 @@ void test_free_allows_realloc()
 void test_small_alloc_is_writable()
 {
     constexpr std::size_t SIZE = 64;
-    auto* ptr = static_cast<std::uint8_t*>(kmalloc(SIZE));
+    auto*                 ptr  = static_cast<std::uint8_t*>(kmalloc(SIZE));
 
     for (std::size_t i = 0; i < SIZE; i++) {
         ptr[i] = static_cast<std::uint8_t>(i);
@@ -91,7 +91,7 @@ void test_small_alloc_is_writable()
 void test_large_alloc_is_writable()
 {
     constexpr std::size_t SIZE = 2048;
-    auto* ptr = static_cast<std::uint8_t*>(kmalloc(SIZE));
+    auto*                 ptr  = static_cast<std::uint8_t*>(kmalloc(SIZE));
 
     for (std::size_t i = 0; i < SIZE; i++) {
         ptr[i] = static_cast<std::uint8_t>(i & 0xFF);

@@ -11,45 +11,45 @@
 
 namespace process {
 enum class ProcessState : std::uint8_t {
-    RUNNING = 1,
-    READY = 2,
-    BLOCKED = 3,
+    RUNNING  = 1,
+    READY    = 2,
+    BLOCKED  = 3,
     SLEEPING = 4,
-    DEAD = 5,
+    DEAD     = 5,
 };
 
 enum class WaitReason : std::uint8_t {
-    NONE = 0,
+    NONE     = 0,
     KEYBOARD = 1,
-    SLEEP = 2,
+    SLEEP    = 2,
 };
 
 struct ProcessAllocation {
     std::uintptr_t virt_addr;
-    std::size_t num_pages;
+    std::size_t    num_pages;
 };
 
 struct Process {
     // Process meta info
-    std::size_t pid;
+    std::size_t  pid;
     ProcessState state;
-    WaitReason wait_reason;
-    int exit_status;
+    WaitReason   wait_reason;
+    int          exit_status;
 
     kstring working_dir;
 
     // Address space
     arch::vmm::PageTableEntry* pml4;
-    std::uintptr_t entry;
-    std::uintptr_t heap_break;
-    std::uintptr_t mmap_min_addr;
+    std::uintptr_t             entry;
+    std::uintptr_t             heap_break;
+    std::uintptr_t             mmap_min_addr;
 
-    std::uint8_t* kernel_stack; // Base of kernel stack
-    std::uintptr_t kernel_rsp; // Top of stack (initially)
-    std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
+    std::uint8_t*                kernel_stack;       // Base of kernel stack
+    std::uintptr_t               kernel_rsp;         // Top of stack (initially)
+    std::uintptr_t               kernel_rsp_saved;   // Used for context switching within syscall
     arch::context::ContextFrame* context_frame;
-    bool has_kernel_context; // Can be resumed via context_switch
-    bool has_user_context; // Can be resumed via schedule/iretq
+    bool                         has_kernel_context; // Can be resumed via context_switch
+    bool                         has_user_context;   // Can be resumed via schedule/iretq
 
     // VMM page info
     kvector<ProcessAllocation> allocations;
@@ -70,7 +70,7 @@ struct Process {
     std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
 
     std::uint64_t fs_base; // For thread local storage (TLS)
-    int* tidptr;
+    int*          tidptr;
 };
 
 Process* create_process(std::uint8_t* buffer, std::size_t size);

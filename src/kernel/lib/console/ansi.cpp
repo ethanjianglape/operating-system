@@ -119,8 +119,8 @@ std::size_t parse_csi(kstring::const_iterator begin, kstring::const_iterator str
 
     char code = *iter;
 
-    kstring default_arg = get_default_arg(code);
-    kvector<kstring> args = algo::tokenize(begin + 2, iter, ';');
+    kstring          default_arg = get_default_arg(code);
+    kvector<kstring> args        = algo::tokenize(begin + 2, iter, ';');
 
     log::debug("num args: ", args.size());
 

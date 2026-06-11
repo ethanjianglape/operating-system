@@ -15,14 +15,14 @@ std::uintptr_t sys_brk(void* addr)
     }
 
     std::uintptr_t hb_start = proc->heap_break;
-    std::uintptr_t hb_end = reinterpret_cast<std::uintptr_t>(addr);
+    std::uintptr_t hb_end   = reinterpret_cast<std::uintptr_t>(addr);
 
     if (hb_end <= hb_start) {
         return hb_start;
     }
 
-    std::uintptr_t size = hb_end - hb_start;
-    std::size_t pages = arch::vmm::map_mem_at(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+    std::uintptr_t size  = hb_end - hb_start;
+    std::size_t    pages = arch::vmm::map_mem_at(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
     proc->heap_break = hb_end;
     proc->allocations.push_back(process::ProcessAllocation {
@@ -45,13 +45,13 @@ std::uintptr_t sys_mmap(void* addr_ptr, std::size_t length, int prot, int flags,
     }
 
     auto* proc = arch::percpu::current_process();
-    auto addr = reinterpret_cast<std::uintptr_t>(addr_ptr);
+    auto  addr = reinterpret_cast<std::uintptr_t>(addr_ptr);
 
     if (addr_ptr == nullptr || addr < proc->mmap_min_addr) {
         addr = proc->mmap_min_addr;
     }
 
-    int vmm_flags = arch::vmm::PAGE_WRITE | arch::vmm::PAGE_USER;
+    int                         vmm_flags  = arch::vmm::PAGE_WRITE | arch::vmm::PAGE_USER;
     arch::vmm::MemoryAllocation allocation = arch::vmm::try_map_mem_at(proc->pml4, addr, length, vmm_flags);
 
     proc->allocations.push_back(process::ProcessAllocation {

@@ -65,8 +65,8 @@ void test_free_allows_realloc()
 
 void test_size_class_selection_32()
 {
-    void* ptr = slab::alloc(1); // Should use 32-byte class
-    slab::Slab* s = slab::try_get_slab(ptr);
+    void*       ptr = slab::alloc(1); // Should use 32-byte class
+    slab::Slab* s   = slab::try_get_slab(ptr);
     test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
     test::assert_eq(s->size_class_index, (std::uint8_t)0, "1-byte alloc uses size class 0 (32 bytes)");
     slab::free(ptr);
@@ -74,8 +74,8 @@ void test_size_class_selection_32()
 
 void test_size_class_selection_64()
 {
-    void* ptr = slab::alloc(33); // Should use 64-byte class
-    slab::Slab* s = slab::try_get_slab(ptr);
+    void*       ptr = slab::alloc(33); // Should use 64-byte class
+    slab::Slab* s   = slab::try_get_slab(ptr);
     test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
     test::assert_eq(s->size_class_index, (std::uint8_t)1, "33-byte alloc uses size class 1 (64 bytes)");
     slab::free(ptr);
@@ -83,8 +83,8 @@ void test_size_class_selection_64()
 
 void test_size_class_selection_128()
 {
-    void* ptr = slab::alloc(65); // Should use 128-byte class
-    slab::Slab* s = slab::try_get_slab(ptr);
+    void*       ptr = slab::alloc(65); // Should use 128-byte class
+    slab::Slab* s   = slab::try_get_slab(ptr);
     test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
     test::assert_eq(s->size_class_index, (std::uint8_t)2, "65-byte alloc uses size class 2 (128 bytes)");
     slab::free(ptr);
@@ -92,8 +92,8 @@ void test_size_class_selection_128()
 
 void test_size_class_selection_1024()
 {
-    void* ptr = slab::alloc(513); // Should use 1024-byte class
-    slab::Slab* s = slab::try_get_slab(ptr);
+    void*       ptr = slab::alloc(513); // Should use 1024-byte class
+    slab::Slab* s   = slab::try_get_slab(ptr);
     test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
     test::assert_eq(s->size_class_index, (std::uint8_t)5, "513-byte alloc uses size class 5 (1024 bytes)");
     slab::free(ptr);
@@ -101,12 +101,12 @@ void test_size_class_selection_1024()
 
 void test_free_chunk_count_decreases()
 {
-    void* ptr = slab::alloc(32);
-    slab::Slab* s = slab::try_get_slab(ptr);
+    void*       ptr = slab::alloc(32);
+    slab::Slab* s   = slab::try_get_slab(ptr);
     test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
     std::uint8_t before = s->free_chunks;
 
-    void* ptr2 = slab::alloc(32);
+    void*        ptr2  = slab::alloc(32);
     std::uint8_t after = s->free_chunks;
 
     test::assert_eq(after, (std::uint8_t)(before - 1), "alloc decreases free_chunks by 1");
@@ -117,9 +117,9 @@ void test_free_chunk_count_decreases()
 
 void test_free_chunk_count_increases()
 {
-    void* ptr1 = slab::alloc(32);
-    void* ptr2 = slab::alloc(32);
-    slab::Slab* s = slab::try_get_slab(ptr1);
+    void*       ptr1 = slab::alloc(32);
+    void*       ptr2 = slab::alloc(32);
+    slab::Slab* s    = slab::try_get_slab(ptr1);
     test::assert_not_null(s, "try_get_slab returns non-null for slab allocation");
 
     std::uint8_t before = s->free_chunks;

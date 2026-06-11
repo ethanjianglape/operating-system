@@ -3,8 +3,8 @@
 #include <cstdint>
 
 namespace console::fonts {
-inline constexpr std::uint8_t NUM_GLPHYS = 95;
-inline constexpr std::uint8_t FONT_WIDTH = 8;
+inline constexpr std::uint8_t NUM_GLPHYS  = 95;
+inline constexpr std::uint8_t FONT_WIDTH  = 8;
 inline constexpr std::uint8_t FONT_HEIGHT = 16;
 
 // 8x16 VGA bitmap font - covers ASCII 32-126

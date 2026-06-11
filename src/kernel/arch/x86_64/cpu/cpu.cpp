@@ -112,13 +112,13 @@ static inline std::uint16_t read_ss()
 static void log_rflags(std::uint64_t rflags)
 {
     log::debug("RFLAGS: ", fmt::hex { rflags }, " [",
-        (rflags & (1 << 0)) ? "CF " : "", // Carry
-        (rflags & (1 << 2)) ? "PF " : "", // Parity
-        (rflags & (1 << 4)) ? "AF " : "", // Auxiliary
-        (rflags & (1 << 6)) ? "ZF " : "", // Zero
-        (rflags & (1 << 7)) ? "SF " : "", // Sign
-        (rflags & (1 << 8)) ? "TF " : "", // Trap
-        (rflags & (1 << 9)) ? "IF " : "", // Interrupt Enable
+        (rflags & (1 << 0)) ? "CF " : "",  // Carry
+        (rflags & (1 << 2)) ? "PF " : "",  // Parity
+        (rflags & (1 << 4)) ? "AF " : "",  // Auxiliary
+        (rflags & (1 << 6)) ? "ZF " : "",  // Zero
+        (rflags & (1 << 7)) ? "SF " : "",  // Sign
+        (rflags & (1 << 8)) ? "TF " : "",  // Trap
+        (rflags & (1 << 9)) ? "IF " : "",  // Interrupt Enable
         (rflags & (1 << 10)) ? "DF " : "", // Direction
         (rflags & (1 << 11)) ? "OF " : "", // Overflow
         "]");
@@ -131,14 +131,14 @@ static void log_rflags(std::uint64_t rflags)
 static void log_cr0(std::uint64_t cr0)
 {
     log::debug("CR0:    ", fmt::hex { cr0 }, " [",
-        (cr0 & (1 << 0)) ? "PE " : "", // Protected Mode Enable
-        (cr0 & (1 << 1)) ? "MP " : "", // Monitor Coprocessor
-        (cr0 & (1 << 2)) ? "EM " : "", // Emulation
-        (cr0 & (1 << 3)) ? "TS " : "", // Task Switched
-        (cr0 & (1 << 4)) ? "ET " : "", // Extension Type
-        (cr0 & (1 << 5)) ? "NE " : "", // Numeric Error
-        (cr0 & (1 << 16)) ? "WP " : "", // Write Protect
-        (cr0 & (1 << 18)) ? "AM " : "", // Alignment Mask
+        (cr0 & (1 << 0)) ? "PE " : "",    // Protected Mode Enable
+        (cr0 & (1 << 1)) ? "MP " : "",    // Monitor Coprocessor
+        (cr0 & (1 << 2)) ? "EM " : "",    // Emulation
+        (cr0 & (1 << 3)) ? "TS " : "",    // Task Switched
+        (cr0 & (1 << 4)) ? "ET " : "",    // Extension Type
+        (cr0 & (1 << 5)) ? "NE " : "",    // Numeric Error
+        (cr0 & (1 << 16)) ? "WP " : "",   // Write Protect
+        (cr0 & (1 << 18)) ? "AM " : "",   // Alignment Mask
         (cr0 & (1UL << 29)) ? "NW " : "", // Not Write-through
         (cr0 & (1UL << 30)) ? "CD " : "", // Cache Disable
         (cr0 & (1UL << 31)) ? "PG " : "", // Paging

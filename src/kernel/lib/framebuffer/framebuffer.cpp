@@ -14,7 +14,7 @@ static std::uint64_t fb_num_pixels;
 static std::uint64_t fb_pitch;
 static std::uint16_t fb_bpp;
 
-static std::uint8_t* vram = nullptr;
+static std::uint8_t* vram     = nullptr;
 static std::uint8_t* vram_end = nullptr;
 static std::uint64_t vram_size;
 
@@ -37,15 +37,15 @@ void init(const FrameBufferInfo& info)
 {
     log::init_start("Framebuffer");
 
-    fb_width = info.width;
-    fb_height = info.height;
+    fb_width      = info.width;
+    fb_height     = info.height;
     fb_num_pixels = fb_width * fb_height;
-    fb_pitch = info.pitch;
-    fb_bpp = info.bpp;
+    fb_pitch      = info.pitch;
+    fb_bpp        = info.bpp;
 
     vram_size = fb_num_pixels * (fb_bpp / 8);
-    vram = info.vram;
-    vram_end = vram + vram_size;
+    vram      = info.vram;
+    vram_end  = vram + vram_size;
 
     log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
     log::info("Framebuffer # pixels: ", fb_num_pixels);
@@ -58,9 +58,9 @@ void init(const FrameBufferInfo& info)
 void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color)
 {
     const auto offset = get_pixel_offset(x, y);
-    const auto blue = color & 0xFF;
-    const auto green = (color >> 8) & 0xFF;
-    const auto red = (color >> 16) & 0xFF;
+    const auto blue   = color & 0xFF;
+    const auto green  = (color >> 8) & 0xFF;
+    const auto red    = (color >> 16) & 0xFF;
 
     vram[offset + RGB_OFFB] = blue;
     vram[offset + RGB_OFFG] = green;
@@ -88,8 +88,8 @@ void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h
 
 std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y)
 {
-    std::uint32_t pixel = 0x00000000;
-    const auto offset = get_pixel_offset(x, y);
+    std::uint32_t pixel  = 0x00000000;
+    const auto    offset = get_pixel_offset(x, y);
 
     pixel |= vram[offset + RGB_OFFB];
     pixel |= vram[offset + RGB_OFFG] << 8;
@@ -106,7 +106,7 @@ void clear_black()
 void clear(std::uint32_t color)
 {
     auto* start = reinterpret_cast<std::uint32_t*>(vram);
-    auto* end = reinterpret_cast<std::uint32_t*>(vram_end);
+    auto* end   = reinterpret_cast<std::uint32_t*>(vram_end);
 
     while (start != end) {
         *start = color;

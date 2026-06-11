@@ -139,8 +139,8 @@ void test_to_string_oct_wrapper()
 
 void test_to_string_pointer()
 {
-    int x = 42;
-    int* ptr = &x;
+    int         x      = 42;
+    int*        ptr    = &x;
     const char* result = fmt::to_string(ptr);
     // Should start with "0x" and be a hex address
     test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(ptr) has hex prefix");
@@ -148,8 +148,8 @@ void test_to_string_pointer()
 
 void test_to_string_hex_pointer_wrapper()
 {
-    int x = 42;
-    int* ptr = &x;
+    int         x      = 42;
+    int*        ptr    = &x;
     const char* result = fmt::to_string(fmt::hex { ptr });
     test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(hex{ptr}) has hex prefix");
 }
@@ -174,7 +174,7 @@ void test_parse_uint_zero()
 
 void test_parse_uint_kstring()
 {
-    kstring s("9876");
+    kstring        s("9876");
     std::uintmax_t result = fmt::parse_uint(s);
     test::assert_eq(result, static_cast<std::uintmax_t>(9876), "parse_uint(kstring) works");
 }

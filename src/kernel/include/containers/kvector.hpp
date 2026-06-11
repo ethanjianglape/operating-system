@@ -26,7 +26,7 @@ template <kvector_storable T>
 class kvector final {
 private:
     static constexpr std::size_t INITIAL_CAPACITY = 16;
-    static constexpr std::size_t GROWTH_RATE = 2;
+    static constexpr std::size_t GROWTH_RATE      = 2;
 
     T* _data;
 
@@ -59,7 +59,7 @@ private:
         }
 
         kfree(_data);
-        _data = new_data;
+        _data     = new_data;
         _capacity = new_capacity;
     }
 
@@ -73,8 +73,8 @@ public:
             : _ptr { ptr }
         {
         }
-        T& operator*() const { return *_ptr; }
-        T* operator->() const { return _ptr; }
+        T&        operator*() const { return *_ptr; }
+        T*        operator->() const { return _ptr; }
         iterator& operator++()
         {
             _ptr++;
@@ -108,8 +108,8 @@ public:
             : _ptr { ptr }
         {
         }
-        const T& operator*() const { return *_ptr; }
-        const T* operator->() const { return _ptr; }
+        const T&        operator*() const { return *_ptr; }
+        const T*        operator->() const { return _ptr; }
         const_iterator& operator++()
         {
             _ptr++;
@@ -136,8 +136,8 @@ public:
 
     kvector()
     {
-        _data = nullptr;
-        _size = 0;
+        _data     = nullptr;
+        _size     = 0;
         _capacity = 0;
     }
 
@@ -172,8 +172,8 @@ public:
         , _size { other._size }
         , _capacity { other._capacity }
     {
-        other._data = nullptr;
-        other._size = 0;
+        other._data     = nullptr;
+        other._size     = 0;
         other._capacity = 0;
     }
 
@@ -202,11 +202,11 @@ public:
         if (this != &other) {
             clear();
             kfree(_data);
-            _data = other._data;
-            _size = other._size;
-            _capacity = other._capacity;
-            other._data = nullptr;
-            other._size = 0;
+            _data           = other._data;
+            _size           = other._size;
+            _capacity       = other._capacity;
+            other._data     = nullptr;
+            other._size     = 0;
             other._capacity = 0;
         }
 
@@ -218,7 +218,7 @@ public:
         if (this != &other) {
             clear();
             kfree(_data);
-            _data = nullptr;
+            _data     = nullptr;
             _capacity = 0;
 
             ensure_capacity(other.size());
@@ -266,13 +266,13 @@ public:
     const_iterator begin() const { return const_iterator { _data }; }
     const_iterator end() const { return const_iterator { _data + _size }; }
 
-    T* data() { return _data; }
+    T*       data() { return _data; }
     const T* data() const { return _data; }
 
-    T& front() { return _data[0]; }
+    T&       front() { return _data[0]; }
     const T& front() const { return _data[0]; }
 
-    T& back() { return _data[_size - 1]; }
+    T&       back() { return _data[_size - 1]; }
     const T& back() const { return _data[_size - 1]; }
 
     T& operator[](std::size_t i)
@@ -373,8 +373,8 @@ public:
     void move_to_end(std::size_t pos)
     {
         for (std::size_t i = pos; i < _size - 1; i++) {
-            T temp = _data[i];
-            _data[i] = _data[i + 1];
+            T temp       = _data[i];
+            _data[i]     = _data[i + 1];
             _data[i + 1] = temp;
         }
     }

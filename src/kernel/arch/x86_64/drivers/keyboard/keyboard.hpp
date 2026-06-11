@@ -13,13 +13,13 @@ namespace x86_64::drivers::keyboard {
 // that multiple backends (PS/2, USB HID) translate to.
 
 struct KeyEvent {
-    ScanCode scancode;
+    ScanCode         scancode;
     ExtendedScanCode extended_scancode;
-    bool released;
-    bool shift_held;
-    bool control_held;
-    bool alt_held;
-    bool caps_lock_on;
+    bool             released;
+    bool             shift_held;
+    bool             control_held;
+    bool             alt_held;
+    bool             caps_lock_on;
 };
 
 // =========================================================================

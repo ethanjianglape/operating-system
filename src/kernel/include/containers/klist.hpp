@@ -23,7 +23,7 @@ private:
     struct node final {
         node* prev;
         node* next;
-        T data;
+        T     data;
     };
 
     node* _head;
@@ -103,8 +103,8 @@ public:
     {
         if (this != &other) {
             clear();
-            _head = other._head;
-            _size = other._size;
+            _head       = other._head;
+            _size       = other._size;
             other._head = nullptr;
             other._size = 0;
         }
@@ -137,10 +137,10 @@ public:
 
     bool empty() const { return _size == 0; }
 
-    T& front() { return _head->data; }
+    T&       front() { return _head->data; }
     const T& front() const { return _head->data; }
 
-    T& back() { return _head->prev->data; }
+    T&       back() { return _head->prev->data; }
     const T& back() const { return _head->prev->data; }
 
     T& operator[](std::size_t pos)
@@ -175,9 +175,9 @@ public:
 
         for (std::size_t i = 0; i < _size; i++) {
             node* temp = n->next;
-            n->next = n->prev;
-            n->prev = temp;
-            n = temp;
+            n->next    = n->prev;
+            n->prev    = temp;
+            n          = temp;
         }
 
         _head = _head->next;
@@ -228,7 +228,7 @@ public:
         }
 
         if (empty()) {
-            _head = n;
+            _head       = n;
             _head->next = n;
             _head->prev = n;
         } else {
@@ -236,8 +236,8 @@ public:
             n->prev = _head->prev;
 
             _head->prev->next = n;
-            _head->prev = n;
-            _head = n;
+            _head->prev       = n;
+            _head             = n;
         }
 
         _size++;
@@ -254,7 +254,7 @@ public:
         }
 
         if (empty()) {
-            _head = n;
+            _head       = n;
             _head->next = n;
             _head->prev = n;
         } else {
@@ -262,7 +262,7 @@ public:
             n->prev = _head->prev;
 
             _head->prev->next = n;
-            _head->prev = n;
+            _head->prev       = n;
         }
 
         _size++;

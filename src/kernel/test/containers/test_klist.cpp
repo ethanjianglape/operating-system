@@ -250,11 +250,11 @@ void test_alternating_push()
     klist<int> l;
 
     // Alternate push_front and push_back
-    l.push_back(0); // [0]
+    l.push_back(0);  // [0]
     l.push_front(1); // [1, 0]
-    l.push_back(2); // [1, 0, 2]
+    l.push_back(2);  // [1, 0, 2]
     l.push_front(3); // [3, 1, 0, 2]
-    l.push_back(4); // [3, 1, 0, 2, 4]
+    l.push_back(4);  // [3, 1, 0, 2, 4]
 
     test::assert_eq(l.size(), 5ul, "alternating push: size is 5");
     test::assert_eq(l[0], 3, "alternating push: [0] is 3");
@@ -273,7 +273,7 @@ void test_alternating_pop()
     // [0, 1, 2, 3, 4, 5]
 
     l.pop_front(); // [1, 2, 3, 4, 5]
-    l.pop_back(); // [1, 2, 3, 4]
+    l.pop_back();  // [1, 2, 3, 4]
     l.pop_front(); // [2, 3, 4]
 
     test::assert_eq(l.size(), 3ul, "alternating pop: size is 3");
@@ -406,9 +406,9 @@ void test_nested_push_front_back_mix()
     klist<kstring> third;
     third.push_back(kstring("third"));
 
-    outer.push_back(first); // [first]
+    outer.push_back(first);   // [first]
     outer.push_front(second); // [second, first]
-    outer.push_back(third); // [second, first, third]
+    outer.push_back(third);   // [second, first, third]
 
     test::assert_eq(outer.size(), 3ul, "nested push mix: size is 3");
     test::assert_true(outer[0][0] == "second", "nested push mix: [0] is second");
@@ -464,13 +464,13 @@ void test_nested_clear_all()
 void test_nested_assignment()
 {
     klist<klist<kstring>> outer1;
-    klist<kstring> inner;
+    klist<kstring>        inner;
     inner.push_back(kstring("assign"));
     inner.push_back(kstring("me"));
     outer1.push_back(inner);
 
     klist<klist<kstring>> outer2;
-    klist<kstring> other;
+    klist<kstring>        other;
     other.push_back(kstring("will be replaced"));
     outer2.push_back(other);
     outer2.push_back(other);
@@ -793,7 +793,7 @@ void test_rotate_round_robin()
 void test_remove_empty()
 {
     klist<int> l;
-    bool result = l.remove(42);
+    bool       result = l.remove(42);
     test::assert_true(!result, "remove empty: returns false");
     test::assert_true(l.empty(), "remove empty: list still empty");
 }

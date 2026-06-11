@@ -46,8 +46,8 @@ namespace acpi {
  */
 static std::uint8_t compute_checksum(const void* data, std::size_t length)
 {
-    const auto* bytes = reinterpret_cast<const std::uint8_t*>(data);
-    std::uint8_t sum = 0;
+    const auto*  bytes = reinterpret_cast<const std::uint8_t*>(data);
+    std::uint8_t sum   = 0;
 
     for (std::size_t i = 0; i < length; i++) {
         sum += bytes[i];
@@ -96,7 +96,7 @@ static void validate_xsdp(const XSDP* xsdp)
  */
 static void validate_acpi_header(const ACPIHeader* header)
 {
-    kstring sig { header->signature, 4 };
+    kstring      sig { header->signature, 4 };
     std::uint8_t sum = compute_checksum(header, header->length);
 
     if (sum != 0) {
@@ -184,7 +184,7 @@ static void parse_xsdt(const XSDT* xsdt)
 
     for (int i = 0; i < entries; i++) {
         ACPIHeader* header = get_acpi_header(xsdt->other_headers[i]);
-        kstring sig { header->signature, 4 };
+        kstring     sig { header->signature, 4 };
 
         log_acpi_header(header);
         validate_acpi_header(header);

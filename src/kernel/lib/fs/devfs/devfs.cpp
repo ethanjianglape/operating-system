@@ -6,17 +6,17 @@
 
 namespace fs::devfs {
 static Inode* devfs_open(FileSystem* self, const kstring& path, int flags);
-static int devfs_stat(FileSystem* self, const kstring& path, Stat* out);
-static int devfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
-static int devfs_mkdir(FileSystem*, const kstring&, int);
+static int    devfs_stat(FileSystem* self, const kstring& path, Stat* out);
+static int    devfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
+static int    devfs_mkdir(FileSystem*, const kstring&, int);
 
 static FileSystem devfs_fs = {
-    .name = "devfs",
+    .name         = "devfs",
     .private_data = nullptr,
-    .open = devfs_open,
-    .stat = devfs_stat,
-    .readdir = devfs_readdir,
-    .mkdir = devfs_mkdir
+    .open         = devfs_open,
+    .stat         = devfs_stat,
+    .readdir      = devfs_readdir,
+    .mkdir        = devfs_mkdir
 };
 
 void init()

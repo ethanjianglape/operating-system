@@ -220,7 +220,7 @@ static inline void ioapic_write(volatile std::uint8_t* base, std::uint32_t reg, 
     }
 
     *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOREGSEL) = reg;
-    *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOWIN) = value;
+    *reinterpret_cast<volatile std::uint32_t*>(base + IOAPIC_IOWIN)    = value;
 }
 
 /**
@@ -338,17 +338,17 @@ void configure_svr()
  */
 void ioapic_route_irq(std::uint8_t irq, std::uint8_t vector)
 {
-    const std::uint32_t gsi = acpi::madt::get_gsi_for_irq(irq);
+    const std::uint32_t       gsi    = acpi::madt::get_gsi_for_irq(irq);
     const acpi::madt::IOApic* ioapic = acpi::madt::get_ioapic_for_gsi(gsi);
 
     if (ioapic == nullptr) {
         kpanic("No IOAPIC found for GSI: ", gsi);
     }
 
-    const acpi::madt::InterruptSourceOverride* iso = acpi::madt::get_override_for_irq(irq);
-    volatile std::uint8_t* ioapic_addr = acpi::madt::get_mapped_ioapic_addr(ioapic);
+    const acpi::madt::InterruptSourceOverride* iso         = acpi::madt::get_override_for_irq(irq);
+    volatile std::uint8_t*                     ioapic_addr = acpi::madt::get_mapped_ioapic_addr(ioapic);
 
-    std::uint32_t pin = gsi - ioapic->gsi_base;
+    std::uint32_t pin   = gsi - ioapic->gsi_base;
     std::uint64_t entry = vector;
 
     if (iso) {
@@ -487,8 +487,8 @@ void apic_timer_handler(irq::InterruptFrame* frame)
  */
 void timer_init()
 {
-    constexpr std::uint32_t initial_count = 0xFFFFFFFF; // Max value
-    constexpr std::uint32_t calibration_ms = 1; // Calibrate over 1ms
+    constexpr std::uint32_t initial_count  = 0xFFFFFFFF; // Max value
+    constexpr std::uint32_t calibration_ms = 1;          // Calibrate over 1ms
 
     // Step 1: Configure divider and start counting
     //

@@ -47,10 +47,10 @@ int sys_open(const char* path, int flags)
 
     int fd = alloc_fd(process);
 
-    process->fd_table[fd].inode = inode;
+    process->fd_table[fd].inode  = inode;
     process->fd_table[fd].offset = 0;
-    process->fd_table[fd].flags = flags;
-    process->fd_table[fd].path = fs::canonicalize(path);
+    process->fd_table[fd].flags  = flags;
+    process->fd_table[fd].path   = fs::canonicalize(path);
 
     return fd;
 }
@@ -118,9 +118,9 @@ int sys_ioctl(int fd, unsigned long request, void* arg)
     }
 
     if (request == linux::TIOCGWINSZ && desc->inode->type == fs::FileType::CHAR_DEVICE) {
-        auto* ws = reinterpret_cast<linux::winsize*>(arg);
-        ws->ws_row = console::get_screen_rows();
-        ws->ws_col = console::get_screen_cols();
+        auto* ws      = reinterpret_cast<linux::winsize*>(arg);
+        ws->ws_row    = console::get_screen_rows();
+        ws->ws_col    = console::get_screen_cols();
         ws->ws_xpixel = 0;
         ws->ws_ypixel = 0;
 
@@ -132,8 +132,8 @@ int sys_ioctl(int fd, unsigned long request, void* arg)
 
 int sys_close(int fd)
 {
-    process::Process* process = arch::percpu::current_process();
-    fs::FileDescriptor* desc = get_fd(fd);
+    process::Process*   process = arch::percpu::current_process();
+    fs::FileDescriptor* desc    = get_fd(fd);
 
     if (!desc) {
         return -EBADF;
@@ -176,7 +176,7 @@ int sys_lseek(int fd, std::size_t offset, int whence)
 long sys_getcwd(char* buffer, std::size_t size)
 {
     process::Process* proc = arch::percpu::current_process();
-    std::size_t len = proc->working_dir.length();
+    std::size_t       len  = proc->working_dir.length();
 
     if (len + 1 > size) {
         return -ERANGE;
@@ -191,8 +191,8 @@ long sys_getcwd(char* buffer, std::size_t size)
 int sys_chdir(const char* buffer)
 {
     process::Process* proc = arch::percpu::current_process();
-    kstring path { buffer };
-    fs::Stat stat;
+    kstring           path { buffer };
+    fs::Stat          stat;
 
     int stat_res = fs::stat(path, &stat);
 
@@ -211,7 +211,7 @@ int sys_chdir(const char* buffer)
 
 int sys_fchdir(int fd)
 {
-    process::Process* proc = arch::percpu::current_process();
+    process::Process*   proc = arch::percpu::current_process();
     fs::FileDescriptor* desc = get_fd(fd);
 
     if (!desc) {

@@ -9,7 +9,7 @@
 class kstring final {
 private:
     static constexpr std::size_t INITIAL_CAPACITY = 16;
-    static constexpr std::size_t GROWTH_RATE = 2;
+    static constexpr std::size_t GROWTH_RATE      = 2;
 
     char* _data;
 
@@ -41,7 +41,7 @@ private:
             kfree(_data);
         }
 
-        _data = new_data;
+        _data     = new_data;
         _capacity = new_capacity;
     }
 
@@ -83,8 +83,8 @@ public:
             : _ptr { ptr }
         {
         }
-        char& operator*() const { return *_ptr; }
-        char* operator->() const { return _ptr; }
+        char&     operator*() const { return *_ptr; }
+        char*     operator->() const { return _ptr; }
         iterator& operator++()
         {
             _ptr++;
@@ -118,8 +118,8 @@ public:
             : _ptr { ptr }
         {
         }
-        const char& operator*() const { return *_ptr; }
-        const char* operator->() const { return _ptr; }
+        const char&    operator*() const { return *_ptr; }
+        const char*    operator->() const { return _ptr; }
         const_iterator operator+(int n)
         {
             auto result = *this;
@@ -213,7 +213,7 @@ public:
 
         ensure_capacity(count + 1);
         memcpy(_data, s, count + 1);
-        _length = count;
+        _length        = count;
         _data[_length] = '\0';
     }
 
@@ -223,8 +223,8 @@ public:
         , _length { other._length }
         , _capacity { other._capacity }
     {
-        other._data = nullptr;
-        other._length = 0;
+        other._data     = nullptr;
+        other._length   = 0;
         other._capacity = 0;
     }
 
@@ -246,11 +246,11 @@ public:
     {
         if (this != &other) {
             kfree(_data);
-            _data = other._data;
-            _length = other._length;
-            _capacity = other._capacity;
-            other._data = nullptr;
-            other._length = 0;
+            _data           = other._data;
+            _length         = other._length;
+            _capacity       = other._capacity;
+            other._data     = nullptr;
+            other._length   = 0;
             other._capacity = 0;
         }
 
@@ -262,8 +262,8 @@ public:
     {
         if (this != &other) {
             kfree(_data);
-            _data = nullptr;
-            _length = 0;
+            _data     = nullptr;
+            _length   = 0;
             _capacity = 0;
 
             if (!other.empty()) {
@@ -280,8 +280,8 @@ public:
     kstring& operator=(const char* s)
     {
         kfree(_data);
-        _data = nullptr;
-        _length = 0;
+        _data     = nullptr;
+        _length   = 0;
         _capacity = 0;
 
         if (s != nullptr) {
@@ -301,26 +301,26 @@ public:
 
     std::size_t length() const { return _length; }
     std::size_t size() const { return _length; }
-    bool empty() const { return _length == 0; }
+    bool        empty() const { return _length == 0; }
 
     // Iterators
-    iterator begin() { return iterator { _data }; }
-    iterator end() { return iterator { _data + _length }; }
+    iterator       begin() { return iterator { _data }; }
+    iterator       end() { return iterator { _data + _length }; }
     const_iterator begin() const { return const_iterator { _data }; }
     const_iterator end() const { return const_iterator { _data + _length }; }
 
     // Element access
-    char& front() { return _data[0]; }
+    char&       front() { return _data[0]; }
     const char& front() const { return _data[0]; }
 
-    char& back() { return _data[_length - 1]; }
+    char&       back() { return _data[_length - 1]; }
     const char& back() const { return _data[_length - 1]; }
 
-    char& operator[](std::size_t i) { return _data[i]; }
+    char&       operator[](std::size_t i) { return _data[i]; }
     const char& operator[](std::size_t i) const { return _data[i]; }
 
     const char* c_str() const { return _data ? _data : ""; }
-    char* data() { return _data; }
+    char*       data() { return _data; }
     const char* data() const { return _data; }
 
     std::size_t find(const char* str) const
@@ -363,7 +363,7 @@ public:
     char& push_back(char c)
     {
         ensure_capacity(_length + 2); // +1 for char, +1 for null terminator
-        _data[_length] = c;
+        _data[_length]     = c;
         _data[_length + 1] = '\0';
         return _data[_length++];
     }
@@ -397,8 +397,8 @@ public:
 
         while (s < e) {
             char t = *s;
-            *s = *e;
-            *e = t;
+            *s     = *e;
+            *e     = t;
 
             s++;
             e--;

@@ -14,8 +14,8 @@
 
 namespace process {
 constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
-constexpr std::size_t USER_STACK_SIZE = 16 * 1024; // 16KiB
-constexpr std::uintptr_t USER_STACK_TOP = USER_STACK_BASE + USER_STACK_SIZE;
+constexpr std::size_t    USER_STACK_SIZE = 16 * 1024; // 16KiB
+constexpr std::uintptr_t USER_STACK_TOP  = USER_STACK_BASE + USER_STACK_SIZE;
 
 constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024;
 
@@ -36,29 +36,29 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
     auto* p = new Process {};
 
-    p->pid = g_pid++;
-    p->state = ProcessState::READY;
-    p->wait_reason = WaitReason::NONE;
-    p->exit_status = 0;
-    p->entry = file.entry;
-    p->heap_break = 0;
-    p->pml4 = pml4;
-    p->fd_table = {};
-    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
-    p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
-    p->wake_time_ms = 0;
+    p->pid                = g_pid++;
+    p->state              = ProcessState::READY;
+    p->wait_reason        = WaitReason::NONE;
+    p->exit_status        = 0;
+    p->entry              = file.entry;
+    p->heap_break         = 0;
+    p->pml4               = pml4;
+    p->fd_table           = {};
+    p->kernel_stack       = new std::uint8_t[KERNEL_STACK_SIZE];
+    p->kernel_rsp         = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
+    p->wake_time_ms       = 0;
     p->has_kernel_context = true;
-    p->has_user_context = true;
-    p->working_dir = "/";
-    p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
-    p->fs_base = 0;
-    p->tidptr = 0;
+    p->has_user_context   = true;
+    p->working_dir        = "/";
+    p->mmap_min_addr      = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
+    p->fs_base            = 0;
+    p->tidptr             = 0;
 
     for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
-        auto virt = header.p_vaddr;
+        auto virt      = header.p_vaddr;
         auto file_size = header.p_filesz;
-        auto mem_size = header.p_memsz;
-        auto offset = header.p_offset;
+        auto mem_size  = header.p_memsz;
+        auto offset    = header.p_offset;
 
         std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
@@ -97,12 +97,12 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     // All zeros: argc=0, argv/envp terminated by NULL, auxv terminated by AT_NULL(0,0)
     // 6 entries = 48 bytes ensures 16-byte alignment (required by System V ABI)
     auto* stack = reinterpret_cast<std::uint64_t*>(USER_STACK_TOP);
-    *(--stack) = 0; // padding for 16-byte alignment
-    *(--stack) = 0; // AT_NULL value
-    *(--stack) = 0; // AT_NULL type
-    *(--stack) = 0; // envp terminator (NULL)
-    *(--stack) = 0; // argv terminator (NULL)
-    *(--stack) = 0; // argc = 0
+    *(--stack)  = 0; // padding for 16-byte alignment
+    *(--stack)  = 0; // AT_NULL value
+    *(--stack)  = 0; // AT_NULL type
+    *(--stack)  = 0; // envp terminator (NULL)
+    *(--stack)  = 0; // argv terminator (NULL)
+    *(--stack)  = 0; // argc = 0
 
     p->rsp = reinterpret_cast<std::uintptr_t>(stack);
 
@@ -121,8 +121,8 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->rsi = 0;
     p->rdi = 0;
     p->rbp = 0;
-    p->r8 = 0;
-    p->r9 = 0;
+    p->r8  = 0;
+    p->r9  = 0;
     p->r10 = 0;
     p->r11 = 0;
     p->r12 = 0;
@@ -130,7 +130,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->r14 = 0;
     p->r15 = 0;
 
-    p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
+    p->context_frame      = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
     p->context_frame->r15 = p->rip;
     p->context_frame->r14 = p->rsp;
     p->context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
@@ -138,7 +138,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->context_frame->rbp = 0x77777777;
     p->context_frame->rbx = 0x12345678;
     p->context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
-    p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+    p->kernel_rsp_saved   = reinterpret_cast<std::uintptr_t>(p->context_frame);
 
     fs::Inode* tty_inode = fs::devfs::tty::get_tty_inode();
 
@@ -179,7 +179,7 @@ void terminate_process(Process* proc)
     log::info("========================================");
 
     auto frames_before = pmm::get_free_frames();
-    auto slabs_before = slab::total_slabs();
+    auto slabs_before  = slab::total_slabs();
 
     for (auto& fd : proc->fd_table) {
         fd.inode->ops->close(&fd);
@@ -194,7 +194,7 @@ void terminate_process(Process* proc)
     delete proc;
 
     auto frames_after = pmm::get_free_frames();
-    auto slabs_after = slab::total_slabs();
+    auto slabs_after  = slab::total_slabs();
 
     log::info("PMM frames: ", frames_before, " -> ", frames_after,
         " (+", frames_after - frames_before, ")");

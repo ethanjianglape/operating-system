@@ -36,17 +36,17 @@ static std::size_t free_frames;
 
 bool is_frame_free(std::size_t frame)
 {
-    const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
+    const std::size_t index  = frame / FRAME_BITMAP_ENTRY_SIZE;
     const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
-    const std::size_t entry = frame_bitmap[index];
-    const std::size_t value = entry & (FRAME_USED << offset);
+    const std::size_t entry  = frame_bitmap[index];
+    const std::size_t value  = entry & (FRAME_USED << offset);
 
     return value == FRAME_FREE;
 }
 
 void set_frame_used(std::size_t frame)
 {
-    const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
+    const std::size_t index  = frame / FRAME_BITMAP_ENTRY_SIZE;
     const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
 
     frame_bitmap[index] |= (FRAME_USED << offset);
@@ -55,9 +55,9 @@ void set_frame_used(std::size_t frame)
 
 void set_frame_free(std::size_t frame)
 {
-    const std::size_t index = frame / FRAME_BITMAP_ENTRY_SIZE;
+    const std::size_t index  = frame / FRAME_BITMAP_ENTRY_SIZE;
     const std::size_t offset = frame % FRAME_BITMAP_ENTRY_SIZE;
-    const std::size_t mask = ~(FRAME_USED << offset);
+    const std::size_t mask   = ~(FRAME_USED << offset);
 
     frame_bitmap[index] &= mask;
     free_frames++;
@@ -72,7 +72,7 @@ void init()
 
     total_memory = 0;
     total_frames = 0;
-    free_frames = 0;
+    free_frames  = 0;
 }
 
 /**
@@ -119,10 +119,10 @@ std::size_t get_free_frames()
 void set_addr_free(std::size_t addr, std::size_t length)
 {
     std::size_t frame_start = addr / FRAME_SIZE;
-    std::size_t frame_end = (addr + length) / FRAME_SIZE;
+    std::size_t frame_end   = (addr + length) / FRAME_SIZE;
 
     frame_bitmap_start = frame_start;
-    frame_bitmap_end = frame_end;
+    frame_bitmap_end   = frame_end;
 
     while (frame_start <= frame_end) {
         set_frame_free(frame_start++);
@@ -132,7 +132,7 @@ void set_addr_free(std::size_t addr, std::size_t length)
 void set_addr_used(std::size_t addr, std::size_t length)
 {
     std::size_t frame_start = addr / FRAME_SIZE;
-    std::size_t frame_end = (addr + length) / FRAME_SIZE;
+    std::size_t frame_end   = (addr + length) / FRAME_SIZE;
 
     while (frame_start <= frame_end) {
         set_frame_used(frame_start++);
