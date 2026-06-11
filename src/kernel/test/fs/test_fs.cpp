@@ -13,7 +13,7 @@ void test_open_existing_file()
     test::assert_not_null(inode, "open existing file returns inode");
 
     if (inode && inode->ops && inode->ops->close) {
-        fs::FileDescriptor fd = { .inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY };
+        fs::FileDescriptor fd = {.inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY};
         inode->ops->close(&fd);
     }
 }
@@ -37,7 +37,7 @@ void test_dev_null_read_returns_eof()
     test::assert_not_null(inode, "/dev/null opens for read test");
 
     if (inode && inode->ops && inode->ops->read) {
-        fs::FileDescriptor fd = { .inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY };
+        fs::FileDescriptor fd = {.inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY};
 
         char buf[16];
         int  result = inode->ops->read(&fd, buf, sizeof(buf));
@@ -51,7 +51,7 @@ void test_dev_null_write_succeeds()
     test::assert_not_null(inode, "/dev/null opens for write test");
 
     if (inode && inode->ops && inode->ops->write) {
-        fs::FileDescriptor fd = { .inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY };
+        fs::FileDescriptor fd = {.inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY};
 
         const char* data   = "test data";
         int         result = inode->ops->write(&fd, data, 9);
@@ -140,55 +140,55 @@ void test_readdir_nonexistent()
 void test_canonicalize_simple()
 {
     kstring result = fs::canonicalize("/bin/a");
-    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize simple path unchanged");
+    test::assert_eq(result, kstring{"/bin/a"}, "canonicalize simple path unchanged");
 }
 
 void test_canonicalize_trailing_slash()
 {
     kstring result = fs::canonicalize("/bin/");
-    test::assert_eq(result, kstring { "/bin" }, "canonicalize removes trailing slash");
+    test::assert_eq(result, kstring{"/bin"}, "canonicalize removes trailing slash");
 }
 
 void test_canonicalize_double_slash()
 {
     kstring result = fs::canonicalize("/bin//a");
-    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize removes double slashes");
+    test::assert_eq(result, kstring{"/bin/a"}, "canonicalize removes double slashes");
 }
 
 void test_canonicalize_dot()
 {
     kstring result = fs::canonicalize("/bin/./a");
-    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize removes . component");
+    test::assert_eq(result, kstring{"/bin/a"}, "canonicalize removes . component");
 }
 
 void test_canonicalize_dotdot()
 {
     kstring result = fs::canonicalize("/bin/../dev/null");
-    test::assert_eq(result, kstring { "/dev/null" }, "canonicalize resolves .. component");
+    test::assert_eq(result, kstring{"/dev/null"}, "canonicalize resolves .. component");
 }
 
 void test_canonicalize_dotdot_at_root()
 {
     kstring result = fs::canonicalize("/../bin/a");
-    test::assert_eq(result, kstring { "/bin/a" }, "canonicalize handles .. at root");
+    test::assert_eq(result, kstring{"/bin/a"}, "canonicalize handles .. at root");
 }
 
 void test_canonicalize_multiple_dotdot()
 {
     kstring result = fs::canonicalize("/a/b/c/../../d");
-    test::assert_eq(result, kstring { "/a/d" }, "canonicalize handles multiple ..");
+    test::assert_eq(result, kstring{"/a/d"}, "canonicalize handles multiple ..");
 }
 
 void test_canonicalize_root()
 {
     kstring result = fs::canonicalize("/");
-    test::assert_eq(result, kstring { "/" }, "canonicalize root stays root");
+    test::assert_eq(result, kstring{"/"}, "canonicalize root stays root");
 }
 
 void test_canonicalize_complex()
 {
     kstring result = fs::canonicalize("/a/./b/../c//d/");
-    test::assert_eq(result, kstring { "/a/c/d" }, "canonicalize handles complex path");
+    test::assert_eq(result, kstring{"/a/c/d"}, "canonicalize handles complex path");
 }
 
 // =========================================================================

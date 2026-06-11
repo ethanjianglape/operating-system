@@ -96,7 +96,7 @@ static void validate_xsdp(const XSDP* xsdp)
  */
 static void validate_acpi_header(const ACPIHeader* header)
 {
-    kstring      sig { header->signature, 4 };
+    kstring      sig{header->signature, 4};
     std::uint8_t sum = compute_checksum(header, header->length);
 
     if (sum != 0) {
@@ -108,26 +108,26 @@ static void validate_acpi_header(const ACPIHeader* header)
 
 static void log_xsdp(const XSDP* xsdp)
 {
-    kstring signature { xsdp->signature, 8 };
-    kstring oem_id { xsdp->oem_id, 6 };
+    kstring signature{xsdp->signature, 8};
+    kstring oem_id{xsdp->oem_id, 6};
 
     log::info("XSDP:");
     log::info("  signature    = \"", signature, "\"");
     log::info("  checksum     = ", xsdp->checksum);
     log::info("  oem_id       = ", oem_id);
     log::info("  revision     = ", xsdp->revision);
-    log::info("  rsdt_addr    = ", fmt::hex { xsdp->rsdt_addr });
+    log::info("  rsdt_addr    = ", fmt::hex{xsdp->rsdt_addr});
     log::info("  length       = ", xsdp->length);
-    log::info("  xsdt_addr    = ", fmt::hex { xsdp->xsdt_addr });
+    log::info("  xsdt_addr    = ", fmt::hex{xsdp->xsdt_addr});
     log::info("  ext_checksum = ", xsdp->extended_checksum);
     log::info("  reserved     = [", xsdp->reserved[0], ", ", xsdp->reserved[1], ", ", xsdp->reserved[2], "]");
 }
 
 static void log_acpi_header(const ACPIHeader* header)
 {
-    kstring signature { header->signature, 4 };
-    kstring oem_id { header->oem_id, 6 };
-    kstring oem_table_id { header->oem_table_id, 8 };
+    kstring signature{header->signature, 4};
+    kstring oem_id{header->oem_id, 6};
+    kstring oem_table_id{header->oem_table_id, 8};
 
     log::info("ACPIHeader:");
     log::info("  signature        = \"", signature, "\"");
@@ -137,7 +137,7 @@ static void log_acpi_header(const ACPIHeader* header)
     log::info("  oem_id           = ", oem_id);
     log::info("  oem_table_id     = ", oem_table_id);
     log::info("  oem_revision     = ", header->oem_revision);
-    log::info("  creator_id       = ", fmt::hex { header->creator_id });
+    log::info("  creator_id       = ", fmt::hex{header->creator_id});
     log::info("  creator_revision = ", header->creator_revision);
 }
 
@@ -184,7 +184,7 @@ static void parse_xsdt(const XSDT* xsdt)
 
     for (int i = 0; i < entries; i++) {
         ACPIHeader* header = get_acpi_header(xsdt->other_headers[i]);
-        kstring     sig { header->signature, 4 };
+        kstring     sig{header->signature, 4};
 
         log_acpi_header(header);
         validate_acpi_header(header);
@@ -209,6 +209,7 @@ static void parse_xsdt(const XSDT* xsdt)
 static XSDT* get_xsdt(void* rsdp_addr)
 {
     auto* xsdp = reinterpret_cast<XSDP*>(rsdp_addr);
+
     log_xsdp(xsdp);
     validate_xsdp(xsdp);
 

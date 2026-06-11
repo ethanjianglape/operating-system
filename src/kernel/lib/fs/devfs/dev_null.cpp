@@ -35,8 +35,7 @@ static const FileOps null_ops = {
     .write = null_write,
     .close = null_close,
     .lseek = null_lseek,
-    .fstat = null_fstat
-};
+    .fstat = null_fstat};
 
 static Inode null_inode = {
     .type         = FileType::CHAR_DEVICE,

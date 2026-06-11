@@ -16,7 +16,7 @@ void test_default_constructor()
 
 void test_initializer_list_constructor()
 {
-    kvector<int> v = { 1, 2, 3, 4, 5 };
+    kvector<int> v = {1, 2, 3, 4, 5};
     test::assert_eq(v.size(), 5ul, "initializer list kvector has correct size");
     test::assert_eq(v[0], 1, "initializer list kvector[0] is correct");
     test::assert_eq(v[4], 5, "initializer list kvector[4] is correct");
@@ -43,7 +43,7 @@ void test_push_back()
 
 void test_pop_back()
 {
-    kvector<int> v = { 1, 2, 3 };
+    kvector<int> v = {1, 2, 3};
     v.pop_back();
     test::assert_eq(v.size(), 2ul, "pop_back decreases size");
     test::assert_eq(v.back(), 2, "pop_back removes last element");
@@ -58,14 +58,14 @@ void test_pop_back_empty()
 
 void test_front_back()
 {
-    kvector<int> v = { 10, 20, 30 };
+    kvector<int> v = {10, 20, 30};
     test::assert_eq(v.front(), 10, "front() returns first element");
     test::assert_eq(v.back(), 30, "back() returns last element");
 }
 
 void test_operator_bracket()
 {
-    kvector<int> v = { 5, 10, 15 };
+    kvector<int> v = {5, 10, 15};
     test::assert_eq(v[1], 10, "operator[] reads correctly");
     v[1] = 100;
     test::assert_eq(v[1], 100, "operator[] writes correctly");
@@ -73,7 +73,7 @@ void test_operator_bracket()
 
 void test_clear()
 {
-    kvector<int> v = { 1, 2, 3, 4, 5 };
+    kvector<int> v = {1, 2, 3, 4, 5};
     v.clear();
     test::assert_true(v.empty(), "clear() empties vector");
     test::assert_eq(v.size(), 0ul, "clear() sets size to 0");
@@ -81,7 +81,7 @@ void test_clear()
 
 void test_iterator()
 {
-    kvector<int> v   = { 1, 2, 3 };
+    kvector<int> v   = {1, 2, 3};
     int          sum = 0;
     for (auto& val : v) {
         sum += val;
@@ -91,7 +91,7 @@ void test_iterator()
 
 void test_copy_constructor()
 {
-    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v1 = {1, 2, 3};
     kvector<int> v2(v1);
     test::assert_eq(v2.size(), 3ul, "copy constructor copies size");
     test::assert_eq(v2[0], 1, "copy constructor copies elements");
@@ -101,7 +101,7 @@ void test_copy_constructor()
 
 void test_move_constructor()
 {
-    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v1 = {1, 2, 3};
     kvector<int> v2(static_cast<kvector<int>&&>(v1));
     test::assert_eq(v2.size(), 3ul, "move constructor transfers size");
     test::assert_eq(v2[0], 1, "move constructor transfers elements");
@@ -110,7 +110,7 @@ void test_move_constructor()
 
 void test_copy_assignment()
 {
-    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v1 = {1, 2, 3};
     kvector<int> v2;
     v2 = v1;
     test::assert_eq(v2.size(), 3ul, "copy assignment copies size");
@@ -119,7 +119,7 @@ void test_copy_assignment()
 
 void test_move_assignment()
 {
-    kvector<int> v1 = { 1, 2, 3 };
+    kvector<int> v1 = {1, 2, 3};
     kvector<int> v2;
     v2 = static_cast<kvector<int>&&>(v1);
     test::assert_eq(v2.size(), 3ul, "move assignment transfers size");
@@ -147,8 +147,8 @@ void test_reserve_and_grow()
 
 void test_initializer_list_assignment()
 {
-    kvector<int> v = { 1, 2, 3 };
-    v              = { 10, 20 };
+    kvector<int> v = {1, 2, 3};
+    v              = {10, 20};
     test::assert_eq(v.size(), 2ul, "initializer list assignment updates size");
     test::assert_eq(v[0], 10, "initializer list assignment updates elements");
 }
@@ -162,7 +162,7 @@ void test_large_allocation_uses_vmm()
 
     kvector<LargeStruct> v;
     for (int i = 0; i < 4; i++) {
-        LargeStruct s {};
+        LargeStruct s{};
         s.data[0]   = static_cast<std::uint8_t>(i);
         s.data[511] = static_cast<std::uint8_t>(i * 2);
         v.push_back(s);
@@ -175,7 +175,7 @@ void test_large_allocation_uses_vmm()
 
 void test_erase()
 {
-    kvector<int> v = { 1, 2, 3, 4, 5 };
+    kvector<int> v = {1, 2, 3, 4, 5};
     v.erase(2);
     test::assert_eq(v.size(), 4ul, "erase() decreases size");
     test::assert_eq(v[0], 1, "erase() keeps elements before");
@@ -186,7 +186,7 @@ void test_erase()
 
 void test_erase_first()
 {
-    kvector<int> v = { 10, 20, 30 };
+    kvector<int> v = {10, 20, 30};
     v.erase(0);
     test::assert_eq(v.size(), 2ul, "erase(0) decreases size");
     test::assert_eq(v[0], 20, "erase(0) shifts first element");
@@ -195,7 +195,7 @@ void test_erase_first()
 
 void test_erase_last()
 {
-    kvector<int> v = { 10, 20, 30 };
+    kvector<int> v = {10, 20, 30};
     v.erase(2);
     test::assert_eq(v.size(), 2ul, "erase(last) decreases size");
     test::assert_eq(v[0], 10, "erase(last) keeps first");
@@ -204,14 +204,14 @@ void test_erase_last()
 
 void test_erase_out_of_bounds()
 {
-    kvector<int> v = { 1, 2, 3 };
+    kvector<int> v = {1, 2, 3};
     v.erase(10);
     test::assert_eq(v.size(), 3ul, "erase() out of bounds does nothing");
 }
 
 void test_move_to_end()
 {
-    kvector<int> v = { 1, 2, 3, 4, 5 };
+    kvector<int> v = {1, 2, 3, 4, 5};
     v.move_to_end(1);
     test::assert_eq(v.size(), 5ul, "move_to_end() keeps size");
     test::assert_eq(v[0], 1, "move_to_end() keeps first");
@@ -223,7 +223,7 @@ void test_move_to_end()
 
 void test_move_to_end_first()
 {
-    kvector<int> v = { 10, 20, 30 };
+    kvector<int> v = {10, 20, 30};
     v.move_to_end(0);
     test::assert_eq(v[0], 20, "move_to_end(0) shifts first");
     test::assert_eq(v[1], 30, "move_to_end(0) shifts second");
@@ -232,7 +232,7 @@ void test_move_to_end_first()
 
 void test_data()
 {
-    kvector<int> v   = { 1, 2, 3 };
+    kvector<int> v   = {1, 2, 3};
     int*         ptr = v.data();
     test::assert_eq(ptr[0], 1, "data() returns pointer to first element");
     test::assert_eq(ptr[2], 3, "data() allows access to elements");
@@ -242,7 +242,7 @@ void test_data()
 
 void test_const_data()
 {
-    const kvector<int> v   = { 5, 10, 15 };
+    const kvector<int> v   = {5, 10, 15};
     const int*         ptr = v.data();
     test::assert_eq(ptr[0], 5, "const data() returns pointer");
     test::assert_eq(ptr[2], 15, "const data() allows read access");
@@ -250,7 +250,7 @@ void test_const_data()
 
 void test_const_iterator()
 {
-    const kvector<int> v   = { 1, 2, 3 };
+    const kvector<int> v   = {1, 2, 3};
     int                sum = 0;
     for (auto it = v.begin(); it != v.end(); ++it) {
         sum += *it;
@@ -343,8 +343,8 @@ void test_nested_kvector_basic()
 {
     kvector<kvector<int>> outer;
 
-    kvector<int> inner1 = { 1, 2, 3 };
-    kvector<int> inner2 = { 4, 5, 6 };
+    kvector<int> inner1 = {1, 2, 3};
+    kvector<int> inner2 = {4, 5, 6};
 
     outer.push_back(inner1);
     outer.push_back(inner2);
@@ -434,7 +434,7 @@ void test_nested_kvector_copy_line()
 {
     kvector<kvector<int>> lines;
 
-    kvector<int> original = { 10, 20, 30, 40, 50 };
+    kvector<int> original = {10, 20, 30, 40, 50};
     lines.push_back(original);
     lines.push_back(original);
 
@@ -451,7 +451,7 @@ void test_nested_kvector_move_semantics()
 
     bool all_moves_worked = true;
     for (int i = 0; i < 20; i++) {
-        kvector<int> inner = { i, i + 1, i + 2 };
+        kvector<int> inner = {i, i + 1, i + 2};
         outer.push_back(static_cast<kvector<int>&&>(inner));
         if (!inner.empty()) {
             all_moves_worked = false;

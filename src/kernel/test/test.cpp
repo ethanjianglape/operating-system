@@ -40,7 +40,7 @@ void run();
 }
 
 namespace test {
-static Results results = { 0, 0 };
+static Results results = {0, 0};
 
 void pass([[maybe_unused]] const char* name)
 {
@@ -67,7 +67,7 @@ void run_all()
     log::info("         Running kernel tests         ");
     log::info("======================================");
 
-    results = { 0, 0 };
+    results = {0, 0};
 
     auto frames_before_test = pmm::get_free_frames();
     auto slabs_before_test  = slab::total_slabs();

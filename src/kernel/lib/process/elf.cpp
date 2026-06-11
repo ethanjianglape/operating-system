@@ -26,11 +26,10 @@ bool validate_type(Elf64_Header* header)
 
 Elf64_File invalid_file()
 {
-    return Elf64_File {
+    return Elf64_File{
         .is_valid_elf    = false,
         .entry           = 0,
-        .program_headers = {}
-    };
+        .program_headers = {}};
 }
 
 Elf64_File parse_file(std::uint8_t* buffer, [[maybe_unused]] std::size_t size)
@@ -63,11 +62,10 @@ Elf64_File parse_file(std::uint8_t* buffer, [[maybe_unused]] std::size_t size)
         return invalid_file();
     }
 
-    Elf64_File file {
+    Elf64_File file{
         .is_valid_elf    = false,
         .entry           = header->e_entry,
-        .program_headers = {}
-    };
+        .program_headers = {}};
 
     for (std::size_t i = 0; i < header->e_phnum; i++) {
         auto* addr = buffer + header->e_phoff + (i * header->e_phentsize);
@@ -82,8 +80,8 @@ Elf64_File parse_file(std::uint8_t* buffer, [[maybe_unused]] std::size_t size)
     }
 
     for (const auto& segment : file.program_headers) {
-        log::debug("segment flags = ", fmt::bin { segment.p_flags },
-            " vaddr = ", fmt::hex { segment.p_vaddr },
+        log::debug("segment flags = ", fmt::bin{segment.p_flags},
+            " vaddr = ", fmt::hex{segment.p_vaddr},
             " file sz = ", segment.p_filesz,
             " mem sz = ", segment.p_memsz);
     }

@@ -191,7 +191,7 @@ long sys_getcwd(char* buffer, std::size_t size)
 int sys_chdir(const char* buffer)
 {
     process::Process* proc = arch::percpu::current_process();
-    kstring           path { buffer };
+    kstring           path{buffer};
     fs::Stat          stat;
 
     int stat_res = fs::stat(path, &stat);

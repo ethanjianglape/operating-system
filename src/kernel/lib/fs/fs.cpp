@@ -57,8 +57,8 @@ void mount(const kstring& path, FileSystem* fs)
     }
 
     log::debug("fs: mounting ", fs->name, " at ", path);
-    mount_points.push_back({ .root = path,
-        .filesystem                = fs });
+    mount_points.push_back({.root = path,
+        .filesystem               = fs});
 }
 
 Inode* open(const kstring& path, int flags)

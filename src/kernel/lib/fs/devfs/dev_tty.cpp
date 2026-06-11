@@ -18,8 +18,8 @@ namespace keyboard = arch::drivers::keyboard;
 using ScanCode         = keyboard::ScanCode;
 using ExtendedScanCode = keyboard::ExtendedScanCode;
 
-static kstring          buffer {};
-static kvector<kstring> history {};
+static kstring          buffer{};
+static kvector<kstring> history{};
 
 static std::size_t buffer_index  = 0;
 static std::size_t history_index = 0;
@@ -35,8 +35,7 @@ static const FileOps tty_ops = {
     .write = tty_write,
     .close = tty_close,
     .lseek = tty_lseek,
-    .fstat = tty_fstat
-};
+    .fstat = tty_fstat};
 
 static Inode tty_inode = {
     .type         = FileType::CHAR_DEVICE,

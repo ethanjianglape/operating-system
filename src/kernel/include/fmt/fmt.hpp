@@ -41,7 +41,7 @@ enum class NumberFormat : std::uint32_t {
     OCT = 4
 };
 
-static char buffer[128] = { '\0' };
+static char buffer[128] = {'\0'};
 
 static std::size_t index = 0;
 

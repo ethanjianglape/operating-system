@@ -72,13 +72,12 @@ constexpr std::uint8_t chunks_per_slab(std::size_t chunk_size)
 }
 
 static SizeClass classes[] = {
-    { 0, SIZE_32, 0, nullptr, chunks_per_slab(SIZE_32) },
-    { 1, SIZE_64, 0, nullptr, chunks_per_slab(SIZE_64) },
-    { 2, SIZE_128, 0, nullptr, chunks_per_slab(SIZE_128) },
-    { 3, SIZE_256, 0, nullptr, chunks_per_slab(SIZE_256) },
-    { 4, SIZE_512, 0, nullptr, chunks_per_slab(SIZE_512) },
-    { 5, SIZE_1024, 0, nullptr, chunks_per_slab(SIZE_1024) }
-};
+    {0, SIZE_32, 0, nullptr, chunks_per_slab(SIZE_32)},
+    {1, SIZE_64, 0, nullptr, chunks_per_slab(SIZE_64)},
+    {2, SIZE_128, 0, nullptr, chunks_per_slab(SIZE_128)},
+    {3, SIZE_256, 0, nullptr, chunks_per_slab(SIZE_256)},
+    {4, SIZE_512, 0, nullptr, chunks_per_slab(SIZE_512)},
+    {5, SIZE_1024, 0, nullptr, chunks_per_slab(SIZE_1024)}};
 
 /**
  * @brief Gets the Slab containing an address, if it's a valid slab allocation.

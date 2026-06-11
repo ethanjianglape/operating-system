@@ -5,7 +5,7 @@ kvector<kstring> split(kstring::const_iterator begin,
     kstring::const_iterator                    end,
     char                                       delim)
 {
-    kvector<kstring> result {};
+    kvector<kstring> result{};
     kstring          part = "";
 
     while (begin != end) {
@@ -34,7 +34,7 @@ kvector<kstring> tokenize(kstring::const_iterator begin,
     kstring::const_iterator                       end,
     char                                          delim)
 {
-    kvector<kstring> result {};
+    kvector<kstring> result{};
     kstring          part = "";
     char             last = '\0';
 

@@ -37,44 +37,39 @@ static volatile std::uint64_t limine_base_revision[]
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_framebuffer_request framebuffer_request
     = {
-          .id       = LIMINE_FRAMEBUFFER_REQUEST_ID,
-          .revision = 0,
-          .response = nullptr
-      };
+        .id       = LIMINE_FRAMEBUFFER_REQUEST_ID,
+        .revision = 0,
+        .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_memmap_request memmap_request
     = {
-          .id       = LIMINE_MEMMAP_REQUEST_ID,
-          .revision = 0,
-          .response = nullptr
-      };
+        .id       = LIMINE_MEMMAP_REQUEST_ID,
+        .revision = 0,
+        .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_hhdm_request hhdm_request
     = {
-          .id       = LIMINE_HHDM_REQUEST_ID,
-          .revision = 0,
-          .response = nullptr
-      };
+        .id       = LIMINE_HHDM_REQUEST_ID,
+        .revision = 0,
+        .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_rsdp_request rsdp_request
     = {
-          .id       = LIMINE_RSDP_REQUEST_ID,
-          .revision = 0,
-          .response = nullptr
-      };
+        .id       = LIMINE_RSDP_REQUEST_ID,
+        .revision = 0,
+        .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_module_request module_request
     = {
-          .id                    = LIMINE_MODULE_REQUEST_ID,
-          .revision              = 0,
-          .response              = nullptr,
-          .internal_module_count = 0,
-          .internal_modules      = nullptr
-      };
+        .id                    = LIMINE_MODULE_REQUEST_ID,
+        .revision              = 0,
+        .response              = nullptr,
+        .internal_module_count = 0,
+        .internal_modules      = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests_end")]]
 static volatile std::uint64_t limine_requests_end_marker[]
@@ -133,13 +128,12 @@ void init_framebuffer()
         kpanic("No framebuffer available from Limine");
     }
 
-    auto fb_info = framebuffer::FrameBufferInfo {
+    auto fb_info = framebuffer::FrameBufferInfo{
         .width  = fb->width,
         .height = fb->height,
         .pitch  = fb->pitch,
         .bpp    = fb->bpp,
-        .vram   = static_cast<std::uint8_t*>(fb->address)
-    };
+        .vram   = static_cast<std::uint8_t*>(fb->address)};
 
     framebuffer::init(fb_info);
 }
@@ -161,8 +155,8 @@ void init_memory()
         auto length = entries[i]->length;
         auto type   = entries[i]->type;
 
-        log::info("  [", i, "] ", fmt::hex { base }, " - ", fmt::hex { base + length },
-            " (", fmt::hex { length }, ") ", memmap_type_to_string(type));
+        log::info("  [", i, "] ", fmt::hex{base}, " - ", fmt::hex{base + length},
+            " (", fmt::hex{length}, ") ", memmap_type_to_string(type));
 
         if (type == LIMINE_MEMMAP_USABLE) {
             pmm::add_free_memory(base, length);

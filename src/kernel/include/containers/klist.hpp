@@ -55,13 +55,13 @@ private:
 
 public:
     klist()
-        : _head { nullptr }
-        , _size { 0 }
+        : _head{nullptr}
+        , _size{0}
     {
     }
 
     klist(std::initializer_list<T> init)
-        : klist {}
+        : klist{}
     {
         for (const auto& val : init) {
             push_back(val);
@@ -69,7 +69,7 @@ public:
     }
 
     explicit klist(std::size_t count, const T& value = {})
-        : klist {}
+        : klist{}
     {
         while (count--) {
             push_back(value);
@@ -77,15 +77,15 @@ public:
     }
 
     klist(klist&& other)
-        : _head { other._head }
-        , _size { other._size }
+        : _head{other._head}
+        , _size{other._size}
     {
         other._head = nullptr;
         other._size = 0;
     }
 
     klist(const klist& other)
-        : klist {}
+        : klist{}
     {
         if (other.empty()) {
             return;
@@ -219,12 +219,12 @@ public:
 
     void push_front(const T& t)
     {
-        auto* n = new node {};
+        auto* n = new node{};
 
         if constexpr (std::is_trivially_copyable_v<T>) {
             n->data = t;
         } else {
-            new (&n->data) T { t };
+            new (&n->data) T{t};
         }
 
         if (empty()) {
@@ -250,7 +250,7 @@ public:
         if constexpr (std::is_trivially_copyable_v<T>) {
             n->data = t;
         } else {
-            new (&n->data) T { t };
+            new (&n->data) T{t};
         }
 
         if (empty()) {

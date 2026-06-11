@@ -143,7 +143,7 @@ alignas(16) static std::uint8_t kernel_stack[4096 * 4];
  */
 GdtEntry make_gdt_entry(std::uint32_t base, std::uint32_t limit, std::uint8_t access, std::uint8_t flags)
 {
-    GdtEntry entry {};
+    GdtEntry entry{};
 
     // Base address is 32 bits split between 1 16-bit field and 2 8-bit fields
     entry.base_low  = base & 0xFFFF;
@@ -170,7 +170,7 @@ GdtEntry make_gdt_entry(std::uint32_t base, std::uint32_t limit, std::uint8_t ac
  */
 TssDescriptor make_tss_descriptor()
 {
-    TssDescriptor desc {};
+    TssDescriptor desc{};
 
     std::uint64_t base  = reinterpret_cast<std::uint64_t>(&tss);
     std::uint32_t limit = sizeof(TssEntry) - 1;
@@ -225,8 +225,8 @@ void init_tss()
     tss.rsp0        = reinterpret_cast<std::uint64_t>(kernel_stack) + sizeof(kernel_stack);
     tss.iopb_offset = sizeof(TssEntry);
 
-    log::debug("TSS kernel_stack @ ", fmt::hex { reinterpret_cast<uint64_t>(kernel_stack) });
-    log::debug("TSS kernel_stack top = ", fmt::hex { reinterpret_cast<uint64_t>(kernel_stack + sizeof(kernel_stack)) });
+    log::debug("TSS kernel_stack @ ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack)});
+    log::debug("TSS kernel_stack top = ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack + sizeof(kernel_stack))});
 }
 
 /**
@@ -237,10 +237,10 @@ void init_tss()
  */
 void log_gdt_entry(GdtEntry& entry, int i, const char* name)
 {
-    log::info("GDT[", i, "]: ", name, " [base (", fmt::hex { entry.base_low }, ",",
-        fmt::hex { entry.base_mid }, ",", fmt::hex { entry.base_high }, ") limit (",
-        fmt::hex { entry.limit_low }, ",", fmt::hex { entry.limit_high }, ") flags (",
-        fmt::bin { entry.flags }, ") access (", fmt::hex { entry.access }, ")]");
+    log::info("GDT[", i, "]: ", name, " [base (", fmt::hex{entry.base_low}, ",",
+        fmt::hex{entry.base_mid}, ",", fmt::hex{entry.base_high}, ") limit (",
+        fmt::hex{entry.limit_low}, ",", fmt::hex{entry.limit_high}, ") flags (",
+        fmt::bin{entry.flags}, ") access (", fmt::hex{entry.access}, ")]");
 }
 
 /**
@@ -264,8 +264,8 @@ void init()
     load_tss();
 
     log::info("GDT created with 6 entries");
-    log::info("GDT.limit = ", fmt::hex { gdtr.limit });
-    log::info("GDT.base = ", fmt::hex { gdtr.base });
+    log::info("GDT.limit = ", fmt::hex{gdtr.limit});
+    log::info("GDT.base = ", fmt::hex{gdtr.base});
 
     log_gdt_entry(gdt_table.zero, 0, "NULL");
     log_gdt_entry(gdt_table.kernel_code, 1, "Kernel Code");

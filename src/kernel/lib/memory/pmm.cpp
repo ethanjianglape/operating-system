@@ -90,11 +90,11 @@ void add_free_memory(std::size_t addr, std::size_t len)
 
     if (end >= MAX_MEMORY_BYTES) {
         if (addr >= MAX_MEMORY_BYTES) {
-            log::warn("Ignoring memory region at ", fmt::hex { addr }, " (beyond max)");
+            log::warn("Ignoring memory region at ", fmt::hex{addr}, " (beyond max)");
             return;
         }
 
-        log::warn("Truncating memory region from ", fmt::hex { end }, " to ", fmt::hex { MAX_MEMORY_BYTES });
+        log::warn("Truncating memory region from ", fmt::hex{end}, " to ", fmt::hex{MAX_MEMORY_BYTES});
         len = MAX_MEMORY_BYTES - addr;
     }
 

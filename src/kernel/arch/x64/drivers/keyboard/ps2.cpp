@@ -115,7 +115,7 @@ static void handle_scancode(std::uint8_t byte)
     update_modifiers(scancode, extended, released);
 
     // Build and push key event
-    KeyEvent event {
+    KeyEvent event{
         .scancode          = scancode,
         .extended_scancode = extended,
         .released          = released,

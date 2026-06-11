@@ -49,8 +49,8 @@ std::uint64_t get_lapic_addr() { return lapic_addr; }
 static void log_header(const Header* madt)
 {
     log::info("MADT:");
-    log::info("  lapic_addr = ", fmt::hex { madt->lapic_addr });
-    log::info("  flags      = ", fmt::bin { madt->flags });
+    log::info("  lapic_addr = ", fmt::hex{madt->lapic_addr});
+    log::info("  flags      = ", fmt::bin{madt->flags});
 }
 
 static void parse_lapic(const LocalApic* lapic)
@@ -58,7 +58,7 @@ static void parse_lapic(const LocalApic* lapic)
     log::info("Local APIC:");
     log::info("  acpi_processor_id = ", lapic->acpi_processor_id);
     log::info("  apic_id           = ", lapic->apic_id);
-    log::info("  flags             = ", fmt::bin { lapic->flags });
+    log::info("  flags             = ", fmt::bin{lapic->flags});
 
     local_apics.push_back(lapic);
 }
@@ -67,16 +67,16 @@ static void parse_ioapic(const IOApic* ioapic)
 {
     log::info("IOAPIC:");
     log::info("  ioapic_id   = ", ioapic->ioapic_id);
-    log::info("  ioapic_addr = ", fmt::hex { ioapic->ioapic_addr });
-    log::info("  gsi_base    = ", fmt::hex { ioapic->gsi_base });
+    log::info("  ioapic_addr = ", fmt::hex{ioapic->ioapic_addr});
+    log::info("  gsi_base    = ", fmt::hex{ioapic->gsi_base});
 
     std::uintptr_t phys = ioapic->ioapic_addr;
     std::uintptr_t virt = arch::vmm::map_hddm_page(phys, arch::vmm::PAGE_WRITE | arch::vmm::PAGE_CACHE_DISABLE);
 
     ioapics.push_back(ioapic);
-    mapped_ioapics.push_back(MappedIOApic {
+    mapped_ioapics.push_back(MappedIOApic{
         .phys_addr = phys,
-        .virt_addr = virt });
+        .virt_addr = virt});
 }
 
 static void parse_ioapic_iso(const InterruptSourceOverride* iso)
@@ -84,7 +84,7 @@ static void parse_ioapic_iso(const InterruptSourceOverride* iso)
     log::info("Interrupt Source Override:");
     log::info("  bus    = ", iso->bus);
     log::info("  source = ", iso->source, " -> gsi = ", iso->gsi);
-    log::info("  flags  = ", fmt::bin { iso->flags });
+    log::info("  flags  = ", fmt::bin{iso->flags});
 
     overrides.push_back(iso);
 }
@@ -93,7 +93,7 @@ static void parse_ioapic_nmi_source(const NMISource* nis)
 {
     log::info("IOAPIC NMI Source:");
     log::info("  nmi_source = ", nis->nmi_source);
-    log::info("  flags      = ", fmt::bin { nis->flags });
+    log::info("  flags      = ", fmt::bin{nis->flags});
     log::info("  gsi        = ", nis->gsi);
 }
 
@@ -101,14 +101,14 @@ static void parse_lapic_nmi(const LocalApicNMI* nmi)
 {
     log::info("Local APIC NMI:");
     log::info("  acpi_processor_id = ", nmi->acpi_processor_id);
-    log::info("  flags             = ", fmt::bin { nmi->flags });
+    log::info("  flags             = ", fmt::bin{nmi->flags});
     log::info("  lint              = ", nmi->lint);
 }
 
 static void parse_lapic_addr_override(const LocalApicAddressOverride* override_entry)
 {
     log::info("Local APIC Address Override:");
-    log::info("  lapic_addr = ", fmt::hex { override_entry->lapic_addr });
+    log::info("  lapic_addr = ", fmt::hex{override_entry->lapic_addr});
 
     lapic_addr = override_entry->lapic_addr;
 }
@@ -117,7 +117,7 @@ static void parse_x2apic(const LocalX2Apic* x2apic)
 {
     log::info("Local x2APIC:");
     log::info("  x2apic_id = ", x2apic->x2apic_id);
-    log::info("  flags     = ", fmt::bin { x2apic->flags });
+    log::info("  flags     = ", fmt::bin{x2apic->flags});
     log::info("  acpi_id   = ", x2apic->acpi_id);
 }
 

@@ -43,14 +43,14 @@ static TmpFile* find_file_by_path(const kstring& path)
 
 static TmpFile* create_file(const kstring& path, const kstring& name, FileType type, TmpFile* parent)
 {
-    auto* file = new TmpFile {};
+    auto* file = new TmpFile{};
 
     file->name     = name;
     file->path     = path;
     file->type     = type;
     file->size     = 0;
     file->parent   = parent;
-    file->children = new klist<TmpFile*> {};
+    file->children = new klist<TmpFile*>{};
 
     g_tmp_files.push_back(file);
 
@@ -101,8 +101,8 @@ static Inode* tmpfs_open(FileSystem*, const kstring& path, int)
         return nullptr;
     }
 
-    auto* inode = new Inode {};
-    auto* meta  = new FsFileMeta {};
+    auto* inode = new Inode{};
+    auto* meta  = new FsFileMeta{};
 
     meta->data = file->data;
     meta->size = file->size;
@@ -160,8 +160,7 @@ static FileSystem tmpfs_fs = {
     .open         = tmpfs_open,
     .stat         = tmpfs_stat,
     .readdir      = tmpfs_readdir,
-    .mkdir        = tmpfs_mkdir
-};
+    .mkdir        = tmpfs_mkdir};
 
 void init()
 {

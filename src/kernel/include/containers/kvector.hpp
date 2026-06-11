@@ -70,7 +70,7 @@ public:
 
     public:
         iterator(T* ptr)
-            : _ptr { ptr }
+            : _ptr{ptr}
         {
         }
         T&        operator*() const { return *_ptr; }
@@ -105,7 +105,7 @@ public:
 
     public:
         const_iterator(const T* ptr)
-            : _ptr { ptr }
+            : _ptr{ptr}
         {
         }
         const T&        operator*() const { return *_ptr; }
@@ -142,7 +142,7 @@ public:
     }
 
     kvector(std::initializer_list<T> init)
-        : kvector {}
+        : kvector{}
     {
         ensure_capacity(init.size());
 
@@ -158,7 +158,7 @@ public:
     }
 
     explicit kvector(std::size_t count, const T& value = {})
-        : kvector {}
+        : kvector{}
     {
         ensure_capacity(count);
 
@@ -168,9 +168,9 @@ public:
     }
 
     kvector(kvector&& other)
-        : _data { other._data }
-        , _size { other._size }
-        , _capacity { other._capacity }
+        : _data{other._data}
+        , _size{other._size}
+        , _capacity{other._capacity}
     {
         other._data     = nullptr;
         other._size     = 0;
@@ -178,7 +178,7 @@ public:
     }
 
     kvector(const kvector& other)
-        : kvector {}
+        : kvector{}
     {
         if (other.empty()) {
             return;
@@ -260,11 +260,11 @@ public:
 
     bool empty() const { return _size == 0; }
 
-    iterator begin() { return iterator { _data }; }
-    iterator end() { return iterator { _data + _size }; }
+    iterator begin() { return iterator{_data}; }
+    iterator end() { return iterator{_data + _size}; }
 
-    const_iterator begin() const { return const_iterator { _data }; }
-    const_iterator end() const { return const_iterator { _data + _size }; }
+    const_iterator begin() const { return const_iterator{_data}; }
+    const_iterator end() const { return const_iterator{_data + _size}; }
 
     T*       data() { return _data; }
     const T* data() const { return _data; }

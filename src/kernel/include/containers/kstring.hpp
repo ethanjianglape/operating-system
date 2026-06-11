@@ -80,7 +80,7 @@ public:
 
     public:
         iterator(char* ptr)
-            : _ptr { ptr }
+            : _ptr{ptr}
         {
         }
         char&     operator*() const { return *_ptr; }
@@ -115,7 +115,7 @@ public:
 
     public:
         const_iterator(const char* ptr)
-            : _ptr { ptr }
+            : _ptr{ptr}
         {
         }
         const char&    operator*() const { return *_ptr; }
@@ -183,15 +183,15 @@ public:
 
     // Default constructor
     kstring()
-        : _data { nullptr }
-        , _length { 0 }
-        , _capacity { 0 }
+        : _data{nullptr}
+        , _length{0}
+        , _capacity{0}
     {
     }
 
     // Construct from C string
     kstring(const char* s)
-        : kstring {}
+        : kstring{}
     {
         if (s == nullptr) {
             return;
@@ -205,7 +205,7 @@ public:
 
     // Construct from C string of count length
     kstring(const char* s, std::size_t count)
-        : kstring {}
+        : kstring{}
     {
         if (s == nullptr) {
             return;
@@ -219,9 +219,9 @@ public:
 
     // Move constructor
     kstring(kstring&& other) noexcept
-        : _data { other._data }
-        , _length { other._length }
-        , _capacity { other._capacity }
+        : _data{other._data}
+        , _length{other._length}
+        , _capacity{other._capacity}
     {
         other._data     = nullptr;
         other._length   = 0;
@@ -230,7 +230,7 @@ public:
 
     // Copy constructor
     kstring(const kstring& other)
-        : kstring {}
+        : kstring{}
     {
         if (other.empty()) {
             return;
@@ -304,10 +304,10 @@ public:
     bool        empty() const { return _length == 0; }
 
     // Iterators
-    iterator       begin() { return iterator { _data }; }
-    iterator       end() { return iterator { _data + _length }; }
-    const_iterator begin() const { return const_iterator { _data }; }
-    const_iterator end() const { return const_iterator { _data + _length }; }
+    iterator       begin() { return iterator{_data}; }
+    iterator       end() { return iterator{_data + _length}; }
+    const_iterator begin() const { return const_iterator{_data}; }
+    const_iterator end() const { return const_iterator{_data + _length}; }
 
     // Element access
     char&       front() { return _data[0]; }
@@ -509,13 +509,13 @@ public:
 
     kstring operator+(const kstring& other) const
     {
-        kstring res { *this };
+        kstring res{*this};
         return res += other;
     }
 
     kstring operator+(const char* s) const
     {
-        kstring res { *this };
+        kstring res{*this};
         return res += s;
     }
 
@@ -566,6 +566,6 @@ public:
 
 inline kstring operator+(const char* lhs, const kstring& rhs)
 {
-    kstring res { lhs };
+    kstring res{lhs};
     return res += rhs;
 }

@@ -16,8 +16,7 @@ static FileSystem devfs_fs = {
     .open         = devfs_open,
     .stat         = devfs_stat,
     .readdir      = devfs_readdir,
-    .mkdir        = devfs_mkdir
-};
+    .mkdir        = devfs_mkdir};
 
 void init()
 {
@@ -55,12 +54,12 @@ static int devfs_stat(FileSystem*, const kstring& path, Stat* out)
 static int devfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>& out)
 {
     if (path.empty()) {
-        out.push_back(DirEntry {
+        out.push_back(DirEntry{
             .name = "tty1",
             .type = FileType::CHAR_DEVICE,
         });
 
-        out.push_back(DirEntry {
+        out.push_back(DirEntry{
             .name = "null",
             .type = FileType::CHAR_DEVICE,
         });

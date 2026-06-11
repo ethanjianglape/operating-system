@@ -18,8 +18,7 @@ static FileSystem initramfs_fs = {
     .open         = initramfs_open,
     .stat         = initramfs_stat,
     .readdir      = initramfs_readdir,
-    .mkdir        = initramfs_mkdir
-};
+    .mkdir        = initramfs_mkdir};
 
 void init(std::uint8_t* addr, std::size_t)
 {
@@ -38,12 +37,12 @@ static Inode* initramfs_open(FileSystem*, const kstring& path, int)
         ? FileType::DIRECTORY
         : FileType::REGULAR;
 
-    auto* inode = new Inode {};
+    auto* inode = new Inode{};
     inode->type = type;
     inode->size = meta->size_bytes;
     inode->ops  = get_fs_file_ops();
 
-    auto* file_meta     = new FsFileMeta {};
+    auto* file_meta     = new FsFileMeta{};
     file_meta->data     = meta->data;
     file_meta->size     = meta->size_bytes;
     inode->private_data = file_meta;
@@ -82,7 +81,7 @@ static int initramfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>
 
         kstring basename = fullpath.substr(prefix_len);
 
-        out.push_back(DirEntry {
+        out.push_back(DirEntry{
             .name = basename,
             .type = meta->header->typeflag == tar::TYPEFLAG_DIR
                 ? FileType::DIRECTORY

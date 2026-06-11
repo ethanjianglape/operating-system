@@ -25,7 +25,7 @@ std::uintptr_t sys_brk(void* addr)
     std::size_t    pages = arch::vmm::map_mem_at(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
     proc->heap_break = hb_end;
-    proc->allocations.push_back(process::ProcessAllocation {
+    proc->allocations.push_back(process::ProcessAllocation{
         .virt_addr = hb_start,
         .num_pages = pages,
     });
@@ -54,9 +54,9 @@ std::uintptr_t sys_mmap(void* addr_ptr, std::size_t length, int prot, int flags,
     int                         vmm_flags  = arch::vmm::PAGE_WRITE | arch::vmm::PAGE_USER;
     arch::vmm::MemoryAllocation allocation = arch::vmm::try_map_mem_at(proc->pml4, addr, length, vmm_flags);
 
-    proc->allocations.push_back(process::ProcessAllocation {
+    proc->allocations.push_back(process::ProcessAllocation{
         .virt_addr = allocation.virt_addr,
-        .num_pages = allocation.num_pages });
+        .num_pages = allocation.num_pages});
 
     return allocation.virt_addr;
 }

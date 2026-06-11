@@ -97,8 +97,7 @@ static const FileOps fs_file_ops = {
     .write = fs_file_write,
     .close = fs_file_close,
     .lseek = fs_file_lseek,
-    .fstat = fs_file_fstat
-};
+    .fstat = fs_file_fstat};
 
 const FileOps* get_fs_file_ops()
 {

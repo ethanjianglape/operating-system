@@ -34,7 +34,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     arch::vmm::PageTableEntry* pml4 = arch::vmm::create_user_pml4();
     arch::vmm::switch_pml4(pml4);
 
-    auto* p = new Process {};
+    auto* p = new Process{};
 
     p->pid                = g_pid++;
     p->state              = ProcessState::READY;
@@ -62,11 +62,11 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
         std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
-        log::debug("mapping user mem at ", fmt::hex { virt }, " len = ", mem_size);
+        log::debug("mapping user mem at ", fmt::hex{virt}, " len = ", mem_size);
 
-        p->allocations.push_back(ProcessAllocation {
+        p->allocations.push_back(ProcessAllocation{
             .virt_addr = virt & ~0xFFFUL,
-            .num_pages = code_pages });
+            .num_pages = code_pages});
 
         memcpy(reinterpret_cast<void*>(virt),
             reinterpret_cast<void*>(buffer + offset),
@@ -85,9 +85,9 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
     std::size_t stack_pages = arch::vmm::map_mem_at(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER);
 
-    p->allocations.push_back(ProcessAllocation {
+    p->allocations.push_back(ProcessAllocation{
         .virt_addr = USER_STACK_BASE,
-        .num_pages = stack_pages });
+        .num_pages = stack_pages});
 
     // Initial instruction pointer
     p->rip = file.entry;
@@ -142,20 +142,20 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
     fs::Inode* tty_inode = fs::devfs::tty::get_tty_inode();
 
-    p->fd_table.push_back({ .inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY }); // stdin
-    p->fd_table.push_back({ .inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY }); // stdout
-    p->fd_table.push_back({ .inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY }); // stderr
+    p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stdin
+    p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stdout
+    p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stderr
 
     arch::vmm::switch_kernel_pml4();
 
     log::debug("Created process ", p->pid);
-    log::debug("  kernel_stack @ ", fmt::hex { p->kernel_stack });
-    log::debug("  kernel_rsp = ", fmt::hex { p->kernel_rsp });
-    log::debug("  context_frame @ ", fmt::hex { p->context_frame });
-    log::debug("  context_frame->r15 = ", fmt::hex { p->context_frame->r15 });
+    log::debug("  kernel_stack @ ", fmt::hex{p->kernel_stack});
+    log::debug("  kernel_rsp = ", fmt::hex{p->kernel_rsp});
+    log::debug("  context_frame @ ", fmt::hex{p->context_frame});
+    log::debug("  context_frame->r15 = ", fmt::hex{p->context_frame->r15});
 
-    log::debug("p2 context_frame virt = ", fmt::hex { (uint64_t)p->context_frame });
-    log::debug("p2 context_frame phys = ", fmt::hex { arch::vmm::hhdm_virt_to_phys(p->context_frame) });
+    log::debug("p2 context_frame virt = ", fmt::hex{(uint64_t)p->context_frame});
+    log::debug("p2 context_frame phys = ", fmt::hex{arch::vmm::hhdm_virt_to_phys(p->context_frame)});
 
     return p;
 }

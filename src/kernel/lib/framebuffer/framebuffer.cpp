@@ -49,7 +49,7 @@ void init(const FrameBufferInfo& info)
 
     log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
     log::info("Framebuffer # pixels: ", fb_num_pixels);
-    log::info("VRAM: ", fmt::hex { vram });
+    log::info("VRAM: ", fmt::hex{vram});
     log::info("VRAM Size: ", vram_size);
 
     log::init_end("Framebuffer");
@@ -117,6 +117,6 @@ void clear(std::uint32_t color)
 void log()
 {
     log::info("Screen = ", fb_width, "x", fb_height, "x", fb_bpp);
-    log::info("VRAM   = ", fmt::hex { vram });
+    log::info("VRAM   = ", fmt::hex{vram});
 }
 }

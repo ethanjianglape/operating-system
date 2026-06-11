@@ -41,12 +41,12 @@ void parse_headers(std::uint8_t* addr)
     std::uintmax_t num_blocks = (size + 511) / 512;
     std::uint8_t*  data       = size > 0 ? addr + 512 : nullptr;
 
-    metas.push_back(TarMeta {
+    metas.push_back(TarMeta{
         .header       = header,
         .data         = data,
         .size_bytes   = size,
         .num_blocks   = num_blocks,
-        .filename_str = filename });
+        .filename_str = filename});
 
     parse_headers(addr + 512 + (num_blocks * 512));
 }
@@ -77,7 +77,7 @@ std::size_t read(TarMeta* meta, void* buffer, std::size_t count, std::size_t off
 {
     std::uint8_t* data = meta->data + offset;
 
-    log::debug("tar read from ", fmt::hex { data }, " to = ", fmt::hex { buffer }, " count = ", count, " offset = ", offset);
+    log::debug("tar read from ", fmt::hex{data}, " to = ", fmt::hex{buffer}, " count = ", count, " offset = ", offset);
 
     memcpy(buffer, data, count);
 

@@ -85,7 +85,7 @@
 namespace x64::irq {
 // Handler function pointers for each interrupt vector.
 // Vectors 0-31 are exceptions (handled specially), 32-255 are IRQs.
-static irq_handler_fn irq_handlers[NUM_IRQ_HANDLERS] = { nullptr };
+static irq_handler_fn irq_handlers[NUM_IRQ_HANDLERS] = {nullptr};
 
 /**
  * @brief Registers a callback function for a hardware IRQ vector.
@@ -127,8 +127,7 @@ constexpr const char* const exception_names[] = {
     "Hypervisor Injection (#HV)",
     "VMM Communication (#VC)",
     "Security Exception (#SX)",
-    "Reserved"
-};
+    "Reserved"};
 
 /**
  * @brief Decodes and logs page fault details from CR2 and error code.
@@ -138,7 +137,7 @@ static void handle_page_fault(std::uint64_t error)
 {
     std::uint64_t fault_addr;
     asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
-    log::error("Faulting Address: ", fmt::hex { fault_addr });
+    log::error("Faulting Address: ", fmt::hex{fault_addr});
 
     // Decode the page fault error code
     log::error("Cause: ",
@@ -180,8 +179,8 @@ static void handle_exception(const InterruptFrame* frame)
 
     log::error("===== !!KERNEL PANIC!! =====");
     log::error("CPU Exception: ", exception_names[vector]);
-    log::error("Vector: ", vector, " (", fmt::hex { vector }, ")");
-    log::error("Error Code: ", error, " (", fmt::hex { error }, ")");
+    log::error("Vector: ", vector, " (", fmt::hex{vector}, ")");
+    log::error("Error Code: ", error, " (", fmt::hex{error}, ")");
 
     if (vector == EXC_PAGE_FAULT) {
         handle_page_fault(error);
@@ -206,7 +205,7 @@ static void handle_irq(InterruptFrame* frame)
     if (irq_handlers[vector]) {
         irq_handlers[vector](frame);
     } else {
-        log::debug("Unhandled IRQ: vector ", vector, " (", fmt::hex { vector }, ")");
+        log::debug("Unhandled IRQ: vector ", vector, " (", fmt::hex{vector}, ")");
     }
 }
 }

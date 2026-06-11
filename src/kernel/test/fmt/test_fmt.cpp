@@ -97,7 +97,7 @@ void test_to_string_hex_large()
 
 void test_to_string_hex_wrapper()
 {
-    const char* result = fmt::to_string(fmt::hex { 0xABCD });
+    const char* result = fmt::to_string(fmt::hex{0xABCD});
     test::assert_true(strcmp(result, "0x0000ABCD") == 0, "to_string(hex{0xABCD}) correct");
 }
 
@@ -115,7 +115,7 @@ void test_to_string_bin_value()
 
 void test_to_string_bin_wrapper()
 {
-    const char* result = fmt::to_string(fmt::bin { 0b11110000 });
+    const char* result = fmt::to_string(fmt::bin{0b11110000});
     test::assert_true(strcmp(result, "0b11110000") == 0, "to_string(bin{0b11110000}) correct");
 }
 
@@ -133,7 +133,7 @@ void test_to_string_oct_value()
 
 void test_to_string_oct_wrapper()
 {
-    const char* result = fmt::to_string(fmt::oct { 511 });
+    const char* result = fmt::to_string(fmt::oct{511});
     test::assert_true(strcmp(result, "0777") == 0, "to_string(oct{511}) returns \"0777\"");
 }
 
@@ -150,7 +150,7 @@ void test_to_string_hex_pointer_wrapper()
 {
     int         x      = 42;
     int*        ptr    = &x;
-    const char* result = fmt::to_string(fmt::hex { ptr });
+    const char* result = fmt::to_string(fmt::hex{ptr});
     test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(hex{ptr}) has hex prefix");
 }
 

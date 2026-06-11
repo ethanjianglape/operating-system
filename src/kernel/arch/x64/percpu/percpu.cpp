@@ -80,7 +80,7 @@ void init()
 {
     log::init_start("PerCPU");
 
-    PerCPU* per_cpu_data = new PerCPU {};
+    PerCPU* per_cpu_data = new PerCPU{};
 
     per_cpu_data->self       = per_cpu_data; // For C++ access via get()
     per_cpu_data->kernel_rsp = 0;            // Set by scheduler before running process
@@ -93,7 +93,7 @@ void init()
     // KERNEL_GS_BASE is the "other" slot for SWAPGS. Starts unused.
     cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
 
-    log::info("GS_BASE = ", fmt::hex { reinterpret_cast<std::uintptr_t>(per_cpu_data) });
+    log::info("GS_BASE = ", fmt::hex{reinterpret_cast<std::uintptr_t>(per_cpu_data)});
 
     log::init_end("PerCPU");
 }

@@ -193,7 +193,7 @@ void unmap_page(PageTableEntry* pml4, std::uintptr_t virt)
     PageTableEntry* pte = get_pte(pml4, virt);
 
     if (pte == nullptr) {
-        log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex { virt });
+        log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex{virt});
         return;
     }
 
@@ -314,7 +314,7 @@ MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, 
         map_page(pml4, virt + (page * PAGE_SIZE), phys, flags);
     }
 
-    return MemoryAllocation { .virt_addr = virt, .num_pages = num_pages };
+    return MemoryAllocation{.virt_addr = virt, .num_pages = num_pages};
 }
 
 /**
@@ -414,7 +414,7 @@ void init_pml4()
     constexpr std::uint64_t bottom_12_mask = ~0xFFF;
     kernel_pml4                            = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
-    log::info("VMM pml4 addr = ", fmt::hex { kernel_pml4 });
+    log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
 }
 
 /**
@@ -457,7 +457,7 @@ void init(std::uintptr_t offset)
 
     hhdm_offset = offset;
 
-    log::info("VMM HHDM addr = ", fmt::hex { hhdm_offset });
+    log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
 
     init_pml4();
 
