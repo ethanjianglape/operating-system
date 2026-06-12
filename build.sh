@@ -64,6 +64,9 @@ if [ ! -f "../sysroot/boot/kernel.elf" ]; then
     exit 1
 fi
 
+log_section "Dumping kernel.elf object data"
+objdump -x ../sysroot/boot/kernel.elf > ../kernel.dump
+
 if [ -d "../initramfs" ]; then
     log_section "Creating initramfs.tar"
     tar -cvf ../sysroot/boot/initramfs.tar -C ../initramfs .

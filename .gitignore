@@ -16,6 +16,7 @@ initramfs/bin/*
 *.bin
 *.map
 *.iso
+*.dump
 
 # IDE files
 .vscode/
