@@ -47,12 +47,11 @@ cd cmake_build
 
 # Configure with CMake
 log_section "Configuring CMake"
-cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_ASM_COMPILER=as -DCMAKE_BUILD_TYPE=Debug
+cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_ASM_COMPILER=as -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 # Build (CMakeLists.txt handles cleaning and copying to sysroot)
-log_section "Rebuilding kernel"
-make clean
-bear -- make -j$(nproc)
+log_section "Building kernel"
+make -j$(nproc)
 
 if [ -f "./compile_commands.json" ]; then
     log_section "Copying compile_commands.json"
