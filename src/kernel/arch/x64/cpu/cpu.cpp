@@ -130,7 +130,7 @@ static void log_rflags(std::uint64_t rflags)
 
 static void log_cr0(std::uint64_t cr0)
 {
-    log::debug("CR0:    ", fmt::hex{cr0}, " [",
+    log::debug("CR0: ", fmt::hex{cr0}, " [",
         (cr0 & (1 << 0)) ? "PE " : "",    // Protected Mode Enable
         (cr0 & (1 << 1)) ? "MP " : "",    // Monitor Coprocessor
         (cr0 & (1 << 2)) ? "EM " : "",    // Emulation
@@ -220,8 +220,8 @@ void dump()
     log::debug("R14: ", fmt::hex{r14}, "  R15: ", fmt::hex{r15});
 
     // Control registers
-    log_cr0(read_cr0());
     log::debug("Control Registers:");
+    log_cr0(read_cr0());
     log::debug("CR2: ", fmt::hex{read_cr2()}, " (last page fault address)");
     log::debug("CR3: ", fmt::hex{read_cr3()}, " (page table base)");
     log::debug("CR4: ", fmt::hex{read_cr4()});
@@ -237,6 +237,8 @@ void dump()
 
     // Flags
     log_rflags(read_rflags());
+
+    log::debug("======== End CPU Register Dump ========");
 }
 
 // =========================================================================

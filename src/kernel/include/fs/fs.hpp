@@ -8,9 +8,9 @@
 
 namespace fs {
 enum class FileType : std::uint8_t {
-    NONE        = 0,
-    REGULAR     = 1,
-    DIRECTORY   = 2,
+    NONE = 0,
+    REGULAR = 1,
+    DIRECTORY = 2,
     CHAR_DEVICE = 3,
 };
 
@@ -45,27 +45,27 @@ struct FileOps {
  * Created by FileSystem::open(), freed by FileOps::close().
  */
 struct Inode {
-    FileType       type;
-    std::size_t    size;
+    FileType type;
+    std::size_t size;
     const FileOps* ops;
-    void*          private_data;
+    void* private_data;
 };
 
 /**
  * @brief An open file handle (per-process).
  */
 struct FileDescriptor {
-    Inode*      inode;
-    kstring     path;
+    Inode* inode;
+    kstring path;
     std::size_t offset;
-    int         flags;
+    int flags;
 };
 
 /**
  * @brief File metadata (for stat() without opening).
  */
 struct Stat {
-    FileType    type;
+    FileType type;
     std::size_t size;
 };
 
@@ -73,7 +73,7 @@ struct Stat {
  * @brief Directory listing entry.
  */
 struct DirEntry {
-    kstring  name;
+    kstring name;
     FileType type;
 };
 
@@ -84,7 +84,7 @@ struct DirEntry {
  */
 struct FileSystem {
     const char* name;
-    void*       private_data;
+    void* private_data;
 
     Inode* (*open)(FileSystem* self, const kstring& path, int flags);
     int (*stat)(FileSystem* self, const kstring& path, Stat* out);
@@ -96,7 +96,7 @@ struct FileSystem {
  * @brief A filesystem mounted at a path.
  */
 struct MountPoint {
-    kstring     root;
+    kstring root;
     FileSystem* filesystem;
 };
 
@@ -105,9 +105,10 @@ struct MountPoint {
 // ============================================================================
 
 kstring canonicalize(const kstring& path);
-void    mount(const kstring& path, FileSystem* fs);
-Inode*  open(const kstring& path, int flags);
-int     stat(const kstring& path, Stat* out);
-int     readdir(const kstring& path, kvector<DirEntry>& out);
-int     mkdir(const kstring& path, int mode);
+kstring relative_to_absolute(const kstring& root, const kstring& relative);
+void mount(const kstring& path, FileSystem* fs);
+Inode* open(const kstring& path, int flags);
+int stat(const kstring& path, Stat* out);
+int readdir(const kstring& path, kvector<DirEntry>& out);
+int mkdir(const kstring& path, int mode);
 }

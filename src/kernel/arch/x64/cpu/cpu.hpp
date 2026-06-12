@@ -71,6 +71,7 @@ inline void cpuid(std::uint32_t code, std::uint32_t* a, std::uint32_t* d)
     asm volatile("cpuid" : "=a"(*a), "=d"(*d) : "a"(code) : "ebx", "ecx", "memory");
 }
 
+[[gnu::always_inline]]
 inline void cpuid(std::uint32_t code, std::uint32_t* eax, std::uint32_t* ebx, std::uint32_t* ecx)
 {
     asm volatile("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx) : "a"(code) : "edx", "memory");
@@ -90,7 +91,7 @@ inline std::uint64_t rdmsr(std::uint32_t msr)
 [[gnu::always_inline]]
 inline void wrmsr(uint32_t msr, uint64_t value)
 {
-    const std::uint32_t low  = value & 0xFFFFFFFF;
+    const std::uint32_t low = value & 0xFFFFFFFF;
     const std::uint32_t high = value >> 32;
 
     asm volatile("wrmsr" : : "a"(low), "d"(high), "c"(msr) : "memory");

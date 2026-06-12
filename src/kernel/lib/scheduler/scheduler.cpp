@@ -1,3 +1,4 @@
+#include "arch/x64/cpu/cpu.hpp"
 #include "kpanic/kpanic.hpp"
 #include <arch.hpp>
 #include <log/log.hpp>
@@ -288,8 +289,17 @@ void add_process(process::Process* p)
 
 void init()
 {
+    arch::cpu::cli();
+
+    log::init_start("Scheduler");
+    log::info("Registering schedulers...");
+
     timer::register_handler(wake_sleeping_processes);
     timer::register_handler(terminate_dead_processes);
     timer::register_handler(schedule);
+
+    log::init_end("Scheduler");
+
+    arch::cpu::sti();
 }
 }

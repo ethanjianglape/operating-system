@@ -124,7 +124,3 @@ if [ -f "../myos.iso" ]; then
 else
     log_failure "Failed create ISO!"
 fi
-
-# Clean up ISO directory
-rm -rf isodir
-

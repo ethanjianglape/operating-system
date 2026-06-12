@@ -27,6 +27,10 @@ SECTIONS
         *(.rodata .rodata.*)
     } :rodata
 
+    .note.gnu.build-id : {
+        *(.note.gnu.build-id)
+    } :rodata
+
     .limine_requests ALIGN(4K) : {
         KEEP(*(.limine_requests_start))
         KEEP(*(.limine_requests))

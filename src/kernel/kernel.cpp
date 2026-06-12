@@ -40,13 +40,15 @@ void kernel_main()
     x64::drivers::apic::init();
     x64::drivers::keyboard::init();
 
-    x64::cpu::sti();
-
     log::success("all core kernel features initialized!");
+
+    x64::cpu::dump();
 
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif
+
+    x64::cpu::sti();
 
     console::init();
     fs::devfs::tty::init();

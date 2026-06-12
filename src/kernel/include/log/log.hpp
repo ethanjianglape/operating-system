@@ -12,13 +12,13 @@ void info(Ts... args)
 template <typename... Ts>
 void init_start(Ts... args)
 {
-    kprintln("[INIT] **** ", args..., " initializing ****");
+    kprintln("[INITIALIZE] ", args...);
 }
 
 template <typename... Ts>
 void init_end(Ts... args)
 {
-    kprintln("[INIT] **** ", args..., " initialized! ****");
+    kprintln("[INITIALIZED] ", args...);
 }
 
 template <typename... Ts>

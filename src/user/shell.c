@@ -6,17 +6,18 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 // ============================================================================
 // Shell commands
 // ============================================================================
 
-void cmd_help(void) {
+void cmd_help(void)
+{
     puts("Available commands:");
     puts("  help     - Show this help");
     puts("  pwd      - Print working directory");
@@ -27,7 +28,8 @@ void cmd_help(void) {
     puts("  exit     - Exit shell");
 }
 
-void cmd_pwd(void) {
+void cmd_pwd(void)
+{
     char buf[256];
     if (getcwd(buf, sizeof(buf)) != NULL) {
         puts(buf);
@@ -36,21 +38,24 @@ void cmd_pwd(void) {
     }
 }
 
-void cmd_cd(const char* path) {
+void cmd_cd(const char* path)
+{
     if (chdir(path) != 0) {
         printf("cd: no such directory: %s\n", path);
     }
 }
 
-void cmd_pid(void) {
+void cmd_pid(void)
+{
     printf("PID: %d\n", getpid());
 }
 
-void cmd_mmap(void) {
+void cmd_mmap(void)
+{
     puts("Testing mmap...");
 
     size_t size = 4096;
-    void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void*  ptr  = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     printf("  mmap returned: %p\n", ptr);
 
@@ -81,7 +86,8 @@ void cmd_mmap(void) {
     }
 }
 
-void cmd_mkdir() {
+void cmd_mkdir()
+{
     puts("testing mkdir");
     mkdir("/tmp/dir/test/a", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mkdir("/tmp/dir/test/b", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -93,19 +99,24 @@ void cmd_mkdir() {
 // Command parser
 // ============================================================================
 
-void process_command(char* cmd) {
+void process_command(char* cmd)
+{
     // Skip leading whitespace
-    while (*cmd == ' ') cmd++;
-    
+    while (*cmd == ' ')
+        cmd++;
+
     // Empty command
-    if (*cmd == '\0') return;
+    if (*cmd == '\0')
+        return;
 
     // Parse command and argument
     char* arg = cmd;
-    while (*arg && *arg != ' ' && *arg != '\n') arg++;
+    while (*arg && *arg != ' ' && *arg != '\n')
+        arg++;
     if (*arg == ' ') {
         *arg++ = '\0';
-        while (*arg == ' ') arg++;
+        while (*arg == ' ')
+            arg++;
     }
 
     // Dispatch
@@ -128,7 +139,7 @@ void process_command(char* cmd) {
     } else if (strcmp(cmd, "exit") == 0) {
         exit(0);
     } else {
-        printf("unknown command: %s\n", cmd);
+        printf("unknown command: '%s'\n", cmd);
     }
 }
 
@@ -136,7 +147,8 @@ void process_command(char* cmd) {
 // Entry point
 // ============================================================================
 
-int main(void) {
+int main(void)
+{
     puts("MyOS Shell");
     puts("Type 'help' for available commands.\n");
 
@@ -155,6 +167,11 @@ int main(void) {
         ssize_t n = read(0, buf, sizeof(buf) - 1);
         if (n > 0) {
             buf[n] = '\0';
+
+            if (buf[n - 1] == '\n') {
+                buf[n - 1] = '\0';
+            }
+
             process_command(buf);
         }
     }

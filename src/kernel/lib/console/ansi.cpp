@@ -1,10 +1,12 @@
 #include "algo/algo.hpp"
 #include "containers/kvector.hpp"
+
 #include <console/ansi.hpp>
 #include <console/console.hpp>
-#include <cstdint>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
+
+#include <cstdint>
 
 namespace console::ansi {
 bool is_csi(kstring::const_iterator iter)

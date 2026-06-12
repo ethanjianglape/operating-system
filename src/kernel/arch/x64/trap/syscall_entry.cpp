@@ -92,20 +92,20 @@
  */
 
 #include "syscall_entry.hpp"
-#include "syscall/sys_fd.hpp"
-#include "syscall/sys_mem.hpp"
-#include "syscall/sys_prctl.hpp"
-#include "syscall/sys_proc.hpp"
-#include "syscall/sys_sleep.hpp"
-#include "syscall/sys_thread.hpp"
-#include <linux/ioctl.hpp>
-#include <linux/syscall.hpp>
 
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/percpu/percpu.hpp>
 #include <fmt/fmt.hpp>
+#include <linux/ioctl.hpp>
+#include <linux/syscall.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
+#include <syscall/sys_fd.hpp>
+#include <syscall/sys_mem.hpp>
+#include <syscall/sys_prctl.hpp>
+#include <syscall/sys_proc.hpp>
+#include <syscall/sys_sleep.hpp>
+#include <syscall/sys_thread.hpp>
 
 #include <cerrno>
 #include <cstdint>
@@ -129,15 +129,15 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
     // Track context state for scheduler (see INSIGHTS.md "Why the scheduler
     // must check CS before context switching")
     process->has_kernel_context = true;
-    process->has_user_context   = false;
+    process->has_user_context = false;
 
     const std::uint64_t syscall_num = frame->rax;
-    const std::uint64_t arg1        = frame->rdi;
-    const std::uint64_t arg2        = frame->rsi;
-    const std::uint64_t arg3        = frame->rdx;
-    const std::uint64_t arg4        = frame->r10;
-    const std::uint64_t arg5        = frame->r8;
-    const std::uint64_t arg6        = frame->r9;
+    const std::uint64_t arg1 = frame->rdi;
+    const std::uint64_t arg2 = frame->rsi;
+    const std::uint64_t arg3 = frame->rdx;
+    const std::uint64_t arg4 = frame->r10;
+    const std::uint64_t arg5 = frame->r8;
+    const std::uint64_t arg6 = frame->r9;
 
     switch (syscall_num) {
     case SYS_READ:
@@ -205,10 +205,10 @@ void init()
     //   [63:48] = 0x10: SYSRET base. CPU computes CS=base+16=0x20, SS=base+8=0x18
     //   [47:32] = 0x08: SYSCALL target. CS=0x08 (kernel code), SS=CS+8=0x10 (kernel data)
     // Note: SYSRET adds 16/8 and ORs with 3 for RPL, so user gets CS=0x23, SS=0x1B
-    std::uint64_t star   = (0x10UL << 48) | (0x08UL << 32);
-    std::uint64_t lstar  = reinterpret_cast<std::uint64_t>(syscall_entry);
+    std::uint64_t star = (0x10UL << 48) | (0x08UL << 32);
+    std::uint64_t lstar = reinterpret_cast<std::uint64_t>(syscall_entry);
     std::uint64_t sfmask = SFMASK_DF | SFMASK_IF | SFMASK_TF;
-    std::uint64_t efer   = cpu::rdmsr(MSR_EFER) | EFER_SCE;
+    std::uint64_t efer = cpu::rdmsr(MSR_EFER) | EFER_SCE;
 
     cpu::wrmsr(MSR_STAR, star);
     cpu::wrmsr(MSR_LSTAR, lstar);

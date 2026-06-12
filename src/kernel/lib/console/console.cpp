@@ -339,7 +339,7 @@ void redraw(bool draw_clean)
                         draw_character_at(cc.c, row - viewport_offset, col, cc.fg, cc.bg);
                     }
 
-                    // cc.dirty = false;
+                    cc.dirty = false;
                 } else {
                     draw_character_at(' ', row - viewport_offset, col, current_fg, current_bg);
                 }

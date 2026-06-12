@@ -7,7 +7,7 @@ struct Process;
 }
 
 namespace x64::percpu {
-constexpr std::uint32_t MSR_GS_BASE        = 0xC0000101; // Active GS base
+constexpr std::uint32_t MSR_GS_BASE = 0xC0000101;        // Active GS base
 constexpr std::uint32_t MSR_KERNEL_GS_BASE = 0xC0000102; // Swapped by SWAPGS
 
 /**
@@ -23,10 +23,10 @@ constexpr std::uint32_t MSR_KERNEL_GS_BASE = 0xC0000102; // Swapped by SWAPGS
  *   offset 0x18: process     — Currently running process on this CPU
  */
 struct [[gnu::packed]] PerCPU {
-    PerCPU*           self;       // Why? See percpu.cpp for explanation
-    std::uint64_t     kernel_rsp; // Where to switch RSP on syscall entry
-    std::uint64_t     user_rsp;   // User's RSP saved here during syscall
-    process::Process* process;    // Current process running on this CPU
+    PerCPU* self;              // See percpu.cpp for explanation
+    std::uint64_t kernel_rsp;  // Where to switch RSP on syscall entry
+    std::uint64_t user_rsp;    // User's RSP saved here during syscall
+    process::Process* process; // Current process running on this CPU
 };
 
 void init();

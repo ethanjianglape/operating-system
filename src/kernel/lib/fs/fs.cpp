@@ -27,6 +27,19 @@ kstring canonicalize(const kstring& path)
     return "/" + algo::join(canonical, '/');
 }
 
+kstring relative_to_absolute(const kstring& root, const kstring& relative)
+{
+    if (relative.empty()) {
+        return root;
+    }
+
+    if (relative.front() == '/') {
+        return canonicalize(relative);
+    }
+
+    return canonicalize(root + "/" + relative);
+}
+
 static MountPoint* find_mount(const kstring& path)
 {
     MountPoint* best = nullptr;
@@ -57,14 +70,17 @@ void mount(const kstring& path, FileSystem* fs)
     }
 
     log::debug("fs: mounting ", fs->name, " at ", path);
-    mount_points.push_back({.root = path,
-        .filesystem               = fs});
+    MountPoint mp{
+        .root = path,
+        .filesystem = fs};
+
+    mount_points.push_back(mp);
 }
 
 Inode* open(const kstring& path, int flags)
 {
-    kstring     canonical = canonicalize(path);
-    MountPoint* mp        = find_mount(canonical);
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
 
     if (!mp) {
         log::debug("fs::open: no mount for ", canonical);
@@ -78,8 +94,8 @@ Inode* open(const kstring& path, int flags)
 
 int stat(const kstring& path, Stat* out)
 {
-    kstring     canonical = canonicalize(path);
-    MountPoint* mp        = find_mount(canonical);
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
 
     if (!mp) {
         return -1;
@@ -95,8 +111,8 @@ int stat(const kstring& path, Stat* out)
 
 int readdir(const kstring& path, kvector<DirEntry>& out)
 {
-    kstring     canonical = canonicalize(path);
-    MountPoint* mp        = find_mount(canonical);
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
 
     if (!mp) {
         return -1;
@@ -113,8 +129,8 @@ int readdir(const kstring& path, kvector<DirEntry>& out)
 
 int mkdir(const kstring& path, int mode)
 {
-    kstring     canonical = canonicalize(path);
-    MountPoint* mp        = find_mount(canonical);
+    kstring canonical = canonicalize(path);
+    MountPoint* mp = find_mount(canonical);
 
     if (!mp) {
         return -1;

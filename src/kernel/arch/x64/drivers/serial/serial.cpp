@@ -76,8 +76,9 @@ void init()
  */
 int putchar(char c)
 {
-    while (!is_transmit_ready())
-        ;
+    while (!is_transmit_ready()) {
+        cpu::hlt();
+    }
 
     if (c == '\n') {
         cpu::outb(COM1 + DATA, '\r');

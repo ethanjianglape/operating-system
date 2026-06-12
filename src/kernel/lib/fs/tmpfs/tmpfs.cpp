@@ -7,13 +7,14 @@
 #include <fs/tmpfs/tmpfs.hpp>
 
 namespace fs::tmpfs {
+
 struct TmpFile {
-    kstring          name;
-    kstring          path;
-    FileType         type;
-    std::size_t      size;
-    std::uint8_t*    data;
-    TmpFile*         parent;
+    kstring name;
+    kstring path;
+    FileType type;
+    std::size_t size;
+    std::uint8_t* data;
+    TmpFile* parent;
     klist<TmpFile*>* children;
 };
 
@@ -45,11 +46,11 @@ static TmpFile* create_file(const kstring& path, const kstring& name, FileType t
 {
     auto* file = new TmpFile{};
 
-    file->name     = name;
-    file->path     = path;
-    file->type     = type;
-    file->size     = 0;
-    file->parent   = parent;
+    file->name = name;
+    file->path = path;
+    file->type = type;
+    file->size = 0;
+    file->parent = parent;
     file->children = new klist<TmpFile*>{};
 
     g_tmp_files.push_back(file);
@@ -61,8 +62,8 @@ static TmpFile* create_file(const kstring& path, const kstring& name, FileType t
 static TmpFile* ensure_path_exists(const kstring& path)
 {
     kvector<kstring> parts = algo::split(path, '/');
-    kstring          partial_path;
-    TmpFile*         parent = nullptr;
+    kstring partial_path;
+    TmpFile* parent = nullptr;
 
     log::debug("ensuring path exists: ", path, " ", parts);
 
@@ -102,15 +103,15 @@ static Inode* tmpfs_open(FileSystem*, const kstring& path, int)
     }
 
     auto* inode = new Inode{};
-    auto* meta  = new FsFileMeta{};
+    auto* meta = new FsFileMeta{};
 
     meta->data = file->data;
     meta->size = file->size;
 
-    inode->type         = file->type;
-    inode->size         = file->size;
+    inode->type = file->type;
+    inode->size = file->size;
     inode->private_data = meta;
-    inode->ops          = get_fs_file_ops();
+    inode->ops = get_fs_file_ops();
 
     return inode;
 }
@@ -145,25 +146,22 @@ static int tmpfs_mkdir(FileSystem*, const kstring& path, int)
 {
     log::debug("/tmp mkdir: ", path);
 
-    // TmpFile* parent = ensure_path_exists(path);
+    TmpFile* parent = ensure_path_exists(path);
 
-    return 0;
-
-    // TmpFile* parent = ensure_path_exists(path);
-
-    // return parent != nullptr ? 0 : -1;
+    return parent != nullptr ? 0 : -1;
 }
 
 static FileSystem tmpfs_fs = {
-    .name         = "tmpfs",
+    .name = "tmpfs",
     .private_data = nullptr,
-    .open         = tmpfs_open,
-    .stat         = tmpfs_stat,
-    .readdir      = tmpfs_readdir,
-    .mkdir        = tmpfs_mkdir};
+    .open = tmpfs_open,
+    .stat = tmpfs_stat,
+    .readdir = tmpfs_readdir,
+    .mkdir = tmpfs_mkdir};
 
 void init()
 {
     fs::mount("/tmp", &tmpfs_fs);
 }
+
 }

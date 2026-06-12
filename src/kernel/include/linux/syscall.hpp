@@ -8,6 +8,8 @@
  * See: arch/x86/entry/syscalls/syscall_64.tbl in the Linux source.
  */
 
+// clang-format off
+
 #include <cstdint>
 
 namespace linux {
