@@ -34,8 +34,8 @@ log "Deleting cmake_build/"
 rm -rf cmake_build/
 rm -rf cmake-build-debug/
 
-log "Deleting initramfs/"
-rm -rf initramfs/
+log "Deleting initramfs/bin"
+rm -rf initramfs/bin
 
 log "Deleting sysroot/"
 rm -rf sysroot/

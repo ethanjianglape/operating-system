@@ -76,17 +76,11 @@ log_success "Raw binary: sysroot/boot/kernel.bin"
 # Create bootable ISO using sysroot
 log_section "Creating bootable ISO from sysroot"
 
-log "Cleaning up old iso files..."
-rm -rf isodir
 rm -f ../myos.iso
-mkdir -p isodir
-
-log "Copying sysroot to ISO directory..."
-cp -R ../sysroot/* ./isodir/ 2>/dev/null || true
 
 log_section "Creating bootloader and UEFI dependencies"
-mkdir -p isodir/boot/limine
-mkdir -p isodir/EFI/BOOT
+mkdir -p ../sysroot/boot/limine
+mkdir -p ../sysroot/EFI/BOOT
 
 log_section "Copying limine BIOS and UEFI system files"
 
@@ -99,11 +93,11 @@ else
     exit 1
 fi
 
-cp "$LIMINE_SHARE/limine-bios.sys" isodir/boot/limine
-cp "$LIMINE_SHARE/limine-bios-cd.bin" isodir/boot/limine
-cp "$LIMINE_SHARE/limine-uefi-cd.bin" isodir/boot/limine
-cp "$LIMINE_SHARE/BOOTX64.EFI" isodir/EFI/BOOT
-cp ../src/bootloader/limine/limine.conf isodir/limine.conf
+cp "$LIMINE_SHARE/limine-bios.sys" ../sysroot/boot/limine
+cp "$LIMINE_SHARE/limine-bios-cd.bin" ../sysroot/boot/limine
+cp "$LIMINE_SHARE/limine-uefi-cd.bin" ../sysroot/boot/limine
+cp "$LIMINE_SHARE/BOOTX64.EFI" ../sysroot/EFI/BOOT
+cp ../src/bootloader/limine/limine.conf ../sysroot/limine.conf
 
 log_section "Using xorriso to build bootable ISO"
 xorriso -as mkisofs \
@@ -111,7 +105,7 @@ xorriso -as mkisofs \
         -no-emul-boot -boot-load-size 4 -boot-info-table \
         --efi-boot boot/limine/limine-uefi-cd.bin \
         -efi-boot-part --efi-boot-image --protective-msdos-label \
-        -o ../myos.iso isodir/
+        -o ../myos.iso ../sysroot/
 
 log_section "Installing limine bios into ISO"
 limine bios-install ../myos.iso

@@ -1,9 +1,9 @@
 # Build directories
 build/
 sysroot/
-initramfs/
 cmake-build-*/
 cmake_build/
+initramfs/bin/*
 .cache/*
 .claude*
 
