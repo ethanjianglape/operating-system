@@ -11,13 +11,13 @@ set(USER_BIN_DIR "${CMAKE_SOURCE_DIR}/initramfs/bin")
 # Linker script
 #set(USER_LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/user.ld")
 
-set(MUSL_GCC_FLAGS "-static")
+set(MUSL_GCC_FLAGS -static)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fno-link-libatomic HAS_NO_LINK_LIBATOMIC)
 
 if (HAS_NO_LINK_LIBATOMIC)
-  set(MUSL_GCC_FLAGS "-fno-link-libatomic ${MUSL_GCC_FLAGS}")
+  list(PREPEND MUSL_GCC_FLAGS -fno-link-libatomic)
 endif()
 
 # Function to add a musl libc program (compiled with musl-gcc, statically linked)
