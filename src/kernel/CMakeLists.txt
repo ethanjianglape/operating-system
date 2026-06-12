@@ -1,9 +1,3 @@
-cmake_minimum_required(VERSION 3.16)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-project(kernel C CXX ASM)
-
 # Architecture-specific settings
 set(KERNEL_ARCH "x64" CACHE STRING "Target architecture")
 set(ARCH_DIR "arch/${KERNEL_ARCH}")
@@ -78,31 +72,27 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/scheduler/scheduler.cpp
 )
 
-#Test sources(compiled when KERNEL_TESTS is defined)
-file(GLOB_RECURSE TEST_SOURCES ${TEST_DIR}/*.cpp)
+# Test sources (only compiled when KERNEL_TESTS is ON)
+option(KERNEL_TESTS "Build kernel tests" ON)
+set(TEST_SOURCES "")
+if(KERNEL_TESTS)
+  file(GLOB_RECURSE TEST_SOURCES ${TEST_DIR}/*.cpp)
+endif()
 
 # Architecture-specific boot files
 set(BOOT_SOURCES
   ${ARCH_DIR}/boot/limine_entry.cpp
 )
 
-# Architecture-specific CRT (C Runtime) files
-set(CRT_SOURCES
-  ${ARCH_DIR}/crt/crti.s
-  ${ARCH_DIR}/crt/crtn.s
-)
-
-# Architecture-specific linker script
-set(LINKER_SCRIPT ${ARCH_DIR}/limine.ld)
+# Linker script path — exposed to parent scope for the link command in root CMakeLists.txt
+set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/${ARCH_DIR}/limine.ld")
+set(LINKER_SCRIPT "${LINKER_SCRIPT}" PARENT_SCOPE)
 
 # Include directories
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}           # Allows "arch/x64/..." includes
 )
-
-# Set ASM flags for 64-bit assembly
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --64")
 
 # Create boot object library
 add_library(boot_objs OBJECT ${BOOT_SOURCES})
@@ -120,26 +110,13 @@ add_library(kernel_objs OBJECT
   ${TEST_SOURCES}
 )
 
-# Apply freestanding flags to boot objects
-target_compile_options(boot_objs PRIVATE
-  $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
-  $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-protector>
-)
-
-# Kernel-specific compile options
-target_compile_options(kernel_objs PRIVATE
-  $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
-  $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-protector>
-  $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-  $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
-  $<$<COMPILE_LANGUAGE:CXX>:-fno-use-cxa-atexit>
-)
-
-# Enable kernel tests
+# Kernel test compile definitions
 option(KERNEL_TESTS_QUIET "Suppress passing test output" ON)
-target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS)
-if(KERNEL_TESTS_QUIET)
-  target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS_QUIET)
+if(KERNEL_TESTS)
+  target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS)
+  if(KERNEL_TESTS_QUIET)
+    target_compile_definitions(kernel_objs PRIVATE KERNEL_TESTS_QUIET)
+  endif()
 endif()
 
 # Enable debug assertions (bounds checking, etc.)
@@ -149,14 +126,7 @@ if(KERNEL_DEBUG)
   message(STATUS "Debug assertions: ENABLED")
 endif()
 
-# Set C++ standard
-set_target_properties(kernel_objs PROPERTIES
-  CXX_STANDARD 23
-  CXX_STANDARD_REQUIRED ON
-  CXX_EXTENSIONS OFF
-)
-
 # Print build information
 message(STATUS "Kernel architecture: ${KERNEL_ARCH}")
-message(STATUS "Linker script: ${LINKER_SCRIPT}")
+message(STATUS "Linker script: ${CMAKE_CURRENT_SOURCE_DIR}/${ARCH_DIR}/limine.ld")
 message(STATUS "Boot sources: ${BOOT_SOURCES}")
