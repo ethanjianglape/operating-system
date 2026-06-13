@@ -2,11 +2,11 @@
 
 namespace algo {
 kvector<kstring> split(kstring::const_iterator begin,
-    kstring::const_iterator                    end,
-    char                                       delim)
+    kstring::const_iterator end,
+    char delim)
 {
     kvector<kstring> result{};
-    kstring          part = "";
+    kstring part = "";
 
     while (begin != end) {
         char c = *begin;
@@ -31,16 +31,16 @@ kvector<kstring> split(kstring::const_iterator begin,
 }
 
 kvector<kstring> tokenize(kstring::const_iterator begin,
-    kstring::const_iterator                       end,
-    char                                          delim)
+    kstring::const_iterator end,
+    char delim)
 {
     kvector<kstring> result{};
-    kstring          part = "";
-    char             last = '\0';
+    kstring part = "";
+    char last = '\0';
 
     while (begin != end) {
         char c = *begin;
-        last   = c;
+        last = c;
 
         if (c == delim) {
             result.push_back(part);

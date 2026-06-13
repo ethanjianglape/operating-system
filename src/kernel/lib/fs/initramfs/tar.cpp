@@ -37,15 +37,15 @@ void parse_headers(std::uint8_t* addr)
         filename.pop_back();
     }
 
-    std::uintmax_t size       = fmt::parse_uint((const char*)header->size, 12, fmt::NumberFormat::OCT);
+    std::uintmax_t size = fmt::parse_uint((const char*)header->size, 12, fmt::NumberFormat::OCT);
     std::uintmax_t num_blocks = (size + 511) / 512;
-    std::uint8_t*  data       = size > 0 ? addr + 512 : nullptr;
+    std::uint8_t* data = size > 0 ? addr + 512 : nullptr;
 
     metas.push_back(TarMeta{
-        .header       = header,
-        .data         = data,
-        .size_bytes   = size,
-        .num_blocks   = num_blocks,
+        .header = header,
+        .data = data,
+        .size_bytes = size,
+        .num_blocks = num_blocks,
         .filename_str = filename});
 
     parse_headers(addr + 512 + (num_blocks * 512));
@@ -97,8 +97,8 @@ kvector<TarMeta*> list(const kstring& dir)
             continue;
         }
 
-        bool is_dir    = meta.header->typeflag == '5';
-        int  dir_count = 0;
+        bool is_dir = meta.header->typeflag == '5';
+        int dir_count = 0;
 
         for (std::size_t i = dir.length(); i < filename.length(); i++) {
             if (filename[i] == '/') {

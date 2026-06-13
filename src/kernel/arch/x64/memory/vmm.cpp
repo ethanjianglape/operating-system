@@ -63,8 +63,8 @@ static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt)
 {
     const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
     const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
-    const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
-    const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
+    const std::uintptr_t pd_idx = (virt >> 21) & 0x1FF;
+    const std::uintptr_t pt_idx = (virt >> 12) & 0x1FF;
 
     if (!pml4[pml4_idx].p) {
         return nullptr;
@@ -99,10 +99,10 @@ static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt)
  */
 void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags)
 {
-    pte->p    = (flags & PAGE_PRESENT) ? 1 : 0;
-    pte->rw   = (flags & PAGE_WRITE) ? 1 : 0;
-    pte->us   = (flags & PAGE_USER) ? 1 : 0;
-    pte->pcd  = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
+    pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
+    pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
+    pte->us = (flags & PAGE_USER) ? 1 : 0;
+    pte->pcd = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
     pte->addr = phys >> 12; // the bottom 12 bits of the physical address are not stored
 }
 
@@ -161,8 +161,8 @@ void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, st
 {
     const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
     const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
-    const std::uintptr_t pd_idx   = (virt >> 21) & 0x1FF;
-    const std::uintptr_t pt_idx   = (virt >> 12) & 0x1FF;
+    const std::uintptr_t pd_idx = (virt >> 21) & 0x1FF;
+    const std::uintptr_t pt_idx = (virt >> 12) & 0x1FF;
 
     ensure_table_present(&pml4[pml4_idx], flags | PAGE_PRESENT | PAGE_WRITE);
     auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
@@ -248,10 +248,10 @@ void free_kpage(void* virt)
  */
 void* alloc_contiguous_kmem(std::size_t bytes)
 {
-    std::size_t total     = bytes + sizeof(std::size_t);
+    std::size_t total = bytes + sizeof(std::size_t);
     std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
 
-    auto  phys  = pmm::alloc_contiguous_frames<std::uintptr_t>(num_pages);
+    auto phys = pmm::alloc_contiguous_frames<std::uintptr_t>(num_pages);
     void* block = phys_to_virt<void*>(phys);
 
     *static_cast<std::size_t*>(block) = num_pages;
@@ -271,8 +271,8 @@ void free_contiguous_kmem(void* virt)
         return;
     }
 
-    void* block     = static_cast<std::uint8_t*>(virt) - sizeof(std::size_t);
-    auto  num_pages = *static_cast<std::size_t*>(block);
+    void* block = static_cast<std::uint8_t*>(virt) - sizeof(std::size_t);
+    auto num_pages = *static_cast<std::size_t*>(block);
 
     pmm::free_contiguous_frames(hhdm_virt_to_phys(block), num_pages);
 }
@@ -305,8 +305,8 @@ std::uintptr_t find_contiguous_unmapped_space(PageTableEntry* pml4, std::uintptr
 MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t bytes,
     std::uint32_t flags)
 {
-    std::size_t    num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
-    std::uintptr_t virt      = find_contiguous_unmapped_space(pml4, virt_hint, num_pages);
+    std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+    std::uintptr_t virt = find_contiguous_unmapped_space(pml4, virt_hint, num_pages);
 
     for (std::size_t page = 0; page < num_pages; page++) {
         auto phys = pmm::alloc_frame<std::uintptr_t>();
@@ -333,8 +333,8 @@ MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, 
 std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags)
 {
     std::uintptr_t page_start = virt & ~(PAGE_SIZE - 1);
-    std::uintptr_t page_end   = (virt + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    std::size_t    num_pages  = (page_end - page_start) / PAGE_SIZE;
+    std::uintptr_t page_end = (virt + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    std::size_t num_pages = (page_end - page_start) / PAGE_SIZE;
 
     for (std::size_t page = 0; page < num_pages; page++) {
         auto phys = pmm::alloc_frame<std::uintptr_t>();
@@ -412,7 +412,7 @@ void init_pml4()
 
     // The bottom 12 bits of the pml4 physical address should be ignored
     constexpr std::uint64_t bottom_12_mask = ~0xFFF;
-    kernel_pml4                            = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
+    kernel_pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
 
     log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
 }
@@ -428,8 +428,8 @@ void init_pml4()
  */
 PageTableEntry* create_user_pml4()
 {
-    auto  phys     = pmm::alloc_frame<std::uintptr_t>();
-    auto* virt     = phys_to_virt<std::uintptr_t*>(phys);
+    auto phys = pmm::alloc_frame<std::uintptr_t>();
+    auto* virt = phys_to_virt<std::uintptr_t*>(phys);
     auto* new_pml4 = reinterpret_cast<PageTableEntry*>(virt);
 
     zero_page(virt);

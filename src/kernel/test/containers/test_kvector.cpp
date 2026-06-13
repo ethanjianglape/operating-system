@@ -81,8 +81,8 @@ void test_clear()
 
 void test_iterator()
 {
-    kvector<int> v   = {1, 2, 3};
-    int          sum = 0;
+    kvector<int> v = {1, 2, 3};
+    int sum = 0;
     for (auto& val : v) {
         sum += val;
     }
@@ -148,7 +148,7 @@ void test_reserve_and_grow()
 void test_initializer_list_assignment()
 {
     kvector<int> v = {1, 2, 3};
-    v              = {10, 20};
+    v = {10, 20};
     test::assert_eq(v.size(), 2ul, "initializer list assignment updates size");
     test::assert_eq(v[0], 10, "initializer list assignment updates elements");
 }
@@ -163,7 +163,7 @@ void test_large_allocation_uses_vmm()
     kvector<LargeStruct> v;
     for (int i = 0; i < 4; i++) {
         LargeStruct s{};
-        s.data[0]   = static_cast<std::uint8_t>(i);
+        s.data[0] = static_cast<std::uint8_t>(i);
         s.data[511] = static_cast<std::uint8_t>(i * 2);
         v.push_back(s);
     }
@@ -232,8 +232,8 @@ void test_move_to_end_first()
 
 void test_data()
 {
-    kvector<int> v   = {1, 2, 3};
-    int*         ptr = v.data();
+    kvector<int> v = {1, 2, 3};
+    int* ptr = v.data();
     test::assert_eq(ptr[0], 1, "data() returns pointer to first element");
     test::assert_eq(ptr[2], 3, "data() allows access to elements");
     ptr[1] = 100;
@@ -242,16 +242,16 @@ void test_data()
 
 void test_const_data()
 {
-    const kvector<int> v   = {5, 10, 15};
-    const int*         ptr = v.data();
+    const kvector<int> v = {5, 10, 15};
+    const int* ptr = v.data();
     test::assert_eq(ptr[0], 5, "const data() returns pointer");
     test::assert_eq(ptr[2], 15, "const data() allows read access");
 }
 
 void test_const_iterator()
 {
-    const kvector<int> v   = {1, 2, 3};
-    int                sum = 0;
+    const kvector<int> v = {1, 2, 3};
+    int sum = 0;
     for (auto it = v.begin(); it != v.end(); ++it) {
         sum += *it;
     }
@@ -425,7 +425,7 @@ void test_nested_kvector_multiple_grows()
     bool all_correct = true;
     for (int line = 0; line < 50 && all_correct; line++) {
         int expected_count = (line % 10) * 10 + 5;
-        all_correct        = (lines[line].size() == static_cast<std::size_t>(expected_count) && lines[line][0] == static_cast<std::uint8_t>(line % 256) && lines[line][expected_count - 1] == static_cast<std::uint8_t>((line + expected_count - 1) % 256));
+        all_correct = (lines[line].size() == static_cast<std::size_t>(expected_count) && lines[line][0] == static_cast<std::uint8_t>(line % 256) && lines[line][expected_count - 1] == static_cast<std::uint8_t>((line + expected_count - 1) % 256));
     }
     test::assert_true(all_correct, "nested multiple: all lines have correct size and content");
 }
@@ -474,8 +474,8 @@ void test_prefilled_inner_vectors()
 {
     // Console pattern: create lines pre-filled to fixed width
     kvector<kvector<int>> lines;
-    const std::size_t     LINE_WIDTH = 80;
-    const std::size_t     LINE_COUNT = 25;
+    const std::size_t LINE_WIDTH = 80;
+    const std::size_t LINE_COUNT = 25;
 
     // Create pre-filled lines (like console init)
     for (std::size_t i = 0; i < LINE_COUNT; i++) {
@@ -507,7 +507,7 @@ void test_grow_outer_with_prefilled_inner()
 {
     // Start with some pre-filled lines, then grow outer
     kvector<kvector<int>> lines;
-    const std::size_t     LINE_WIDTH = 80;
+    const std::size_t LINE_WIDTH = 80;
 
     // Initial lines
     for (int i = 0; i < 10; i++) {
@@ -603,7 +603,7 @@ void test_stress_many_small_inner_grows()
         all_correct = (lines[line].size() == 50);
         for (int i = 0; i < 50 && all_correct; i++) {
             std::uint8_t expected = static_cast<std::uint8_t>((i * 100 + line) % 256);
-            all_correct           = (lines[line][i] == expected);
+            all_correct = (lines[line][i] == expected);
         }
     }
     test::assert_true(all_correct, "stress small grows: all data correct");

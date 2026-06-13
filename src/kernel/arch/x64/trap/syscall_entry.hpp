@@ -3,9 +3,9 @@
 #include <cstdint>
 
 namespace x64::trap {
-constexpr std::uint32_t MSR_EFER   = 0xC0000080;
-constexpr std::uint32_t MSR_STAR   = 0xC0000081;
-constexpr std::uint32_t MSR_LSTAR  = 0xC0000082;
+constexpr std::uint32_t MSR_EFER = 0xC0000080;
+constexpr std::uint32_t MSR_STAR = 0xC0000081;
+constexpr std::uint32_t MSR_LSTAR = 0xC0000082;
 constexpr std::uint32_t MSR_SFMASK = 0xC0000084;
 
 constexpr std::uint32_t EFER_SCE = (1 << 0);

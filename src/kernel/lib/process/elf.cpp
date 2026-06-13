@@ -27,8 +27,8 @@ bool validate_type(Elf64_Header* header)
 Elf64_File invalid_file()
 {
     return Elf64_File{
-        .is_valid_elf    = false,
-        .entry           = 0,
+        .is_valid_elf = false,
+        .entry = 0,
         .program_headers = {}};
 }
 
@@ -63,8 +63,8 @@ Elf64_File parse_file(std::uint8_t* buffer, [[maybe_unused]] std::size_t size)
     }
 
     Elf64_File file{
-        .is_valid_elf    = false,
-        .entry           = header->e_entry,
+        .is_valid_elf = false,
+        .entry = header->e_entry,
         .program_headers = {}};
 
     for (std::size_t i = 0; i < header->e_phnum; i++) {

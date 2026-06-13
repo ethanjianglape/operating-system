@@ -125,7 +125,7 @@ extern "C" void load_tss();
 
 namespace x64::gdt {
 static GdtTable gdt_table;
-static Gdtr     gdtr;
+static Gdtr gdtr;
 static TssEntry tss;
 
 // When transitioning from user to kernel code, this is the stack
@@ -146,16 +146,16 @@ GdtEntry make_gdt_entry(std::uint32_t base, std::uint32_t limit, std::uint8_t ac
     GdtEntry entry{};
 
     // Base address is 32 bits split between 1 16-bit field and 2 8-bit fields
-    entry.base_low  = base & 0xFFFF;
-    entry.base_mid  = (base >> 16) & 0xFF;
+    entry.base_low = base & 0xFFFF;
+    entry.base_mid = (base >> 16) & 0xFF;
     entry.base_high = (base >> 24) & 0xFF;
 
     // Limit is 20 bits split between 1 16-bit field and 1 4-bit field
-    entry.limit_low  = limit & 0xFFFF;
+    entry.limit_low = limit & 0xFFFF;
     entry.limit_high = (limit >> 16) & 0x0F;
 
     entry.access = access;
-    entry.flags  = flags;
+    entry.flags = flags;
 
     return entry;
 }
@@ -172,17 +172,17 @@ TssDescriptor make_tss_descriptor()
 {
     TssDescriptor desc{};
 
-    std::uint64_t base  = reinterpret_cast<std::uint64_t>(&tss);
+    std::uint64_t base = reinterpret_cast<std::uint64_t>(&tss);
     std::uint32_t limit = sizeof(TssEntry) - 1;
 
-    desc.limit_low   = limit & 0xFFFF;
-    desc.base_low    = base & 0xFFFF;
-    desc.base_mid    = (base >> 16) & 0xFF;
-    desc.access      = ACCESS_PRESENT | ACCESS_RING_0 | ACCESS_TSS;
+    desc.limit_low = limit & 0xFFFF;
+    desc.base_low = base & 0xFFFF;
+    desc.base_mid = (base >> 16) & 0xFF;
+    desc.access = ACCESS_PRESENT | ACCESS_RING_0 | ACCESS_TSS;
     desc.limit_flags = (limit >> 16) & 0x0F;
-    desc.base_high   = (base >> 24) & 0xFF;
-    desc.base_upper  = (base >> 32) & 0xFFFFFFFF;
-    desc.reserved    = 0x0;
+    desc.base_high = (base >> 24) & 0xFF;
+    desc.base_upper = (base >> 32) & 0xFFFFFFFF;
+    desc.reserved = 0x0;
 
     return desc;
 }
@@ -222,7 +222,7 @@ void init_tss()
 {
     tss = {};
 
-    tss.rsp0        = reinterpret_cast<std::uint64_t>(kernel_stack) + sizeof(kernel_stack);
+    tss.rsp0 = reinterpret_cast<std::uint64_t>(kernel_stack) + sizeof(kernel_stack);
     tss.iopb_offset = sizeof(TssEntry);
 
     log::debug("TSS kernel_stack @ ", fmt::hex{reinterpret_cast<uint64_t>(kernel_stack)});
@@ -258,7 +258,7 @@ void init()
     init_tss();
 
     gdtr.limit = sizeof(gdt_table) - 1;
-    gdtr.base  = reinterpret_cast<std::uint64_t>(&gdt_table);
+    gdtr.base = reinterpret_cast<std::uint64_t>(&gdt_table);
 
     load_gdt(&gdtr);
     load_tss();

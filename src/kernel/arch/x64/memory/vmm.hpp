@@ -8,11 +8,11 @@ namespace x64::vmm {
 extern "C" char KERNEL_VIRT_BASE[];
 
 constexpr std::size_t NUM_PT_ENTRIES = 512;
-constexpr std::size_t PAGE_SIZE      = 4096;
+constexpr std::size_t PAGE_SIZE = 4096;
 
-constexpr std::uint32_t PAGE_PRESENT       = 0x01; // p
-constexpr std::uint32_t PAGE_WRITE         = 0x02; // rw
-constexpr std::uint32_t PAGE_USER          = 0x04; // us
+constexpr std::uint32_t PAGE_PRESENT = 0x01;       // p
+constexpr std::uint32_t PAGE_WRITE = 0x02;         // rw
+constexpr std::uint32_t PAGE_USER = 0x04;          // us
 constexpr std::uint32_t PAGE_CACHE_DISABLE = 0x06; // pcd
 
 struct PageTableEntry {
@@ -35,7 +35,7 @@ static_assert(sizeof(PageTableEntry) == 8, "PageTableEntry must be 32 bits");
 
 struct MemoryAllocation {
     std::uintptr_t virt_addr;
-    std::size_t    num_pages;
+    std::size_t num_pages;
 };
 
 std::uintptr_t get_hhdm_offset();
@@ -55,20 +55,20 @@ T phys_to_virt(std::unsigned_integral auto phys)
 void init(std::uintptr_t hhdm_offset);
 
 std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags);
-void           map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
+void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags);
 
 // Raw single-page HHDM allocation (no header tracking) - for slab allocator
 void* alloc_kpage();
-void  free_kpage(void* virt);
+void free_kpage(void* virt);
 
 // Tracked HHDM allocation (stores size header) - for general kernel use
 void* alloc_contiguous_kmem(std::size_t bytes);
-void  free_contiguous_kmem(void* virt);
+void free_contiguous_kmem(void* virt);
 
 MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t bytes, std::uint32_t flags);
 
 std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags);
-void        unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages);
+void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages);
 
 void free_page_tables(PageTableEntry* pml4);
 

@@ -57,8 +57,8 @@ void sleep_ms(std::uint32_t ms)
     // Calculate the divisor: how many ticks for 'ms' milliseconds?
     // divisor = frequency × time = 1193182 Hz × (ms / 1000)
     const std::uint16_t divisor = (BASE_FREQUENCY * ms) / 1000;
-    const std::uint8_t  low     = divisor & 0xFF;
-    const std::uint8_t  high    = (divisor >> 8) & 0xFF;
+    const std::uint8_t low = divisor & 0xFF;
+    const std::uint8_t high = (divisor >> 8) & 0xFF;
 
     // Program the PIT: send command, then low byte, then high byte
     cpu::outb(COMMAND_REGISTER, command);

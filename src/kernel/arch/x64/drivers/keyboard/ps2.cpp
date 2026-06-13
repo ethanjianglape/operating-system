@@ -98,15 +98,15 @@ static void handle_scancode(std::uint8_t byte)
         return;
     }
 
-    bool         released = (byte & RELEASE_MASK) != 0;
-    std::uint8_t code     = byte & ~RELEASE_MASK;
+    bool released = (byte & RELEASE_MASK) != 0;
+    std::uint8_t code = byte & ~RELEASE_MASK;
 
-    ScanCode         scancode = ScanCode::Nil;
+    ScanCode scancode = ScanCode::Nil;
     ExtendedScanCode extended = ExtendedScanCode::Nil;
 
     if (extended_pending) {
         extended_pending = false;
-        extended         = static_cast<ExtendedScanCode>(code);
+        extended = static_cast<ExtendedScanCode>(code);
     } else {
         scancode = static_cast<ScanCode>(code);
     }
@@ -116,13 +116,13 @@ static void handle_scancode(std::uint8_t byte)
 
     // Build and push key event
     KeyEvent event{
-        .scancode          = scancode,
+        .scancode = scancode,
         .extended_scancode = extended,
-        .released          = released,
-        .shift_held        = is_shift_held(),
-        .control_held      = is_control_held(),
-        .alt_held          = is_alt_held(),
-        .caps_lock_on      = is_caps_lock_on(),
+        .released = released,
+        .shift_held = is_shift_held(),
+        .control_held = is_control_held(),
+        .alt_held = is_alt_held(),
+        .caps_lock_on = is_caps_lock_on(),
     };
 
     push_event(event);
@@ -224,71 +224,71 @@ static bool keyboard_reset()
 }
 
 namespace ps2 {
-    bool init()
-    {
-        // Step 1: Check if PS/2 controller exists
-        if (!ps2_controller_exists()) {
-            log::error("PS/2: No controller detected");
-            return false;
-        }
-
-        // Step 2: Disable both PS/2 ports during initialization
-        ps2_send_command(PS2_CMD_DISABLE_PORT1);
-        ps2_send_command(PS2_CMD_DISABLE_PORT2);
-
-        // Step 3: Flush the output buffer
-        ps2_flush();
-
-        // Step 4: Read and modify controller configuration
-        ps2_send_command(PS2_CMD_READ_CONFIG);
-        std::uint8_t config;
-        if (!ps2_read_data(config)) {
-            log::error("PS/2: Failed to read configuration");
-            return false;
-        }
-
-        // Disable IRQs and translation during setup
-        config &= ~(PS2_CONFIG_PORT1_IRQ | PS2_CONFIG_PORT2_IRQ | PS2_CONFIG_TRANSLATION);
-
-        ps2_send_command(PS2_CMD_WRITE_CONFIG);
-        ps2_send_data(config);
-
-        // Step 5: Controller self-test
-        if (!ps2_self_test()) {
-            return false;
-        }
-
-        // Note: Self-test may reset the controller, so restore config
-        ps2_send_command(PS2_CMD_WRITE_CONFIG);
-        ps2_send_data(config);
-
-        // Step 6: Test first PS/2 port
-        if (!ps2_test_port1()) {
-            return false;
-        }
-
-        // Step 7: Enable first PS/2 port
-        ps2_send_command(PS2_CMD_ENABLE_PORT1);
-
-        // Step 8: Reset keyboard device
-        if (!keyboard_reset()) {
-            return false;
-        }
-
-        // Step 9: Enable IRQ for port 1 in configuration
-        ps2_send_command(PS2_CMD_READ_CONFIG);
-        if (ps2_read_data(config)) {
-            config |= PS2_CONFIG_PORT1_IRQ | PS2_CONFIG_TRANSLATION;
-            ps2_send_command(PS2_CMD_WRITE_CONFIG);
-            ps2_send_data(config);
-        }
-
-        // Step 10: Configure IOAPIC routing and register handler
-        apic::ioapic_route_irq(irq::IRQ_KEYBOARD, irq::VECTOR_KEYBOARD);
-        irq::register_irq_handler(irq::VECTOR_KEYBOARD, keyboard_interrupt_handler);
-
-        log::info("PS/2 keyboard initialized");
-        return true;
+bool init()
+{
+    // Step 1: Check if PS/2 controller exists
+    if (!ps2_controller_exists()) {
+        log::error("PS/2: No controller detected");
+        return false;
     }
+
+    // Step 2: Disable both PS/2 ports during initialization
+    ps2_send_command(PS2_CMD_DISABLE_PORT1);
+    ps2_send_command(PS2_CMD_DISABLE_PORT2);
+
+    // Step 3: Flush the output buffer
+    ps2_flush();
+
+    // Step 4: Read and modify controller configuration
+    ps2_send_command(PS2_CMD_READ_CONFIG);
+    std::uint8_t config;
+    if (!ps2_read_data(config)) {
+        log::error("PS/2: Failed to read configuration");
+        return false;
+    }
+
+    // Disable IRQs and translation during setup
+    config &= ~(PS2_CONFIG_PORT1_IRQ | PS2_CONFIG_PORT2_IRQ | PS2_CONFIG_TRANSLATION);
+
+    ps2_send_command(PS2_CMD_WRITE_CONFIG);
+    ps2_send_data(config);
+
+    // Step 5: Controller self-test
+    if (!ps2_self_test()) {
+        return false;
+    }
+
+    // Note: Self-test may reset the controller, so restore config
+    ps2_send_command(PS2_CMD_WRITE_CONFIG);
+    ps2_send_data(config);
+
+    // Step 6: Test first PS/2 port
+    if (!ps2_test_port1()) {
+        return false;
+    }
+
+    // Step 7: Enable first PS/2 port
+    ps2_send_command(PS2_CMD_ENABLE_PORT1);
+
+    // Step 8: Reset keyboard device
+    if (!keyboard_reset()) {
+        return false;
+    }
+
+    // Step 9: Enable IRQ for port 1 in configuration
+    ps2_send_command(PS2_CMD_READ_CONFIG);
+    if (ps2_read_data(config)) {
+        config |= PS2_CONFIG_PORT1_IRQ | PS2_CONFIG_TRANSLATION;
+        ps2_send_command(PS2_CMD_WRITE_CONFIG);
+        ps2_send_data(config);
+    }
+
+    // Step 10: Configure IOAPIC routing and register handler
+    apic::ioapic_route_irq(irq::IRQ_KEYBOARD, irq::VECTOR_KEYBOARD);
+    irq::register_irq_handler(irq::VECTOR_KEYBOARD, keyboard_interrupt_handler);
+
+    log::info("PS/2 keyboard initialized");
+    return true;
+}
 }
 }

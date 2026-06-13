@@ -75,8 +75,8 @@ bool init()
     cpu::outb(PIC2_DATA, 0xFF);
 
     // Verify the masks were set correctly
-    const auto master  = cpu::inb(PIC1_DATA);
-    const auto slave   = cpu::inb(PIC2_DATA);
+    const auto master = cpu::inb(PIC1_DATA);
+    const auto slave = cpu::inb(PIC2_DATA);
     const auto success = master == 0xFF && slave == 0xFF;
 
     if (!success) {

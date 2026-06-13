@@ -7,10 +7,10 @@
 namespace x64::drivers::keyboard {
 static klist<KeyEvent> event_buffer;
 
-static bool shift_held   = false;
+static bool shift_held = false;
 static bool control_held = false;
-static bool alt_held     = false;
-static bool caps_lock    = false;
+static bool alt_held = false;
+static bool caps_lock = false;
 
 void update_modifiers(ScanCode scancode, ExtendedScanCode extended, bool released)
 {

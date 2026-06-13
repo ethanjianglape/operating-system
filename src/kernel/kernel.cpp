@@ -23,9 +23,10 @@
 [[noreturn]]
 void kernel_main()
 {
-    x64::drivers::serial::init();
     x64::cpu::init();
+    x64::drivers::serial::init();
 
+    log::info("test");
     log::info("MyOS Booted into kernel_main() using Limine.");
     log::info("Serial ouput on COM1 initialized");
 
@@ -47,8 +48,6 @@ void kernel_main()
 #ifdef KERNEL_TESTS
     test::run_all();
 #endif
-
-    x64::cpu::sti();
 
     console::init();
     fs::devfs::tty::init();

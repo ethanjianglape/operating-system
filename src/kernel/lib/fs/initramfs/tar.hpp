@@ -31,11 +31,11 @@ struct TarHeader {
 constexpr char TYPEFLAG_DIR = '5';
 
 struct TarMeta {
-    TarHeader*     header;
-    std::uint8_t*  data;
+    TarHeader* header;
+    std::uint8_t* data;
     std::uintmax_t size_bytes;
     std::uintmax_t num_blocks;
-    kstring        filename_str;
+    kstring filename_str;
 };
 
 void init(std::uint8_t* addr);

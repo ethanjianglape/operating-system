@@ -21,8 +21,8 @@ static void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFr
         auto* proc = g_processes[i];
 
         if (proc->state == process::ProcessState::BLOCKED && proc->wake_time_ms > 0 && ticks > proc->wake_time_ms) {
-            proc->state        = process::ProcessState::READY;
-            proc->wait_reason  = process::WaitReason::NONE;
+            proc->state = process::ProcessState::READY;
+            proc->wait_reason = process::WaitReason::NONE;
             proc->wake_time_ms = 0;
         }
     }
@@ -93,11 +93,11 @@ static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
         }
 
         current->has_kernel_context = false;
-        current->has_user_context   = true;
+        current->has_user_context = true;
 
         // Save CPU state from interrupt frame
-        current->rip    = frame->rip;
-        current->rsp    = frame->rsp;
+        current->rip = frame->rip;
+        current->rsp = frame->rsp;
         current->rflags = frame->rflags;
 
         // General purpose registers
@@ -109,8 +109,8 @@ static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
         current->rdi = frame->rdi;
         current->rbp = frame->rbp;
 
-        current->r8  = frame->r8;
-        current->r9  = frame->r9;
+        current->r8 = frame->r8;
+        current->r9 = frame->r9;
         current->r10 = frame->r10;
         current->r11 = frame->r11;
         current->r12 = frame->r12;
@@ -124,22 +124,22 @@ static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
     if (p != nullptr) {
         g_processes.rotate_next();
 
-        p->state              = process::ProcessState::RUNNING;
+        p->state = process::ProcessState::RUNNING;
         p->has_kernel_context = false;
-        p->has_user_context   = true;
+        p->has_user_context = true;
 
-        per_cpu->process    = p;
+        per_cpu->process = p;
         per_cpu->kernel_rsp = p->kernel_rsp;
 
         arch::vmm::switch_pml4(p->pml4);
         arch::tls::set_fs_base(p->fs_base);
 
         // Restore CPU state to interrupt frame
-        frame->rip    = p->rip;
-        frame->rsp    = p->rsp;
+        frame->rip = p->rip;
+        frame->rsp = p->rsp;
         frame->rflags = p->rflags;
-        frame->cs     = p->cs;
-        frame->ss     = p->ss;
+        frame->cs = p->cs;
+        frame->ss = p->ss;
 
         // General purpose registers
         frame->rax = p->rax;
@@ -150,8 +150,8 @@ static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
         frame->rdi = p->rdi;
         frame->rbp = p->rbp;
 
-        frame->r8  = p->r8;
-        frame->r9  = p->r9;
+        frame->r8 = p->r8;
+        frame->r9 = p->r9;
         frame->r10 = p->r10;
         frame->r11 = p->r11;
         frame->r12 = p->r12;
@@ -169,7 +169,7 @@ void wake_single(process::WaitReason wait_reason)
         auto* p = g_processes[i];
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
-            p->state       = process::ProcessState::READY;
+            p->state = process::ProcessState::READY;
             p->wait_reason = process::WaitReason::NONE;
             goto cleanup;
         }
@@ -187,7 +187,7 @@ void wake_all(process::WaitReason wait_reason)
         auto* p = g_processes[i];
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
-            p->state       = process::ProcessState::READY;
+            p->state = process::ProcessState::READY;
             p->wait_reason = process::WaitReason::NONE;
         }
     }
@@ -199,7 +199,7 @@ void yield_dead(process::Process* proc)
 {
     auto* per_cpu = arch::percpu::get();
 
-    proc->state      = process::ProcessState::DEAD;
+    proc->state = process::ProcessState::DEAD;
     per_cpu->process = nullptr;
 
     while (true) {
@@ -212,7 +212,7 @@ void yield_dead(process::Process* proc)
         if (ready != nullptr) {
             arch::cpu::cli();
 
-            per_cpu->process    = ready;
+            per_cpu->process = ready;
             per_cpu->kernel_rsp = ready->kernel_rsp;
 
             arch::vmm::switch_pml4(ready->pml4);
@@ -246,7 +246,7 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
         return;
     }
 
-    process->state       = process::ProcessState::BLOCKED;
+    process->state = process::ProcessState::BLOCKED;
     process->wait_reason = wait_reason;
 
     while (process->state == process::ProcessState::BLOCKED) {
@@ -259,8 +259,8 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
         if (ready != nullptr && ready->pid != process->pid) {
             arch::cpu::cli();
 
-            auto* per_cpu       = arch::percpu::get();
-            per_cpu->process    = ready;
+            auto* per_cpu = arch::percpu::get();
+            per_cpu->process = ready;
             per_cpu->kernel_rsp = ready->kernel_rsp;
 
             arch::vmm::switch_pml4(ready->pml4);
@@ -270,7 +270,7 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
 
             context_switch(&process->kernel_rsp_saved, ready->kernel_rsp_saved);
 
-            per_cpu->process    = process;
+            per_cpu->process = process;
             per_cpu->kernel_rsp = process->kernel_rsp;
 
             arch::vmm::switch_pml4(process->pml4);

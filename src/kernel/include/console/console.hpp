@@ -5,10 +5,10 @@
 
 namespace console {
 struct ConsoleChar {
-    char          c;
+    char c;
     std::uint32_t fg;
     std::uint32_t bg;
-    bool          dirty;
+    bool dirty;
 
     ConsoleChar(char c, std::uint32_t fg, std::uint32_t bg, bool dirty)
         : c{c}
@@ -20,13 +20,13 @@ struct ConsoleChar {
 };
 
 enum class RgbColor : std::uint32_t {
-    BLACK   = 0x00000000,
-    WHITE   = 0x00FFFFFF,
-    RED     = 0x00FF0000,
-    GREEN   = 0x0000FF00,
-    BLUE    = 0x000000FF,
-    CYAN    = 0x0000FFFF,
-    YELLOW  = 0x00FFFF00,
+    BLACK = 0x00000000,
+    WHITE = 0x00FFFFFF,
+    RED = 0x00FF0000,
+    GREEN = 0x0000FF00,
+    BLUE = 0x000000FF,
+    CYAN = 0x0000FFFF,
+    YELLOW = 0x00FFFF00,
     MAGENTA = 0x00FF00FF,
 };
 

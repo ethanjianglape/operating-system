@@ -4,7 +4,7 @@
 
 namespace timer {
 static kvector<TickHandler> handlers;
-static std::uintmax_t       ticks = 0;
+static std::uintmax_t ticks = 0;
 
 std::uintmax_t get_ticks() { return ticks; }
 

@@ -82,10 +82,10 @@ void init()
 
     PerCPU* per_cpu_data = new PerCPU{};
 
-    per_cpu_data->self       = per_cpu_data; // For C++ access via get()
-    per_cpu_data->kernel_rsp = 0;            // Set by scheduler before running process
-    per_cpu_data->user_rsp   = 0;            // Saved by syscall_entry
-    per_cpu_data->process    = nullptr;      // Set by scheduler
+    per_cpu_data->self = per_cpu_data; // For C++ access via get()
+    per_cpu_data->kernel_rsp = 0;      // Set by scheduler before running process
+    per_cpu_data->user_rsp = 0;        // Saved by syscall_entry
+    per_cpu_data->process = nullptr;   // Set by scheduler
 
     // Set GS_BASE to our per-CPU struct. We're in kernel mode at boot.
     cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(per_cpu_data));
@@ -108,7 +108,7 @@ void init()
 PerCPU* get()
 {
     constexpr std::size_t PER_CPU_SELF_OFFSET = offsetof(x64::percpu::PerCPU, self);
-    PerCPU*               ptr;
+    PerCPU* ptr;
 
     // Read the self pointer from offset 0 of GS-relative memory
     asm volatile("mov %%gs:%c1, %0" : "=r"(ptr) : "i"(PER_CPU_SELF_OFFSET) : "memory");

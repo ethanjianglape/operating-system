@@ -133,12 +133,12 @@ inline const char* to_string(std::uintmax_t unum, NumberFormat format = NumberFo
     }
 
     const auto divisor = number_format_divisor(format);
-    int        ri      = 0;
-    char       reverse[64];
+    int ri = 0;
+    char reverse[64];
 
     while (unum > 0) {
         const auto index = unum % divisor;
-        const auto c     = number_format_char(index, format);
+        const auto c = number_format_char(index, format);
 
         reverse[ri++] = c;
         unum /= divisor;
@@ -151,7 +151,7 @@ inline const char* to_string(std::uintmax_t unum, NumberFormat format = NumberFo
     // Pad hex and bin formats with 0 so they fit within 8/16/32/64 bits
     // ex: 0x1234 -> 0x00001234, 0b1101 -> 0b0000101
     if (format == NumberFormat::HEX || format == NumberFormat::BIN) {
-        std::size_t len   = index - 2;
+        std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
         insert(2, zeros, '0');
@@ -169,7 +169,7 @@ inline const char* to_string(std::intmax_t num, NumberFormat format = NumberForm
 
     if (num < 0) {
         buffer[index++] = '-';
-        unum            = -static_cast<std::uintmax_t>(num);
+        unum = -static_cast<std::uintmax_t>(num);
     } else {
         unum = num;
     }
@@ -191,12 +191,12 @@ inline const char* to_string(std::intmax_t num, NumberFormat format = NumberForm
     }
 
     const auto divisor = number_format_divisor(format);
-    int        ri      = 0;
-    char       reverse[64];
+    int ri = 0;
+    char reverse[64];
 
     while (unum > 0) {
         const auto index = unum % divisor;
-        const auto c     = number_format_char(index, format);
+        const auto c = number_format_char(index, format);
 
         reverse[ri++] = c;
         unum /= divisor;
@@ -209,7 +209,7 @@ inline const char* to_string(std::intmax_t num, NumberFormat format = NumberForm
     // Pad hex and bin formats with 0 so they fit within 8/16/32/64 bits
     // ex: 0x1234 -> 0x00001234, 0b1101 -> 0b0000101
     if (format == NumberFormat::HEX || format == NumberFormat::BIN) {
-        std::size_t len   = index - 2;
+        std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
         insert(2, zeros, '0');

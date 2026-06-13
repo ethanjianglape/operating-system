@@ -95,8 +95,8 @@ Slab* try_get_slab(void* addr)
     }
 
     static constexpr std::uintptr_t PAGE_ALIGN_MASK = ~0xFFF;
-    auto*                           page            = (void*)((std::uintptr_t)addr & PAGE_ALIGN_MASK); // page align
-    auto*                           slab            = reinterpret_cast<Slab*>(page);
+    auto* page = (void*)((std::uintptr_t)addr & PAGE_ALIGN_MASK); // page align
+    auto* slab = reinterpret_cast<Slab*>(page);
 
     if (slab->magic == SLAB_MAGIC) {
         return slab;
@@ -155,8 +155,8 @@ Slab* create_slab(SizeClass* sc)
 
     // instead of storing slab metadata externally, we will just
     // store it directly in the page we just allocated
-    auto*        first_chunk = static_cast<std::uint8_t*>(page) + sizeof(Slab);
-    std::uint8_t num_chunks  = sc->chunks_per_slab;
+    auto* first_chunk = static_cast<std::uint8_t*>(page) + sizeof(Slab);
+    std::uint8_t num_chunks = sc->chunks_per_slab;
 
     for (std::uint8_t i = 0; i < num_chunks - 1; i++) {
         std::uint8_t* this_chunk = first_chunk + (i * sc->size);
@@ -166,12 +166,12 @@ Slab* create_slab(SizeClass* sc)
     }
 
     std::uint8_t* last_chunk = first_chunk + ((num_chunks - 1) * sc->size);
-    *(void**)last_chunk      = nullptr;
+    *(void**)last_chunk = nullptr;
 
-    slab->magic            = SLAB_MAGIC;
+    slab->magic = SLAB_MAGIC;
     slab->size_class_index = sc->index;
-    slab->free_head        = first_chunk;
-    slab->free_chunks      = num_chunks;
+    slab->free_head = first_chunk;
+    slab->free_chunks = num_chunks;
 
     // Insert this new slab at the front of the linked list:
     // SizeClass -> {this slab} <-> {older slab} <-> ... <-> {oldest slab} -> nullptr
@@ -240,8 +240,8 @@ void destroy_slab(SizeClass* sc, Slab* slab)
  */
 void* alloc(std::size_t size)
 {
-    SizeClass* sc   = get_size_class(size);
-    Slab*      slab = sc->first_slab;
+    SizeClass* sc = get_size_class(size);
+    Slab* slab = sc->first_slab;
 
     while (slab != nullptr && slab->free_head == nullptr) {
         slab = slab->next_slab;
@@ -278,7 +278,7 @@ void free(void* addr)
 
     SizeClass* sc = &classes[slab->size_class_index];
 
-    *(void**)addr   = slab->free_head;
+    *(void**)addr = slab->free_head;
     slab->free_head = addr;
     slab->free_chunks += 1;
 

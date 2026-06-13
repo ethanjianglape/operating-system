@@ -21,7 +21,7 @@ struct winsize {
 };
 
 struct iovec {
-    void*       iov_base;
+    void* iov_base;
     std::size_t iov_len;
 };
 }

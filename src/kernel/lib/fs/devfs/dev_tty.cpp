@@ -15,13 +15,13 @@
 namespace fs::devfs::tty {
 namespace keyboard = arch::drivers::keyboard;
 
-using ScanCode         = keyboard::ScanCode;
+using ScanCode = keyboard::ScanCode;
 using ExtendedScanCode = keyboard::ExtendedScanCode;
 
-static kstring          buffer{};
+static kstring buffer{};
 static kvector<kstring> history{};
 
-static std::size_t buffer_index  = 0;
+static std::size_t buffer_index = 0;
 static std::size_t history_index = 0;
 
 static int tty_read(FileDescriptor* fd, void* buf, std::size_t count);
@@ -31,16 +31,16 @@ static int tty_lseek(FileDescriptor*, int, int);
 static int tty_fstat(FileDescriptor*, fs::Stat*);
 
 static const FileOps tty_ops = {
-    .read  = tty_read,
+    .read = tty_read,
     .write = tty_write,
     .close = tty_close,
     .lseek = tty_lseek,
     .fstat = tty_fstat};
 
 static Inode tty_inode = {
-    .type         = FileType::CHAR_DEVICE,
-    .size         = 0,
-    .ops          = &tty_ops,
+    .type = FileType::CHAR_DEVICE,
+    .size = 0,
+    .ops = &tty_ops,
     .private_data = nullptr,
 };
 
@@ -49,22 +49,134 @@ Inode* get_tty_inode() { return &tty_inode; }
 // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
 // Index = scancode value, value = ASCII char (0 = non-printable)
 static constexpr char scancode_to_ascii_table[128] = {
-    0, 0, '1', '2', '3', '4', '5', '6',     // 0x00-0x07
-    '7', '8', '9', '0', '-', '=', 0, 0,     // 0x08-0x0F (0x0E=Backspace, 0x0F=Tab)
-    'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', // 0x10-0x17
-    'o', 'p', '[', ']', 0, 0, 'a', 's',     // 0x18-0x1F (0x1C=Enter, 0x1D=LCtrl)
-    'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', // 0x20-0x27
-    '\'', '`', 0, '\\', 'z', 'x', 'c', 'v', // 0x28-0x2F (0x2A=LShift)
-    'b', 'n', 'm', ',', '.', '/', 0, '*',   // 0x30-0x37 (0x36=RShift, 0x37=Keypad*)
-    0, ' ', 0, 0, 0, 0, 0, 0,               // 0x38-0x3F (0x38=LAlt, 0x39=Space, 0x3A=Caps, 0x3B-0x3F=F1-F5)
-    0, 0, 0, 0, 0, 0, 0, '7',               // 0x40-0x47 (0x40-0x44=F6-F10, 0x45=Num, 0x46=Scroll, 0x47=Kp7)
-    '8', '9', '-', '4', '5', '6', '+', '1', // 0x48-0x4F (Keypad)
-    '2', '3', '0', '.', 0, 0, 0, 0,         // 0x50-0x57 (Keypad, 0x57=F11)
-    0, 0, 0, 0, 0, 0, 0, 0,                 // 0x58-0x5F (0x58=F12)
-    0, 0, 0, 0, 0, 0, 0, 0,                 // 0x60-0x67
-    0, 0, 0, 0, 0, 0, 0, 0,                 // 0x68-0x6F
-    0, 0, 0, 0, 0, 0, 0, 0,                 // 0x70-0x77
-    0, 0, 0, 0, 0, 0, 0, 0,                 // 0x78-0x7F
+    0,
+    0,
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6', // 0x00-0x07
+    '7',
+    '8',
+    '9',
+    '0',
+    '-',
+    '=',
+    0,
+    0, // 0x08-0x0F (0x0E=Backspace, 0x0F=Tab)
+    'q',
+    'w',
+    'e',
+    'r',
+    't',
+    'y',
+    'u',
+    'i', // 0x10-0x17
+    'o',
+    'p',
+    '[',
+    ']',
+    0,
+    0,
+    'a',
+    's', // 0x18-0x1F (0x1C=Enter, 0x1D=LCtrl)
+    'd',
+    'f',
+    'g',
+    'h',
+    'j',
+    'k',
+    'l',
+    ';', // 0x20-0x27
+    '\'',
+    '`',
+    0,
+    '\\',
+    'z',
+    'x',
+    'c',
+    'v', // 0x28-0x2F (0x2A=LShift)
+    'b',
+    'n',
+    'm',
+    ',',
+    '.',
+    '/',
+    0,
+    '*', // 0x30-0x37 (0x36=RShift, 0x37=Keypad*)
+    0,
+    ' ',
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, // 0x38-0x3F (0x38=LAlt, 0x39=Space, 0x3A=Caps, 0x3B-0x3F=F1-F5)
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    '7', // 0x40-0x47 (0x40-0x44=F6-F10, 0x45=Num, 0x46=Scroll, 0x47=Kp7)
+    '8',
+    '9',
+    '-',
+    '4',
+    '5',
+    '6',
+    '+',
+    '1', // 0x48-0x4F (Keypad)
+    '2',
+    '3',
+    '0',
+    '.',
+    0,
+    0,
+    0,
+    0, // 0x50-0x57 (Keypad, 0x57=F11)
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, // 0x58-0x5F (0x58=F12)
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, // 0x60-0x67
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, // 0x68-0x6F
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, // 0x70-0x77
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0, // 0x78-0x7F
 };
 
 char scancode_to_ascii(ScanCode code, bool caps)
@@ -206,7 +318,7 @@ void buffer_history_up()
         move_to_start();
         delete_to_end();
 
-        buffer       = history[--history_index];
+        buffer = history[--history_index];
         buffer_index = buffer.size();
 
         console::put(buffer);
@@ -219,11 +331,11 @@ void buffer_history_down()
     delete_to_end();
 
     if (history_index + 1 < history.size()) {
-        buffer       = history[++history_index];
+        buffer = history[++history_index];
         buffer_index = buffer.size();
     } else {
-        buffer        = "";
-        buffer_index  = buffer.size();
+        buffer = "";
+        buffer_index = buffer.size();
         history_index = history.size();
     }
 
@@ -267,13 +379,13 @@ void run_tty_program(const kstring& name)
     }
 
     std::size_t size = inode->size;
-    auto*       data = new std::uint8_t[size];
+    auto* data = new std::uint8_t[size];
 
     FileDescriptor fd = {
-        .inode  = inode,
-        .path   = "",
+        .inode = inode,
+        .path = "",
         .offset = 0,
-        .flags  = O_RDONLY,
+        .flags = O_RDONLY,
     };
 
     inode->ops->read(&fd, data, size);
@@ -299,12 +411,12 @@ void init()
 
 static int tty_read(FileDescriptor*, void* buff, std::size_t count)
 {
-    buffer       = "";
+    buffer = "";
     buffer_index = 0;
 
     while (true) {
         while (keyboard::KeyEvent* event = keyboard::poll()) {
-            keyboard::ScanCode         scancode = event->scancode;
+            keyboard::ScanCode scancode = event->scancode;
             keyboard::ExtendedScanCode extended = event->extended_scancode;
 
             if (event->released) {
@@ -358,7 +470,7 @@ static int tty_read(FileDescriptor*, void* buff, std::size_t count)
 static int tty_write(FileDescriptor*, const void* buffer, std::size_t count)
 {
     const auto* cbuffer = reinterpret_cast<const char*>(buffer);
-    kstring     str(cbuffer, count);
+    kstring str(cbuffer, count);
 
     console::put(str);
     console::redraw();

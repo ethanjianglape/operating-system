@@ -70,8 +70,8 @@ void init()
 {
     log::init_start("Console");
 
-    cursor_col      = 0;
-    cursor_row      = 0;
+    cursor_col = 0;
+    cursor_row = 0;
     viewport_offset = 0;
 
     screen_cols = fb::get_screen_width() / fonts::FONT_WIDTH;
@@ -112,7 +112,7 @@ void clear_to_eol()
 {
     for (std::size_t col = cursor_col; col < screen_cols; col++) {
         ensure_valid_cursor_buffer_pos(cursor_row, col);
-        buffer[cursor_row][col].c     = ' ';
+        buffer[cursor_row][col].c = ' ';
         buffer[cursor_row][col].dirty = true;
     }
 }
@@ -121,7 +121,7 @@ void erase_in_line(std::size_t from, std::size_t to)
 {
     for (std::size_t col = from; col < to; col++) {
         ensure_valid_cursor_buffer_pos(cursor_row, col);
-        buffer[cursor_row][col].c     = ' ';
+        buffer[cursor_row][col].c = ' ';
         buffer[cursor_row][col].dirty = true;
     }
 }
@@ -252,7 +252,7 @@ int put(char c)
 
     ensure_valid_cursor_buffer_pos(cursor_row, cursor_col);
 
-    buffer[cursor_row][cursor_col].c     = c;
+    buffer[cursor_row][cursor_col].c = c;
     buffer[cursor_row][cursor_col].dirty = true;
 
     move_cursor(1, 0);
@@ -263,7 +263,7 @@ int put(char c)
 int put(const kstring& str)
 {
     auto begin = str.begin();
-    auto end   = str.end();
+    auto end = str.end();
 
     while (begin != end) {
         char c = *begin;

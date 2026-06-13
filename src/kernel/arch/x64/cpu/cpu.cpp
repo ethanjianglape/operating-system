@@ -160,11 +160,8 @@ static void enable_sse()
 
 void init()
 {
-    log::init_start("CPU");
-
+    cli();
     enable_sse();
-
-    log::init_end("CPU");
 }
 
 // =========================================================================

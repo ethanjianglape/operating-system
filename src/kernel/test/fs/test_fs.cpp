@@ -40,7 +40,7 @@ void test_dev_null_read_returns_eof()
         fs::FileDescriptor fd = {.inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY};
 
         char buf[16];
-        int  result = inode->ops->read(&fd, buf, sizeof(buf));
+        int result = inode->ops->read(&fd, buf, sizeof(buf));
         test::assert_eq(result, 0, "/dev/null read returns 0 (EOF)");
     }
 }
@@ -53,8 +53,8 @@ void test_dev_null_write_succeeds()
     if (inode && inode->ops && inode->ops->write) {
         fs::FileDescriptor fd = {.inode = inode, .path = "", .offset = 0, .flags = fs::O_RDONLY};
 
-        const char* data   = "test data";
-        int         result = inode->ops->write(&fd, data, 9);
+        const char* data = "test data";
+        int result = inode->ops->write(&fd, data, 9);
 
         test::assert_eq(result, 9, "/dev/null write returns byte count");
     }
@@ -63,7 +63,7 @@ void test_dev_null_write_succeeds()
 void test_stat_existing_file()
 {
     fs::Stat st;
-    int      result = fs::stat("/bin/a", &st);
+    int result = fs::stat("/bin/a", &st);
     test::assert_eq(result, 0, "stat on existing file returns 0");
     test::assert_eq(st.type, fs::FileType::REGULAR, "stat reports regular file");
     test::assert_true(st.size > 0, "stat reports non-zero size for ELF");
@@ -72,14 +72,14 @@ void test_stat_existing_file()
 void test_stat_nonexistent_file()
 {
     fs::Stat st;
-    int      result = fs::stat("/nonexistent/file", &st);
+    int result = fs::stat("/nonexistent/file", &st);
     test::assert_ne(result, 0, "stat on nonexistent file returns error");
 }
 
 void test_stat_dev_null()
 {
     fs::Stat st;
-    int      result = fs::stat("/dev/null", &st);
+    int result = fs::stat("/dev/null", &st);
     test::assert_eq(result, 0, "stat on /dev/null returns 0");
     test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "stat reports char device");
 }
@@ -87,7 +87,7 @@ void test_stat_dev_null()
 void test_readdir_root()
 {
     kvector<fs::DirEntry> entries;
-    int                   result = fs::readdir("/", entries);
+    int result = fs::readdir("/", entries);
     test::assert_eq(result, 0, "readdir on / returns 0");
     test::assert_true(entries.size() > 0, "root has entries");
 }
@@ -95,7 +95,7 @@ void test_readdir_root()
 void test_readdir_bin()
 {
     kvector<fs::DirEntry> entries;
-    int                   result = fs::readdir("/bin", entries);
+    int result = fs::readdir("/bin", entries);
     test::assert_eq(result, 0, "readdir on /bin returns 0");
     test::assert_true(entries.size() > 0, "/bin has entries");
 
@@ -113,7 +113,7 @@ void test_readdir_bin()
 void test_readdir_dev()
 {
     kvector<fs::DirEntry> entries;
-    int                   result = fs::readdir("/dev", entries);
+    int result = fs::readdir("/dev", entries);
     test::assert_eq(result, 0, "readdir on /dev returns 0");
 
     bool found_null = false;
@@ -129,7 +129,7 @@ void test_readdir_dev()
 void test_readdir_nonexistent()
 {
     kvector<fs::DirEntry> entries;
-    int                   result = fs::readdir("/nonexistent", entries);
+    int result = fs::readdir("/nonexistent", entries);
     test::assert_ne(result, 0, "readdir on nonexistent dir returns error");
 }
 
@@ -198,7 +198,7 @@ void test_canonicalize_complex()
 void test_stat_directory()
 {
     fs::Stat st;
-    int      result = fs::stat("/bin", &st);
+    int result = fs::stat("/bin", &st);
     test::assert_eq(result, 0, "stat on /bin returns 0");
     test::assert_eq(st.type, fs::FileType::DIRECTORY, "stat reports /bin as directory");
 }
@@ -206,7 +206,7 @@ void test_stat_directory()
 void test_stat_dev_tty()
 {
     fs::Stat st;
-    int      result = fs::stat("/dev/tty1", &st);
+    int result = fs::stat("/dev/tty1", &st);
     test::assert_eq(result, 0, "stat on /dev/tty1 returns 0");
     test::assert_eq(st.type, fs::FileType::CHAR_DEVICE, "/dev/tty1 is char device");
 }
@@ -214,7 +214,7 @@ void test_stat_dev_tty()
 void test_stat_with_dotdot()
 {
     fs::Stat st;
-    int      result = fs::stat("/bin/../bin/a", &st);
+    int result = fs::stat("/bin/../bin/a", &st);
     test::assert_eq(result, 0, "stat with .. in path returns 0");
     test::assert_eq(st.type, fs::FileType::REGULAR, "stat resolves .. correctly");
 }

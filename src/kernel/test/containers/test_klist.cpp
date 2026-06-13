@@ -464,13 +464,13 @@ void test_nested_clear_all()
 void test_nested_assignment()
 {
     klist<klist<kstring>> outer1;
-    klist<kstring>        inner;
+    klist<kstring> inner;
     inner.push_back(kstring("assign"));
     inner.push_back(kstring("me"));
     outer1.push_back(inner);
 
     klist<klist<kstring>> outer2;
-    klist<kstring>        other;
+    klist<kstring> other;
     other.push_back(kstring("will be replaced"));
     outer2.push_back(other);
     outer2.push_back(other);
@@ -793,7 +793,7 @@ void test_rotate_round_robin()
 void test_remove_empty()
 {
     klist<int> l;
-    bool       result = l.remove(42);
+    bool result = l.remove(42);
     test::assert_true(!result, "remove empty: returns false");
     test::assert_true(l.empty(), "remove empty: list still empty");
 }

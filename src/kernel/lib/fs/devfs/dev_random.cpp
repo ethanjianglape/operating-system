@@ -30,16 +30,16 @@ static int random_lseek(FileDescriptor*, int, int)
 }
 
 static const FileOps random_ops = {
-    .read  = random_read,
+    .read = random_read,
     .write = random_write,
     .close = random_close,
     .lseek = random_lseek,
     .fstat = nullptr};
 
 static Inode random_inode = {
-    .type         = FileType::CHAR_DEVICE,
-    .size         = 0,
-    .ops          = &random_ops,
+    .type = FileType::CHAR_DEVICE,
+    .size = 0,
+    .ops = &random_ops,
     .private_data = nullptr,
 };
 

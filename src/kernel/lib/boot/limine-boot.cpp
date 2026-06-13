@@ -37,39 +37,39 @@ static volatile std::uint64_t limine_base_revision[]
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_framebuffer_request framebuffer_request
     = {
-        .id       = LIMINE_FRAMEBUFFER_REQUEST_ID,
+        .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
         .revision = 0,
         .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_memmap_request memmap_request
     = {
-        .id       = LIMINE_MEMMAP_REQUEST_ID,
+        .id = LIMINE_MEMMAP_REQUEST_ID,
         .revision = 0,
         .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_hhdm_request hhdm_request
     = {
-        .id       = LIMINE_HHDM_REQUEST_ID,
+        .id = LIMINE_HHDM_REQUEST_ID,
         .revision = 0,
         .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_rsdp_request rsdp_request
     = {
-        .id       = LIMINE_RSDP_REQUEST_ID,
+        .id = LIMINE_RSDP_REQUEST_ID,
         .revision = 0,
         .response = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests")]]
 static volatile limine_module_request module_request
     = {
-        .id                    = LIMINE_MODULE_REQUEST_ID,
-        .revision              = 0,
-        .response              = nullptr,
+        .id = LIMINE_MODULE_REQUEST_ID,
+        .revision = 0,
+        .response = nullptr,
         .internal_module_count = 0,
-        .internal_modules      = nullptr};
+        .internal_modules = nullptr};
 
 [[gnu::used, gnu::section(".limine_requests_end")]]
 static volatile std::uint64_t limine_requests_end_marker[]
@@ -129,19 +129,19 @@ void init_framebuffer()
     }
 
     auto fb_info = framebuffer::FrameBufferInfo{
-        .width  = fb->width,
+        .width = fb->width,
         .height = fb->height,
-        .pitch  = fb->pitch,
-        .bpp    = fb->bpp,
-        .vram   = static_cast<std::uint8_t*>(fb->address)};
+        .pitch = fb->pitch,
+        .bpp = fb->bpp,
+        .vram = static_cast<std::uint8_t*>(fb->address)};
 
     framebuffer::init(fb_info);
 }
 
 void init_memory()
 {
-    auto                  entry_count = memmap_request.response->entry_count;
-    limine_memmap_entry** entries     = memmap_request.response->entries;
+    auto entry_count = memmap_request.response->entry_count;
+    limine_memmap_entry** entries = memmap_request.response->entries;
 
     log::info("Memory map has ", entry_count, " entries:");
 
@@ -151,9 +151,9 @@ void init_memory()
     std::uint64_t total_usable = 0;
 
     for (std::uint64_t i = 0; i < entry_count; i++) {
-        auto base   = entries[i]->base;
+        auto base = entries[i]->base;
         auto length = entries[i]->length;
-        auto type   = entries[i]->type;
+        auto type = entries[i]->type;
 
         log::info("  [", i, "] ", fmt::hex{base}, " - ", fmt::hex{base + length},
             " (", fmt::hex{length}, ") ", memmap_type_to_string(type));
@@ -190,10 +190,10 @@ void init_modules()
     log::info("Loading ", modules->module_count, " module(s):");
 
     for (std::size_t i = 0; i < modules->module_count; i++) {
-        limine_file* mod  = modules->modules[i];
-        auto         addr = static_cast<std::uint8_t*>(mod->address);
-        auto         size = mod->size;
-        const char*  path = mod->path;
+        limine_file* mod = modules->modules[i];
+        auto addr = static_cast<std::uint8_t*>(mod->address);
+        auto size = mod->size;
+        const char* path = mod->path;
 
         log::info("  [", i, "] ", path, " (", size, " bytes)");
 

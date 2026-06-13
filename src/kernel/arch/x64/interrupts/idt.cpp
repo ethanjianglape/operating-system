@@ -134,14 +134,14 @@ void set_descriptor(std::uint8_t vector, void* isr_ptr, std::uint8_t ist, std::u
 
     // isr is the address of the actual code this IDT will execute when fired,
     // it is split up into 3 chunks in the IDT entry:
-    desc->offset_low  = isr & 0xFFFF;
-    desc->offset_mid  = (isr >> 16) & 0xFFFF;
+    desc->offset_low = isr & 0xFFFF;
+    desc->offset_mid = (isr >> 16) & 0xFFFF;
     desc->offset_high = (isr >> 32) & 0xFFFFFFFF;
 
-    desc->ist        = ist & 0x7;
-    desc->selector   = KERNEL_CODE_SEL;
+    desc->ist = ist & 0x7;
+    desc->selector = KERNEL_CODE_SEL;
     desc->attributes = flags;
-    desc->reserved   = 0x0;
+    desc->reserved = 0x0;
 }
 
 /**
@@ -156,12 +156,12 @@ void init()
 
     // idtr is just a "pointer" to our entire list of 256 entries, we use this
     // when calling the LIDT instruction so the CPU knows where to find them
-    idtr.base  = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
+    idtr.base = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
     idtr.limit = sizeof(IdtEntry) * IDT_MAX_DESCRIPTORS - 1;
 
     for (std::size_t vector = 0; vector < IDT_MAX_DESCRIPTORS; vector++) {
         std::uint8_t flags = IDT_KERNEL_INT;
-        std::uint8_t ist   = 0x0;
+        std::uint8_t ist = 0x0;
 
         set_descriptor(vector, isr_stub_table[vector], ist, flags);
     }

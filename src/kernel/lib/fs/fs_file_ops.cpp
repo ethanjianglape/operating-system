@@ -20,7 +20,7 @@ static int fs_file_read(FileDescriptor* fd, void* buf, std::size_t count)
     }
 
     std::size_t remaining = fd->inode->size - fd->offset;
-    std::size_t to_read   = count < remaining ? count : remaining;
+    std::size_t to_read = count < remaining ? count : remaining;
 
     auto* meta = static_cast<FsFileMeta*>(fd->inode->private_data);
     memcpy(buf, meta->data + fd->offset, to_read);
@@ -93,7 +93,7 @@ static int fs_file_fstat(FileDescriptor* fd, Stat* stat)
 }
 
 static const FileOps fs_file_ops = {
-    .read  = fs_file_read,
+    .read = fs_file_read,
     .write = fs_file_write,
     .close = fs_file_close,
     .lseek = fs_file_lseek,

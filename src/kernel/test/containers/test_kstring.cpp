@@ -234,7 +234,7 @@ void test_truncate()
 void test_iterator()
 {
     kstring s("abc");
-    int     sum = 0;
+    int sum = 0;
     for (char c : s) {
         sum += c;
     }
@@ -337,7 +337,7 @@ void test_reserve()
 void test_data()
 {
     kstring s("hello");
-    char*   ptr = s.data();
+    char* ptr = s.data();
     test::assert_eq(ptr[0], 'h', "data() returns pointer to first char");
     test::assert_eq(ptr[4], 'o', "data() allows access to chars");
     ptr[0] = 'j';
@@ -347,7 +347,7 @@ void test_data()
 void test_const_data()
 {
     const kstring s("world");
-    const char*   ptr = s.data();
+    const char* ptr = s.data();
     test::assert_eq(ptr[0], 'w', "const data() returns pointer");
     test::assert_eq(ptr[4], 'd', "const data() allows read access");
 }
@@ -367,7 +367,7 @@ void test_npos()
 void test_const_iterator()
 {
     const kstring s("abc");
-    int           sum = 0;
+    int sum = 0;
     for (auto it = s.begin(); it != s.end(); ++it) {
         sum += *it;
     }
@@ -377,8 +377,8 @@ void test_const_iterator()
 void test_const_iterator_arithmetic()
 {
     const kstring s("hello");
-    auto          it  = s.begin();
-    auto          it2 = it + 2;
+    auto it = s.begin();
+    auto it2 = it + 2;
     test::assert_eq(*it2, 'l', "const_iterator + n works");
     auto it3 = it2 - 1;
     test::assert_eq(*it3, 'e', "const_iterator - n works");
@@ -387,9 +387,9 @@ void test_const_iterator_arithmetic()
 void test_const_iterator_difference()
 {
     const kstring s("hello");
-    auto          begin = s.begin();
-    auto          end   = s.end();
-    auto          diff  = end - begin;
+    auto begin = s.begin();
+    auto end = s.end();
+    auto diff = end - begin;
     test::assert_eq(diff, static_cast<std::ptrdiff_t>(5), "const_iterator difference works");
 }
 

@@ -70,7 +70,7 @@ void run_all()
     results = {0, 0};
 
     auto frames_before_test = pmm::get_free_frames();
-    auto slabs_before_test  = slab::total_slabs();
+    auto slabs_before_test = slab::total_slabs();
 
     test_pmm::run();
     test_vmm::run();
@@ -84,7 +84,7 @@ void run_all()
     test_algo::run();
 
     auto frames_after_test = pmm::get_free_frames();
-    auto slabs_after_test  = slab::total_slabs();
+    auto slabs_after_test = slab::total_slabs();
 
     log::info("======================================");
     log::info("            Test Results              ");

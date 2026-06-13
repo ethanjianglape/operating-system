@@ -12,12 +12,12 @@
 
 // Allows kernel library code to indirectly access the current CPU architecture
 namespace arch {
-namespace vmm     = ::x64::vmm;
-namespace cpu     = ::x64::cpu;
-namespace irq     = ::x64::irq;
+namespace vmm = ::x64::vmm;
+namespace cpu = ::x64::cpu;
+namespace irq = ::x64::irq;
 namespace drivers = ::x64::drivers;
 namespace context = ::x64::context;
-namespace trap    = ::x64::trap;
-namespace percpu  = ::x64::percpu;
-namespace tls     = ::x64::tls;
+namespace trap = ::x64::trap;
+namespace percpu = ::x64::percpu;
+namespace tls = ::x64::tls;
 }
