@@ -1,16 +1,14 @@
-#include "console/ansi.hpp"
-#include "containers/kvector.hpp"
-#include "fmt/fmt.hpp"
+#include <console/ansi.hpp>
 #include <console/console.hpp>
 #include <console/font8x16.hpp>
 #include <containers/kstring.hpp>
-#include <cstddef>
+#include <containers/kvector.hpp>
 #include <framebuffer/framebuffer.hpp>
 #include <log/log.hpp>
 #include <timer/timer.hpp>
 
+#include <cstddef>
 #include <cstdint>
-#include <utility>
 
 namespace console {
 namespace fb = framebuffer;
@@ -153,8 +151,6 @@ void set_cursor(std::uint32_t col, std::uint32_t row)
     cursor_col = col;
     cursor_row = row;
 
-    draw_cursor();
-
     if (cursor_col >= screen_cols) {
         newline();
     }
@@ -162,6 +158,8 @@ void set_cursor(std::uint32_t col, std::uint32_t row)
     if (cursor_row - viewport_offset >= screen_rows) {
         scroll();
     }
+
+    draw_cursor();
 }
 
 void move_cursor(std::int32_t dx, std::int32_t dy)
@@ -328,12 +326,12 @@ void redraw(bool draw_clean)
     }
 
     for (std::size_t row = viewport_offset; row < buffer.size(); row++) {
-        // kvector<ConsoleChar>& line = buffer[row];
+        kvector<ConsoleChar>& line = buffer[row];
 
         for (std::size_t col = 0; col < screen_cols; col++) {
             if (row - viewport_offset < screen_rows) {
-                if (col < buffer[row].size()) {
-                    ConsoleChar& cc = buffer[row][col];
+                if (col < line.size()) {
+                    ConsoleChar& cc = line[col];
 
                     if (draw_clean || cc.dirty) {
                         draw_character_at(cc.c, row - viewport_offset, col, cc.fg, cc.bg);

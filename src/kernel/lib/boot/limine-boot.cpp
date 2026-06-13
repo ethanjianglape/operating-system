@@ -212,10 +212,10 @@ void init()
     log::init_start("Limine Boot");
 
     validate_limine_responses();
-    init_framebuffer();
     init_memory();
     init_acpi();
     init_modules();
+    init_framebuffer();
 
     log::init_end("Limine Boot");
 }

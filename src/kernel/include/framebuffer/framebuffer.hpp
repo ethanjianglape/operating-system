@@ -27,6 +27,8 @@ void init(const FrameBufferInfo& info);
 std::uint32_t get_screen_width();
 std::uint32_t get_screen_height();
 
+void buffer();
+
 void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color);
 void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h);
 void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h, std::uint32_t color);
