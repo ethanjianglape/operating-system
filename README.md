@@ -100,37 +100,56 @@ os/
 │   │   └── CONVENTIONS.md          # Code style guide
 │   └── user/                       # Userspace programs
 │       └── ...                     # ELF binaries for initramfs
+├── firmware/                       # Bundled OVMF firmware for QEMU
 ├── initramfs/                      # Files packaged into initramfs
 │   └── bin/                        # Userspace binaries
-├── limine/                         # Limine bootloader files
-└── configure.sh                    # Build script
+└── build.sh                        # Build script
 ```
 
 See `src/kernel/CONVENTIONS.md` for namespace and code style conventions.
 
 ## Building
 
-**Requirements:**
-- GCC/G++ cross-compiler for x86_64-elf (or system compiler with proper flags)
-- CMake 3.16+
-- GNU assembler
-- Limine bootloader
-- xorriso (for ISO creation)
-- QEMU (for testing)
+### Dependencies
 
-**Build Commands:**
+**Build (required)**
+
+| Tool | Purpose |
+|------|---------|
+| `cmake` 3.16+ | Build system |
+| `gcc` / `g++` | Kernel and userspace compilation |
+| `as` (GNU binutils) | Assembly (`.s` files) |
+| `cc` | Compiles the bundled Limine host tool |
+| `musl-gcc` | Userspace programs statically linked against musl libc |
+| `xorriso` | ISO 9660 image creation |
+| `tar` | Initramfs packaging |
+| `make` | CMake build backend |
+
+> **Note:** Limine (bootloader files + host tool) is bundled via CMake's `FetchContent` and built automatically on first configure — no host installation required. Internet access is needed on the first build to download it.
+
+**Runtime (required to run the OS)**
+
+| Tool | Purpose |
+|------|---------|
+| `qemu-system-x86_64` | Running the OS in a VM |
+| KVM kernel module | Hardware acceleration (`-accel kvm`) |
+| OVMF firmware | UEFI firmware for QEMU — bundled at `firmware/OVMF.fd`, with fallback to system edk2 |
+
+**Optional / dev tooling**
+
+| Tool | Purpose |
+|------|---------|
+| `clang-format` | Code formatting via `./clang-format.sh` |
+
+### Build Commands
+
 ```bash
-./configure.sh
+./build.sh
 ```
 
 **Run in QEMU:**
 ```bash
-qemu-system-x86_64 -cdrom myos.iso
-```
-
-**With serial output (recommended for debugging):**
-```bash
-qemu-system-x86_64 -cdrom myos.iso -serial stdio
+./run-qemu.sh
 ```
 
 ## Architecture
