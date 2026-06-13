@@ -11,46 +11,31 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 log_section() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "${YELLOW}[$CURRENT_TIME] $1${NC}"
+    echo -e "${YELLOW}$1${NC}"
 }
 
 log_failure() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "${RED}[$CURRENT_TIME] FAILURE! $1${NC}"
+    echo -e "${RED}FAILURE! $1${NC}"
 }
 
 log_success() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "${GREEN}[$CURRENT_TIME] $1${NC}"
+    echo -e "${GREEN}$1${NC}"
 }
 
 log() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "[$CURRENT_TIME] $1${NC}"
+    echo -e "$1${NC}"
 }
 
-log_section "Building MyOS Kernel"
-log_section "Creating build directories"
+log_section "Building MyOS"
 
-# Create build directory if it doesn't exist
-log "Creating build directory..."
-mkdir -p cmake_build
-
-log "Creating sysroot directory..."
-mkdir -p sysroot
-
-log "Creating initframfs directory..."
-mkdir -p initramfs/bin
+mkdir -p cmake_build sysroot initramfs/bin
 
 cd cmake_build
 
-# Configure with CMake
 log_section "Configuring CMake"
 cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_ASM_COMPILER=as -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-# Build (CMakeLists.txt handles cleaning and copying to sysroot)
-log_section "Building kernel"
+rm -f kernel.elf
 make -j$(nproc)
 
 if [ -f "./compile_commands.json" ]; then
@@ -58,66 +43,6 @@ if [ -f "./compile_commands.json" ]; then
     cp ./compile_commands.json ../
 fi
 
-# Check if build was successful
-if [ ! -f "../sysroot/boot/kernel.elf" ]; then
-    log_failure "Build failed! sysroot/boot/kernel.elf not found!"
-    exit 1
-fi
-
-log_section "Dumping kernel.elf object data"
-objdump -x ../sysroot/boot/kernel.elf > ../kernel.dump
-
-if [ -d "../initramfs" ]; then
-    log_section "Creating initramfs.tar"
-    tar -cvf ../sysroot/boot/initramfs.tar -C ../initramfs .
-fi
-
 log_success "Build successful!"
-log_success "Kernel binary: sysroot/boot/kernel.elf"
-log_success "Raw binary: sysroot/boot/kernel.bin"
-
-# Create bootable ISO using sysroot
-log_section "Creating bootable ISO from sysroot"
-
-rm -f ../myos.iso
-
-log_section "Creating bootloader and UEFI dependencies"
-mkdir -p ../sysroot/boot/limine
-mkdir -p ../sysroot/EFI/BOOT
-
-log_section "Copying limine BIOS and UEFI system files"
-
-if [ -d "/usr/local/share/limine" ]; then
-    LIMINE_SHARE="/usr/local/share/limine"
-elif [ -d "/usr/share/limine" ]; then
-    LIMINE_SHARE="/usr/share/limine"
-else
-    log_failure "Could not find limine share directory!"
-    exit 1
-fi
-
-cp "$LIMINE_SHARE/limine-bios.sys" ../sysroot/boot/limine
-cp "$LIMINE_SHARE/limine-bios-cd.bin" ../sysroot/boot/limine
-cp "$LIMINE_SHARE/limine-uefi-cd.bin" ../sysroot/boot/limine
-cp "$LIMINE_SHARE/BOOTX64.EFI" ../sysroot/EFI/BOOT
-cp ../src/bootloader/limine/limine.conf ../sysroot/limine.conf
-
-log_section "Using xorriso to build bootable ISO"
-xorriso -as mkisofs \
-        -b boot/limine/limine-bios-cd.bin \
-        -no-emul-boot -boot-load-size 4 -boot-info-table \
-        --efi-boot boot/limine/limine-uefi-cd.bin \
-        -efi-boot-part --efi-boot-image --protective-msdos-label \
-        -o ../myos.iso ../sysroot/
-
-log_section "Installing limine bios into ISO"
-limine bios-install ../myos.iso
-
-echo ""
-
-if [ -f "../myos.iso" ]; then
-    log_success "MyOS Build Successful!"
-    log_success "ISO Created: myos.iso"
-else
-    log_failure "Failed create ISO!"
-fi
+log_success "Kernel: sysroot/boot/kernel.elf"
+log_success "ISO: myos.iso"

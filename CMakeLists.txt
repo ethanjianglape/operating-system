@@ -64,6 +64,7 @@ add_subdirectory(src/user)
 # Note: boot_objs, crti_obj, crtn_obj, and kernel_objs are all defined in src/kernel/
 file(MAKE_DIRECTORY ${SYSROOT}/boot)
 
+
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
     COMMAND ${CMAKE_CXX_COMPILER}
@@ -95,6 +96,51 @@ add_custom_command(
 )
 
 add_custom_target(kernel ALL DEPENDS ${CMAKE_BINARY_DIR}/kernel.elf)
+
+# ISO creation
+if(EXISTS "/usr/local/share/limine")
+    set(LIMINE_SHARE "/usr/local/share/limine")
+elseif(EXISTS "/usr/share/limine")
+    set(LIMINE_SHARE "/usr/share/limine")
+else()
+    message(FATAL_ERROR "Could not find limine share directory")
+endif()
+
+find_program(XORRISO xorriso REQUIRED)
+find_program(LIMINE_CMD limine REQUIRED)
+
+set(LIMINE_CONF ${CMAKE_SOURCE_DIR}/src/bootloader/limine/limine.conf)
+file(GLOB_RECURSE INITRAMFS_STATIC_FILES ${CMAKE_SOURCE_DIR}/initramfs/etc/*)
+
+add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/myos.iso
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${SYSROOT}/boot/limine
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${SYSROOT}/EFI/BOOT
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_SHARE}/limine-bios.sys    ${SYSROOT}/boot/limine/
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_SHARE}/limine-bios-cd.bin ${SYSROOT}/boot/limine/
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_SHARE}/limine-uefi-cd.bin ${SYSROOT}/boot/limine/
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_SHARE}/BOOTX64.EFI        ${SYSROOT}/EFI/BOOT/
+    COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_CONF}                     ${SYSROOT}/limine.conf
+    COMMAND tar -cf ${SYSROOT}/boot/initramfs.tar -C ${CMAKE_SOURCE_DIR}/initramfs .
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/myos.iso
+    COMMAND ${XORRISO} -as mkisofs
+            -b boot/limine/limine-bios-cd.bin
+            -no-emul-boot -boot-load-size 4 -boot-info-table
+            --efi-boot boot/limine/limine-uefi-cd.bin
+            -efi-boot-part --efi-boot-image --protective-msdos-label
+            -o ${CMAKE_SOURCE_DIR}/myos.iso ${SYSROOT}/
+    COMMAND ${LIMINE_CMD} bios-install ${CMAKE_SOURCE_DIR}/myos.iso
+    DEPENDS
+        ${CMAKE_BINARY_DIR}/.kernel_stamp
+        ${LIMINE_CONF}
+        ${INITRAMFS_STATIC_FILES}
+        ${CMAKE_SOURCE_DIR}/initramfs/bin/shell
+        ${CMAKE_SOURCE_DIR}/initramfs/bin/musl
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Creating bootable ISO"
+    VERBATIM
+)
+add_custom_target(iso ALL DEPENDS ${CMAKE_SOURCE_DIR}/myos.iso)
 
 # Print build information
 message(STATUS "Building kernel for x86_64 (64-bit) architecture using standard gcc")
