@@ -103,16 +103,27 @@ add_custom_command(
 add_custom_target(kernel ALL DEPENDS ${CMAKE_BINARY_DIR}/kernel.elf)
 
 # ISO creation
-if(EXISTS "/usr/local/share/limine")
-  set(LIMINE_SHARE "/usr/local/share/limine")
-elseif(EXISTS "/usr/share/limine")
-  set(LIMINE_SHARE "/usr/share/limine")
-else()
-  message(FATAL_ERROR "Could not find limine share directory")
-endif()
+include(FetchContent)
+FetchContent_Declare(limine
+  URL      https://github.com/Limine-Bootloader/Limine/releases/download/v12.3.2/limine-binary.tar.gz
+  URL_HASH SHA256=433ac5933ef7918b6a6751db0a81e47fa122581dfb32430bc257be686f3906e5
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(limine)
+
+set(LIMINE_SHARE ${limine_SOURCE_DIR})
 
 find_program(XORRISO xorriso REQUIRED)
-find_program(LIMINE_CMD limine REQUIRED)
+
+# Compile the limine host tool from the single-file source bundled in the release
+set(LIMINE_CMD ${CMAKE_BINARY_DIR}/limine-host/limine)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/limine-host)
+add_custom_command(
+  OUTPUT ${LIMINE_CMD}
+  COMMAND cc -o ${LIMINE_CMD} ${LIMINE_SHARE}/limine.c
+  DEPENDS ${LIMINE_SHARE}/limine.c
+  COMMENT "Building limine host tool"
+)
 
 set(LIMINE_CONF ${CMAKE_SOURCE_DIR}/src/bootloader/limine/limine.conf)
 file(GLOB_RECURSE INITRAMFS_STATIC_FILES ${CMAKE_SOURCE_DIR}/initramfs/etc/*)
@@ -141,6 +152,7 @@ add_custom_command(
   ${INITRAMFS_STATIC_FILES}
   ${CMAKE_SOURCE_DIR}/initramfs/bin/shell
   ${CMAKE_SOURCE_DIR}/initramfs/bin/musl
+  ${LIMINE_CMD}
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Creating bootable ISO"
   VERBATIM
