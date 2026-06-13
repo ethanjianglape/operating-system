@@ -67,6 +67,7 @@ file(MAKE_DIRECTORY ${SYSROOT}/boot)
 
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
+    COMMAND ${CMAKE_COMMAND} -E rm -f kernel.elf
     COMMAND ${CMAKE_CXX_COMPILER}
         -m64
         -T ${LINKER_SCRIPT}
@@ -82,11 +83,8 @@ add_custom_command(
         "$<TARGET_OBJECTS:kernel_objs>"
         "$<TARGET_OBJECTS:crtn_obj>"
         -lgcc
-    COMMAND ${CMAKE_OBJCOPY} -O binary kernel.elf kernel.bin
     COMMAND ${CMAKE_COMMAND} -E remove -f ${SYSROOT}/boot/kernel.elf
-    COMMAND ${CMAKE_COMMAND} -E remove -f ${SYSROOT}/boot/kernel.bin
     COMMAND ${CMAKE_COMMAND} -E copy kernel.elf ${SYSROOT}/boot/kernel.elf
-    COMMAND ${CMAKE_COMMAND} -E copy kernel.bin ${SYSROOT}/boot/kernel.bin
     COMMAND ${CMAKE_COMMAND} -E touch .kernel_stamp
     DEPENDS boot_objs kernel_objs crti_obj crtn_obj
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

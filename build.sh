@@ -35,7 +35,6 @@ cd cmake_build
 log_section "Configuring CMake"
 cmake .. -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_ASM_COMPILER=as -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-rm -f kernel.elf
 make -j$(nproc)
 
 if [ -f "./compile_commands.json" ]; then
