@@ -66,7 +66,6 @@ add_subdirectory(src/user)
 # Note: boot_objs, crti_obj, crtn_obj, and kernel_objs are all defined in src/kernel/
 file(MAKE_DIRECTORY ${SYSROOT}/boot)
 
-
 add_custom_command(
   OUTPUT ${CMAKE_BINARY_DIR}/kernel.elf ${CMAKE_BINARY_DIR}/kernel.map ${CMAKE_BINARY_DIR}/.kernel_stamp
   COMMAND ${CMAKE_COMMAND} -E rm -f kernel.elf

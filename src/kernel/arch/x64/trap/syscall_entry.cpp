@@ -92,6 +92,7 @@
  */
 
 #include "syscall_entry.hpp"
+#include "linux/dirent.hpp"
 
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/percpu/percpu.hpp>
@@ -183,6 +184,10 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
         return syscall::sys_set_tid_address(reinterpret_cast<int*>(arg1));
     case SYS_FCHDIR:
         return syscall::sys_fchdir(arg1);
+    case linux::SYS_FNCTL:
+        return syscall::sys_fcntl(arg1, arg2, arg3);
+    case linux::SYS_GETDENTS64:
+        return syscall::sys_getdents64(arg1, reinterpret_cast<void*>(arg2), arg3);
     default:
         log::error("Unsupported syscall: ", syscall_num);
         return -ENOSYS;

@@ -1,6 +1,33 @@
+#include <dirent.h>
 #include <stdio.h>
+#include <unistd.h>
 
-int main(void) {
-    printf("Hello from musl!\n");
+int main(void)
+{
+    DIR* dir = opendir("/dev");
+
+    printf("Hello from musl userspace!\n");
+
+    if (dir != NULL) {
+        printf("dir = %d\n", dir);
+
+        struct dirent* entry;
+
+        while (1) {
+            entry = readdir(dir);
+
+            if (entry == NULL) {
+                break;
+            }
+
+            printf("%s\n", entry->d_name);
+        }
+
+    } else {
+        puts("Failed to opendir('/dev')");
+    }
+
+    sleep(1);
+
     return 0;
 }

@@ -1,3 +1,4 @@
+#include "log/log.hpp"
 #include <fs/devfs/dev_null.hpp>
 #include <fs/devfs/dev_random.hpp>
 #include <fs/devfs/dev_tty.hpp>
@@ -18,6 +19,13 @@ static FileSystem devfs_fs = {
     .readdir = devfs_readdir,
     .mkdir = devfs_mkdir};
 
+// represents the /dev directory itself
+static Inode devfs_inode = {
+    .type = FileType::DIRECTORY,
+    .size = 0,
+    .ops = nullptr,
+    .private_data = nullptr};
+
 void init()
 {
     fs::mount("/dev", &devfs_fs);
@@ -25,6 +33,11 @@ void init()
 
 static Inode* devfs_open(FileSystem*, const kstring& path, int)
 {
+    if (path.empty()) {
+        // open() called on /dev itself
+        return &devfs_inode;
+    }
+
     if (path == "/tty1") {
         return tty::get_tty_inode();
     }

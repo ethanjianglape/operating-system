@@ -41,6 +41,8 @@ void parse_headers(std::uint8_t* addr)
     std::uintmax_t num_blocks = (size + 511) / 512;
     std::uint8_t* data = size > 0 ? addr + 512 : nullptr;
 
+    log::debugf("parse tar header: filename={}, size={}, num_blocks={}", filename, size, num_blocks);
+
     metas.push_back(TarMeta{
         .header = header,
         .data = data,

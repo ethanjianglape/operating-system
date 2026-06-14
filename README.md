@@ -60,7 +60,7 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 - Serial output (COM1) for kernel logging
 
 ### Infrastructure
-- Dynamic containers (`kstring`, `kvector`)
+- Dynamic containers (`kstring`, `kvector`, `klist`)
 - In-kernel unit test framework (160+ tests)
 - Modern C++23 with freestanding implementation
 
@@ -178,7 +178,7 @@ sys_read(fd, buf, count)
 
 **Key Design Decisions:**
 - **Higher-half kernel**: Kernel mapped at high addresses via HHDM
-- **Architecture abstraction**: `lib/` code uses `arch::` namespace, not `x86_64::` directly
+- **Architecture abstraction**: `lib/` code uses `arch::` namespace, not `x64::` directly
 - **Single dispatch VFS**: `fd->inode->ops->read()` - no double indirection
 - **Flat namespaces**: No `kernel::` prefix; subsystems use `fs::`, `pmm::`, `log::`, etc.
 - **k-prefixed utilities**: Global types like `kstring`, `kvector`, `kprint()`

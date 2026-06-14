@@ -5,6 +5,7 @@
  * Compiled with musl libc for standard C library support.
  */
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,11 @@ void cmd_cd(const char* path)
     }
 }
 
+void cmd_ls()
+{
+    DIR* dir = opendir("/");
+}
+
 void cmd_pid(void)
 {
     printf("PID: %d\n", getpid());
@@ -55,7 +61,7 @@ void cmd_mmap(void)
     puts("Testing mmap...");
 
     size_t size = 4096;
-    void*  ptr  = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     printf("  mmap returned: %p\n", ptr);
 
@@ -138,6 +144,8 @@ void process_command(char* cmd)
         cmd_mmap();
     } else if (strcmp(cmd, "exit") == 0) {
         exit(0);
+    } else if (strcmp(cmd, "ls") == 0) {
+        cmd_ls();
     } else {
         printf("unknown command: '%s'\n", cmd);
     }

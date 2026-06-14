@@ -1,11 +1,13 @@
 #include "arch/x64/percpu/percpu.hpp"
 #include "containers/kstring.hpp"
+#include "linux/dirent.hpp"
 #include <arch.hpp>
 #include <console/console.hpp>
 #include <cstddef>
 #include <fs/fs.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
+#include <string.h>
 #include <syscall/sys_fd.hpp>
 
 #include <cerrno>
@@ -235,5 +237,54 @@ int sys_mkdir(const char* path, int mode)
 {
     log::debug("sys_mkdir: ", path);
     return fs::mkdir(path, mode);
+}
+
+int sys_fcntl(int, unsigned int, unsigned long)
+{
+    log::warn("SYS_FCNTL is not implemented yet");
+    return 1;
+}
+
+int sys_getdents64(int fd, void* buffer, unsigned int count)
+{
+    fs::FileDescriptor* desc = get_fd(fd);
+
+    if (!desc) {
+        return -EBADF;
+    }
+
+    log::debugf("getdents fd: path={}, off={}, size={}", desc->path, desc->offset, desc->inode->size);
+
+    kvector<fs::DirEntry> entries;
+
+    fs::readdir(desc->path, entries);
+
+    if (desc->offset >= entries.size()) {
+        return 0;
+    }
+
+    const int max_entries = count / sizeof(linux::linux_dirent64);
+
+    int inode = 1;
+    int entries_returned = 0;
+
+    auto* dirent = reinterpret_cast<linux::linux_dirent64*>(buffer);
+
+    while (desc->offset < entries.size() && entries_returned < max_entries) {
+        const auto& entry = entries[desc->offset];
+
+        dirent->d_ino = inode++;
+        dirent->d_off = 0;
+        dirent->d_reclen = sizeof(linux::linux_dirent64);
+        dirent->d_type = static_cast<std::uint8_t>(entry.type);
+
+        strncpy(dirent->d_name, entry.name.c_str(), sizeof(dirent->d_name));
+
+        dirent++;
+        entries_returned++;
+        desc->offset++;
+    }
+
+    return sizeof(linux::linux_dirent64) * entries_returned;
 }
 }

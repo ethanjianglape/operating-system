@@ -1,5 +1,6 @@
 #pragma once
 
+#include "linux/dirent.hpp"
 #include <containers/kvector.hpp>
 #include <fs/fs.hpp>
 #include <linux/ioctl.hpp>
@@ -18,4 +19,6 @@ long sys_getcwd(char* buffer, std::size_t size);
 int sys_chdir(const char* buffer);
 int sys_fchdir(int fd);
 int sys_mkdir(const char* path, int mode);
+int sys_fcntl(int fd, unsigned int cmd, unsigned long arg);
+int sys_getdents64(int fd, void* buffer, unsigned int count);
 }
