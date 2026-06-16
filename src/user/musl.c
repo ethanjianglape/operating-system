@@ -4,9 +4,13 @@
 
 int main(void)
 {
-    DIR* dir = opendir("/dev");
+    puts("Hello from musl userspace!");
 
-    printf("Hello from musl userspace!\n");
+    sleep(10);
+
+    return 0;
+    /*
+    DIR* dir = opendir("/dev");
 
     if (dir != NULL) {
         printf("dir = %d\n", dir);
@@ -30,4 +34,5 @@ int main(void)
     sleep(1);
 
     return 0;
+    */
 }

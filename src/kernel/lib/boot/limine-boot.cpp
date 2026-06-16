@@ -1,3 +1,5 @@
+#include "arch/x64/percpu/percpu.hpp"
+#include "fs/fs.hpp"
 #include <boot/boot.hpp>
 #include <boot/limine.h>
 
@@ -199,11 +201,10 @@ void init_modules()
 
         // TODO: Check module type/extension before assuming initramfs
         // For now, we assume all modules are TAR archives for initramfs
-        fs::initramfs::init(addr, size);
-    }
 
-    fs::devfs::init();
-    fs::tmpfs::init();
+        auto* mp = new fs::initramfs::InitramfsMountPoint{addr, size};
+        fs::register_mount("/", mp);
+    }
 }
 
 namespace boot {

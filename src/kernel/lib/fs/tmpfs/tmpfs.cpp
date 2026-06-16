@@ -161,7 +161,7 @@ static FileSystem tmpfs_fs = {
 
 void init()
 {
-    fs::mount("/tmp", &tmpfs_fs);
+    //fs::mount("/tmp", &tmpfs_fs);
 }
 
 }

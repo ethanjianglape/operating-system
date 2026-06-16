@@ -5,6 +5,7 @@
 #include <fs/fs_file_ops.hpp>
 
 namespace fs {
+/*    
 static int fs_file_read(FileDescriptor* fd, void* buf, std::size_t count)
 {
     if (!fd || !fd->inode || !buf) {
@@ -98,9 +99,9 @@ static const FileOps fs_file_ops = {
     .close = fs_file_close,
     .lseek = fs_file_lseek,
     .fstat = fs_file_fstat};
-
+*/
 const FileOps* get_fs_file_ops()
 {
-    return &fs_file_ops;
+    return nullptr;
 }
 }

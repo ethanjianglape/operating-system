@@ -36,6 +36,7 @@ struct Process {
     WaitReason wait_reason;
     int exit_status;
 
+    fs::InodeClass* cwd_inode;
     kstring working_dir;
 
     // Address space
@@ -55,7 +56,7 @@ struct Process {
     kvector<ProcessAllocation> allocations;
 
     // File Descriptors
-    kvector<fs::FileDescriptor> fd_table;
+    kvector<fs::FileDescriptor*> fd_table;
 
     // Sleep
     std::uint64_t wake_time_ms;

@@ -1,9 +1,19 @@
+#include "arch/x64/percpu/percpu.hpp"
+#include "containers/kstring.hpp"
+
+#include "kpanic/kpanic.hpp"
+#include "process/process.hpp"
 #include <algo/algo.hpp>
+#include <fs/devfs/devfs.hpp>
 #include <fs/fs.hpp>
 #include <log/log.hpp>
 
 namespace fs {
-static kvector<MountPoint> mount_points;
+
+static MountPointClass* g_root_mountpoint;
+static kvector<MountPointClass*> g_mountpoints;
+
+static devfs::DevFileSystem dev_fs{};
 
 kstring canonicalize(const kstring& path)
 {
@@ -27,120 +37,155 @@ kstring canonicalize(const kstring& path)
     return "/" + algo::join(canonical, '/');
 }
 
-kstring relative_to_absolute(const kstring& root, const kstring& relative)
+kstring getcwd(const InodeClass* inode)
 {
-    if (relative.empty()) {
-        return root;
-    }
+    klist<kstring> path{};
 
-    if (relative.front() == '/') {
-        return canonicalize(relative);
-    }
-
-    return canonicalize(root + "/" + relative);
+    return "/" + algo::join(path, '/');
 }
 
-static MountPoint* find_mount(const kstring& path)
+MountPointClass* find_mount_at(InodeClass* inode)
 {
-    MountPoint* best = nullptr;
-
-    for (auto& mp : mount_points) {
-        if (path.starts_with(mp.root)) {
-            if (!best || mp.root.size() > best->root.size()) {
-                best = &mp;
-            }
+    for (auto* mp : g_mountpoints) {
+        if (mp->mounted_on == inode) {
+            return mp;
         }
     }
 
-    return best;
+    return nullptr;
 }
 
-static kstring strip_mount_prefix(const kstring& path, MountPoint* mp)
+InodeClass* resolve_path(const kstring& path)
 {
-    return path.substr(mp->root.size());
-}
-
-void mount(const kstring& path, FileSystem* fs)
-{
-    for (const auto& mp : mount_points) {
-        if (mp.root == path) {
-            log::warn("Filesystem already mounted at: ", path);
-            return;
-        }
-    }
-
-    log::debug("fs: mounting ", fs->name, " at ", path);
-    MountPoint mp{
-        .root = path,
-        .filesystem = fs};
-
-    mount_points.push_back(mp);
-}
-
-Inode* open(const kstring& path, int flags)
-{
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
-
-    if (!mp) {
-        log::debug("fs::open: no mount for ", canonical);
+    if (!g_root_mountpoint) {
+        kpanic("!! VFS: Root is NULL !!");
         return nullptr;
     }
 
-    kstring relative = strip_mount_prefix(canonical, mp);
+    InodeClass* current = g_root_mountpoint->root();
+    process::Process* proc = arch::percpu::current_process();
 
-    return mp->filesystem->open(mp->filesystem, relative, flags);
+    if (path.front() == '/' || proc->cwd_inode == nullptr) {
+        current = g_root_mountpoint->root();
+    } else {
+        current = proc->cwd_inode;
+    }
+
+    kvector<kstring> tokens = algo::split(path, '/');
+
+    for (const kstring& token : tokens) {
+        if (token.empty() || token == ".") {
+            continue;
+        }
+
+        if (token == "..") {
+            if (current == current->mountpoint->root() && current->mountpoint->mounted_on != nullptr) {
+                current = current->mountpoint->mounted_on->parent;
+            } else if (current->parent != nullptr) {
+                current = current->parent;
+            }
+
+            continue;
+        }
+
+        InodeClass* next = current->lookup(token.c_str());
+
+        if (!next) {
+            return nullptr;
+        }
+
+        MountPointClass* mp = find_mount_at(next);
+
+        if (mp) {
+            current = mp->root();
+        } else {
+            current = next;
+        }
+    }
+
+    return current;
+}
+
+void register_mount(const char* path, MountPointClass* mp)
+{
+    mp->path = path;
+
+    if (g_root_mountpoint == nullptr) {
+        log::info("VFS mount root at ", path);
+        g_root_mountpoint = mp;
+    }
+
+    g_mountpoints.push_back(mp);
+}
+
+void mount(const char* path, FileSystemClass* fs, const char* source)
+{
+    MountPointClass* mp = fs->mount(source);
+    mp->mounted_on = resolve_path(path);
+    mp->root()->parent = mp->mounted_on;
+    register_mount(path, mp);
+}
+
+FileDescriptor* open(const char* path, int flags)
+{
+    InodeClass* inode = resolve_path(path);
+
+    if (!inode) {
+        return nullptr;
+    }
+
+    auto* fd = new FileDescriptor{};
+
+    fd->inode = inode;
+    fd->flags = flags;
+    fd->offset = 0;
+    fd->path = path;
+
+    return fd;
 }
 
 int stat(const kstring& path, Stat* out)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    InodeClass* inode = resolve_path(path);
 
-    if (!mp) {
+    if (!inode) {
         return -1;
     }
 
-    if (!mp->filesystem->stat) {
-        return -1;
-    }
-
-    kstring relative = strip_mount_prefix(canonical, mp);
-    return mp->filesystem->stat(mp->filesystem, relative, out);
+    return inode->stat(out);
 }
 
 int readdir(const kstring& path, kvector<DirEntry>& out)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    InodeClass* inode = resolve_path(path);
 
-    if (!mp) {
+    if (!inode) {
         return -1;
     }
 
-    if (!mp->filesystem->readdir) {
+    if (inode->type != FileType::DIRECTORY) {
         return -1;
     }
 
-    kstring relative = strip_mount_prefix(canonical, mp);
+    auto* dir = static_cast<DirectoryInode*>(inode);
 
-    return mp->filesystem->readdir(mp->filesystem, relative, out);
+    return dir->readdir(out);
 }
 
 int mkdir(const kstring& path, int mode)
 {
-    kstring canonical = canonicalize(path);
-    MountPoint* mp = find_mount(canonical);
+    InodeClass* inode = resolve_path(path);
 
-    if (!mp) {
+    if (!inode) {
         return -1;
     }
 
-    if (!mp->filesystem->mkdir) {
+    if (inode->type != FileType::DIRECTORY) {
         return -1;
     }
 
-    kstring relative = strip_mount_prefix(canonical, mp);
-    return mp->filesystem->mkdir(mp->filesystem, relative, mode);
+    auto* dir = static_cast<DirectoryInode*>(inode);
+
+    return dir->mkdir(path.c_str(), mode);
 }
 }

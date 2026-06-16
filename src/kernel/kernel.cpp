@@ -13,6 +13,7 @@
 #include <containers/kstring.hpp>
 #include <framebuffer/framebuffer.hpp>
 #include <fs/devfs/dev_tty.hpp>
+#include <fs/devfs/devfs.hpp>
 #include <log/log.hpp>
 #include <scheduler/scheduler.hpp>
 
@@ -48,8 +49,12 @@ void kernel_main()
     test::run_all();
 #endif
 
+    auto* devfs = new fs::devfs::DevFileSystem{};
+
+    fs::mount("/dev", devfs, nullptr);
+
     console::init();
-    fs::devfs::tty::init();
+    fs::devfs::init_tty();
     scheduler::init();
 
     while (true) {
