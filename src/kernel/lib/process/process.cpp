@@ -49,7 +49,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->wake_time_ms = 0;
     p->has_kernel_context = true;
     p->has_user_context = true;
-    p->working_dir = "/";
     p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
     p->fs_base = 0;
     p->tidptr = 0;

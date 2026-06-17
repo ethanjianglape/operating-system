@@ -25,23 +25,19 @@ public:
 
     explicit InitramfsDirectoryInode(InitramfsMountPoint* mp);
 
-    InodeClass* lookup(const char* name) override;
+    Inode* lookup(const char* name) override;
     int readdir(kvector<DirEntry>& entries) override;
     int mkdir(const char* name, int mode) override;
-    int crete(const char* name, int mode) override;
+    int create(const char* name, int mode) override;
     int open(FileDescriptor* fd, int flags) override;
     int close(FileDescriptor* fd) override;
     int lseek(FileDescriptor* fd, int offset, int whence) override;
     int stat(Stat* stat) override;
 };
 
-class InitramfsFileInode final : public InodeClass {
+class InitramfsFileInode final : public Inode {
 public:
-    tar::TarHeader* tar_header;
     std::uint8_t* tar_data;
-    std::size_t size_bytes;
-    std::size_t num_blocks;
-    kstring filename_str;
 
     InitramfsFileInode();
 
@@ -53,7 +49,7 @@ public:
     int stat(Stat* stat) override;
 };
 
-class InitramfsMountPoint final : public MountPointClass {
+class InitramfsMountPoint final : public MountPoint {
 private:
     InitramfsDirectoryInode* root_inode;
     std::uint8_t* tar_buffer;
@@ -75,12 +71,12 @@ public:
     DirectoryInode* root() override;
 };
 
-class InitramfsFileSystem final : public FileSystemClass {
+class InitramfsFileSystem final : public FileSystem {
 private:
 public:
     const char* name() override;
-    MountPointClass* mount(const char* dir) override;
-    MountPointClass* mount_from_mem(std::uint8_t* buffer, std::size_t size);
+    MountPoint* mount(const char* dir) override;
+    MountPoint* mount_from_mem(std::uint8_t* buffer, std::size_t size);
 };
 
 }

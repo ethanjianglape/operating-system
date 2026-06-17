@@ -10,41 +10,26 @@
 
 namespace fs {
 
-static MountPointClass* g_root_mountpoint;
-static kvector<MountPointClass*> g_mountpoints;
+static MountPoint* g_root_mountpoint;
+static kvector<MountPoint*> g_mountpoints;
 
 static devfs::DevFileSystem dev_fs{};
 
-kstring canonicalize(const kstring& path)
-{
-    kvector<kstring> canonical;
-    kvector<kstring> parts = algo::split(path, '/');
-
-    for (const auto& part : parts) {
-        if (part.empty() || part == ".") {
-            continue;
-        }
-
-        if (part == "..") {
-            if (!canonical.empty()) {
-                canonical.pop_back();
-            }
-        } else {
-            canonical.push_back(part);
-        }
-    }
-
-    return "/" + algo::join(canonical, '/');
-}
-
-kstring getcwd(const InodeClass* inode)
+kstring getcwd(const Inode* inode)
 {
     klist<kstring> path{};
+
+    while (inode != nullptr) {
+        if (inode->name.length() > 0) {
+            path.push_front(inode->name);
+        }
+        inode = inode->parent;
+    }
 
     return "/" + algo::join(path, '/');
 }
 
-MountPointClass* find_mount_at(InodeClass* inode)
+MountPoint* find_mount_at(Inode* inode)
 {
     for (auto* mp : g_mountpoints) {
         if (mp->mounted_on == inode) {
@@ -55,14 +40,14 @@ MountPointClass* find_mount_at(InodeClass* inode)
     return nullptr;
 }
 
-InodeClass* resolve_path(const kstring& path)
+Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
 {
     if (!g_root_mountpoint) {
         kpanic("!! VFS: Root is NULL !!");
         return nullptr;
     }
 
-    InodeClass* current = g_root_mountpoint->root();
+    Inode* current = g_root_mountpoint->root();
     process::Process* proc = arch::percpu::current_process();
 
     if (path.front() == '/' || proc->cwd_inode == nullptr) {
@@ -70,8 +55,6 @@ InodeClass* resolve_path(const kstring& path)
     } else {
         current = proc->cwd_inode;
     }
-
-    kvector<kstring> tokens = algo::split(path, '/');
 
     for (const kstring& token : tokens) {
         if (token.empty() || token == ".") {
@@ -88,13 +71,13 @@ InodeClass* resolve_path(const kstring& path)
             continue;
         }
 
-        InodeClass* next = current->lookup(token.c_str());
+        Inode* next = current->lookup(token.c_str());
 
         if (!next) {
             return nullptr;
         }
 
-        MountPointClass* mp = find_mount_at(next);
+        MountPoint* mp = find_mount_at(next);
 
         if (mp) {
             current = mp->root();
@@ -106,7 +89,14 @@ InodeClass* resolve_path(const kstring& path)
     return current;
 }
 
-void register_mount(const char* path, MountPointClass* mp)
+Inode* resolve_path(const kstring& path)
+{
+    kvector<kstring> tokens = algo::split(path, '/');
+
+    return resolve_path(path, tokens);
+}
+
+void register_mount(const char* path, MountPoint* mp)
 {
     mp->path = path;
 
@@ -118,9 +108,9 @@ void register_mount(const char* path, MountPointClass* mp)
     g_mountpoints.push_back(mp);
 }
 
-void mount(const char* path, FileSystemClass* fs, const char* source)
+void mount(const char* path, FileSystem* fs, const char* source)
 {
-    MountPointClass* mp = fs->mount(source);
+    MountPoint* mp = fs->mount(source);
     mp->mounted_on = resolve_path(path);
     mp->root()->parent = mp->mounted_on;
     register_mount(path, mp);
@@ -128,7 +118,7 @@ void mount(const char* path, FileSystemClass* fs, const char* source)
 
 FileDescriptor* open(const char* path, int flags)
 {
-    InodeClass* inode = resolve_path(path);
+    Inode* inode = resolve_path(path);
 
     if (!inode) {
         return nullptr;
@@ -146,7 +136,7 @@ FileDescriptor* open(const char* path, int flags)
 
 int stat(const kstring& path, Stat* out)
 {
-    InodeClass* inode = resolve_path(path);
+    Inode* inode = resolve_path(path);
 
     if (!inode) {
         return -1;
@@ -157,7 +147,7 @@ int stat(const kstring& path, Stat* out)
 
 int readdir(const kstring& path, kvector<DirEntry>& out)
 {
-    InodeClass* inode = resolve_path(path);
+    Inode* inode = resolve_path(path);
 
     if (!inode) {
         return -1;
@@ -174,7 +164,12 @@ int readdir(const kstring& path, kvector<DirEntry>& out)
 
 int mkdir(const kstring& path, int mode)
 {
-    InodeClass* inode = resolve_path(path);
+    kvector<kstring> tokens = algo::split(path, '/');
+    kstring new_dir = tokens.back();
+
+    tokens.pop_back();
+
+    Inode* inode = resolve_path(path, tokens);
 
     if (!inode) {
         return -1;
@@ -186,6 +181,6 @@ int mkdir(const kstring& path, int mode)
 
     auto* dir = static_cast<DirectoryInode*>(inode);
 
-    return dir->mkdir(path.c_str(), mode);
+    return dir->mkdir(new_dir.c_str(), mode);
 }
 }

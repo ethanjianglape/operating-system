@@ -117,13 +117,9 @@ void cmd_mmap(void)
     }
 }
 
-void cmd_mkdir()
+void cmd_mkdir(const char* path)
 {
-    puts("testing mkdir");
-    mkdir("/tmp/dir/test/a", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    mkdir("/tmp/dir/test/b", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    mkdir("/tmp/dir/test/c", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    mkdir("/tmp/dir/files", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 }
 
 // ============================================================================
@@ -154,7 +150,7 @@ void process_command(char* cmd)
     if (strcmp(cmd, "help") == 0) {
         cmd_help();
     } else if (strcmp(cmd, "mkdir") == 0) {
-        cmd_mkdir();
+        cmd_mkdir(arg);
     } else if (strcmp(cmd, "pwd") == 0) {
         cmd_pwd();
     } else if (strcmp(cmd, "cd") == 0) {

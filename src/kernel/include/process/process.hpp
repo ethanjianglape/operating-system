@@ -36,8 +36,7 @@ struct Process {
     WaitReason wait_reason;
     int exit_status;
 
-    fs::InodeClass* cwd_inode;
-    kstring working_dir;
+    fs::Inode* cwd_inode;
 
     // Address space
     arch::vmm::PageTableEntry* pml4;

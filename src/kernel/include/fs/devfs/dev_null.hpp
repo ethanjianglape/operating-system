@@ -3,7 +3,7 @@
 #include <fs/fs.hpp>
 
 namespace fs::devfs {
-class DevNullInode final : public InodeClass {
+class DevNullInode final : public Inode {
 public:
     DevNullInode();
 

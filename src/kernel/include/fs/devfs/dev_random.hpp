@@ -3,5 +3,5 @@
 #include <fs/fs.hpp>
 
 namespace fs::devfs::random {
-Inode* get_random_inode();
+//Inode* get_random_inode();
 }

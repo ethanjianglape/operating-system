@@ -1,3 +1,4 @@
+#include "fs/tmpfs/tmpfs.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
@@ -50,8 +51,10 @@ void kernel_main()
 #endif
 
     auto* devfs = new fs::devfs::DevFileSystem{};
+    auto* tmpfs = new fs::tmpfs::TmpFileSystem{};
 
     fs::mount("/dev", devfs, nullptr);
+    fs::mount("/tmp", tmpfs, nullptr);
 
     console::init();
     fs::devfs::init_tty();

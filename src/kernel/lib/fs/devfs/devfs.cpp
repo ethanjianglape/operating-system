@@ -13,7 +13,7 @@ DevDirectoryInode::DevDirectoryInode(DevMountPoint* mp)
     type = FileType::DIRECTORY;
 }
 
-InodeClass* DevDirectoryInode::lookup(const char* name)
+Inode* DevDirectoryInode::lookup(const char* name)
 {
     kstring name_str{name};
 
@@ -46,7 +46,7 @@ int DevDirectoryInode::mkdir(const char* name, int mode)
     return 0;
 }
 
-int DevDirectoryInode::crete(const char* name, int mode)
+int DevDirectoryInode::create(const char* name, int mode)
 {
     return 0;
 }
@@ -99,7 +99,7 @@ const char* DevFileSystem::name()
     return "devfs";
 }
 
-MountPointClass* DevFileSystem::mount(const char*)
+MountPoint* DevFileSystem::mount(const char*)
 {
     return new DevMountPoint{};
 }

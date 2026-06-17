@@ -12,7 +12,7 @@ struct Process;
 namespace fs::devfs {
 namespace keyboard = arch::drivers::keyboard;
 
-class DevTtyInode final : public InodeClass {
+class DevTtyInode final : public Inode {
 private:
     kstring buffer{};
     kvector<kstring> history{};

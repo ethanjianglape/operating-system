@@ -3,6 +3,7 @@
 #include <timer/timer.hpp>
 
 namespace fs::devfs::random {
+/*
 static int random_read(FileDescriptor*, void* buff, std::size_t count)
 {
     auto* ptr = reinterpret_cast<std::uint64_t*>(buff);
@@ -46,5 +47,5 @@ static Inode random_inode = {
 Inode* get_random_inode()
 {
     return &random_inode;
-}
+}*/
 }

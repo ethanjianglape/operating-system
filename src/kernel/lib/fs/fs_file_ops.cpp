@@ -100,8 +100,8 @@ static const FileOps fs_file_ops = {
     .lseek = fs_file_lseek,
     .fstat = fs_file_fstat};
 */
-const FileOps* get_fs_file_ops()
-{
-    return nullptr;
-}
+// const FileOps* get_fs_file_ops()
+// {
+// return nullptr;
+// }
 }

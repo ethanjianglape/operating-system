@@ -203,14 +203,14 @@ int sys_lseek(int fd, std::size_t offset, int whence)
 long sys_getcwd(char* buffer, std::size_t size)
 {
     process::Process* proc = arch::percpu::current_process();
-    std::size_t len = proc->working_dir.length();
+    kstring cwd = fs::getcwd(proc->cwd_inode);
 
-    if (len + 1 > size) {
+    if (cwd.length() + 1 > size) {
         return -ERANGE;
     }
 
-    memcpy(buffer, proc->working_dir.c_str(), len);
-    buffer[len] = '\0';
+    memcpy(buffer, cwd.c_str(), cwd.size());
+    buffer[cwd.size()] = '\0';
 
     return reinterpret_cast<long>(buffer);
 }
@@ -229,7 +229,6 @@ int sys_chdir(const char* path)
     }
 
     proc->cwd_inode = desc->inode;
-    proc->working_dir = fs::getcwd(desc->inode);
 
     return 0;
 }
@@ -248,7 +247,6 @@ int sys_fchdir(int fd)
     }
 
     proc->cwd_inode = desc->inode;
-    proc->working_dir = fs::getcwd(desc->inode);
 
     return 0;
 }

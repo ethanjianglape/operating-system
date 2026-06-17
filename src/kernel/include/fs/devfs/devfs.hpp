@@ -15,17 +15,17 @@ private:
 public:
     explicit DevDirectoryInode(DevMountPoint* mp);
 
-    InodeClass* lookup(const char* name) override;
+    Inode* lookup(const char* name) override;
     int readdir(kvector<DirEntry>& entries) override;
     int mkdir(const char* name, int mode) override;
-    int crete(const char* name, int mode) override;
+    int create(const char* name, int mode) override;
     int open(FileDescriptor* fd, int flags) override;
     int close(FileDescriptor* fd) override;
     int lseek(FileDescriptor* fd, int offset, int whence) override;
     int stat(Stat* stat) override;
 };
 
-class DevMountPoint final : public MountPointClass {
+class DevMountPoint final : public MountPoint {
 public:
     DevDirectoryInode root_inode;
     DevNullInode null_inode;
@@ -37,10 +37,10 @@ public:
     DirectoryInode* root() override;
 };
 
-class DevFileSystem final : public FileSystemClass {
+class DevFileSystem final : public FileSystem {
 public:
     const char* name() override;
-    MountPointClass* mount(const char*) override;
+    MountPoint* mount(const char*) override;
 };
 
 }
