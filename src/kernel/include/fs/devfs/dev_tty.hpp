@@ -36,7 +36,7 @@ private:
     void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode ex);
 
 public:
-    DevTtyInode();
+    DevTtyInode(MountPoint* mp, Inode* parent, int ino);
 
     int open(FileDescriptor* fd, int flags) override;
     int read(FileDescriptor* fd, void* buf, std::size_t count) override;

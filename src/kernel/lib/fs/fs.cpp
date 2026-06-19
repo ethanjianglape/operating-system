@@ -15,6 +15,18 @@ static kvector<MountPoint*> g_mountpoints;
 
 static devfs::DevFileSystem dev_fs{};
 
+Inode::Inode(MountPoint* mp)
+    : mountpoint{mp}
+{
+}
+
+DirectoryInode::DirectoryInode(MountPoint* mp)
+    : Inode{mp}
+{
+    type = FileType::DIRECTORY;
+    size = 0;
+}
+
 kstring getcwd(const Inode* inode)
 {
     klist<kstring> path{};
@@ -47,11 +59,11 @@ Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
         return nullptr;
     }
 
-    Inode* current = g_root_mountpoint->root();
+    Inode* current = g_root_mountpoint->root_inode;
     process::Process* proc = arch::percpu::current_process();
 
     if (path.front() == '/' || proc->cwd_inode == nullptr) {
-        current = g_root_mountpoint->root();
+        current = g_root_mountpoint->root_inode;
     } else {
         current = proc->cwd_inode;
     }
@@ -62,7 +74,7 @@ Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
         }
 
         if (token == "..") {
-            if (current == current->mountpoint->root() && current->mountpoint->mounted_on != nullptr) {
+            if (current == current->mountpoint->root_inode && current->mountpoint->mounted_on != nullptr) {
                 current = current->mountpoint->mounted_on->parent;
             } else if (current->parent != nullptr) {
                 current = current->parent;
@@ -80,7 +92,7 @@ Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
         MountPoint* mp = find_mount_at(next);
 
         if (mp) {
-            current = mp->root();
+            current = mp->root_inode;
         } else {
             current = next;
         }
@@ -112,7 +124,7 @@ void mount(const char* path, FileSystem* fs, const char* source)
 {
     MountPoint* mp = fs->mount(source);
     mp->mounted_on = resolve_path(path);
-    mp->root()->parent = mp->mounted_on;
+    mp->root_inode->parent = mp->mounted_on;
     register_mount(path, mp);
 }
 

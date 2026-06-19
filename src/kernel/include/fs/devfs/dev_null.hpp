@@ -5,7 +5,7 @@
 namespace fs::devfs {
 class DevNullInode final : public Inode {
 public:
-    DevNullInode();
+    DevNullInode(MountPoint* mp, Inode* parent, int ino);
 
     int open(FileDescriptor*, int) override;
     int read(FileDescriptor*, void*, std::size_t) override;

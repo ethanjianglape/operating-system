@@ -14,8 +14,8 @@ namespace fs::initramfs {
 
 using namespace tar;
 
-InitramfsDirectoryInode::InitramfsDirectoryInode(InitramfsMountPoint* mp)
-    : initramfs_mp{mp}
+InitramfsDirectoryInode::InitramfsDirectoryInode(MountPoint* mp)
+    : DirectoryInode{mp}
 {
     mountpoint = mp;
     type = FileType::DIRECTORY;
@@ -23,15 +23,11 @@ InitramfsDirectoryInode::InitramfsDirectoryInode(InitramfsMountPoint* mp)
 
 Inode* InitramfsDirectoryInode::lookup(const char* name)
 {
-    for (const auto& child : children) {
-        if (child.name == name) {
-            if (child.dir_inode) {
-                return child.dir_inode;
-            }
+    for (std::size_t i = 0; i < children.size(); i++) {
+        Inode* child = children[i];
 
-            if (child.file_inode) {
-                return child.file_inode;
-            }
+        if (child->name == name) {
+            return child;
         }
     }
 
@@ -40,11 +36,12 @@ Inode* InitramfsDirectoryInode::lookup(const char* name)
 
 int InitramfsDirectoryInode::readdir(kvector<DirEntry>& entries)
 {
-    for (const auto& child : children) {
+    for (std::size_t i = 0; i < children.size(); i++) {
+        Inode* child = children[i];
         DirEntry entry{};
 
-        entry.name = child.name;
-        entry.type = child.dir_inode != nullptr ? FileType::DIRECTORY : FileType::REGULAR;
+        entry.name = child->name;
+        entry.type = child->type;
 
         entries.push_back(entry);
     }
@@ -60,39 +57,40 @@ int InitramfsDirectoryInode::open(FileDescriptor*, int) { return 0; }
 
 int InitramfsDirectoryInode::close(FileDescriptor*) { return 0; }
 
-int InitramfsDirectoryInode::lseek(FileDescriptor* fd, int offset, int whence) { return 0; }
+int InitramfsDirectoryInode::stat(Stat*) { return 0; }
 
-int InitramfsDirectoryInode::stat(Stat* stat) { return 0; }
-
-InitramfsFileInode::InitramfsFileInode()
+InitramfsFileInode::InitramfsFileInode(MountPoint* mp, std::uint8_t* data)
+    : Inode{mp}
+    , tar_data{data}
 {
     type = FileType::REGULAR;
 }
 
-int InitramfsFileInode::open(FileDescriptor* fd, int flags) { return 0; }
+int InitramfsFileInode::open(FileDescriptor*, int) { return 0; }
 
-int InitramfsFileInode::read(FileDescriptor* fd, void* buf, std::size_t count)
+int InitramfsFileInode::read(FileDescriptor*, void* buf, std::size_t count)
 {
     memcpy(buf, tar_data, count);
     return count;
 }
 
-int InitramfsFileInode::write(FileDescriptor* fd, const void* buf, std::size_t count) { return 0; }
+int InitramfsFileInode::write(FileDescriptor*, const void*, std::size_t) { return 0; }
 
-int InitramfsFileInode::close(FileDescriptor* fd) { return 0; }
+int InitramfsFileInode::close(FileDescriptor*) { return 0; }
 
-int InitramfsFileInode::lseek(FileDescriptor* fd, int offset, int whence) { return 0; }
+int InitramfsFileInode::lseek(FileDescriptor*, int, int) { return 0; }
 
-int InitramfsFileInode::stat(Stat* stat) { return 0; }
+int InitramfsFileInode::stat(Stat*) { return 0; }
 
 bool InitramfsMountPoint::is_empty_header(TarHeader* header)
 {
     return header->filename[0] == '\0';
 }
 
-void InitramfsMountPoint::insert_inode(const char* path, InitramfsDirectoryInode* dir_inode, InitramfsFileInode* file_inode)
+void InitramfsMountPoint::insert_inode(const char* path, Inode* inode)
 {
-    auto* current = root_inode;
+    auto* current = static_cast<InitramfsDirectoryInode*>(root_inode);
+
     kvector<kstring> tokens = algo::split(path, '/');
 
     for (std::size_t i = 0; i < tokens.size() - 1; i++) {
@@ -111,37 +109,20 @@ void InitramfsMountPoint::insert_inode(const char* path, InitramfsDirectoryInode
             auto* dir = new InitramfsDirectoryInode{this};
             dir->ino = next_ino++;
             dir->parent = current;
+            dir->name = token;
 
-            InitramfsDirEntry entry{};
+            current->children.push_back(dir);
 
-            entry.name = token;
-            entry.dir_inode = dir;
-            entry.file_inode = nullptr;
-
-            current->children.push_back(std::move(entry));
             current = dir;
         }
     }
 
     const kstring& last = tokens.back();
 
-    InitramfsDirEntry entry{};
+    inode->parent = current;
+    inode->name = last;
 
-    if (dir_inode) {
-        dir_inode->parent = current;
-        dir_inode->name = last;
-    }
-
-    if (file_inode) {
-        file_inode->parent = current;
-        file_inode->name = last;
-    }
-
-    entry.name = last;
-    entry.dir_inode = dir_inode;
-    entry.file_inode = file_inode;
-
-    current->children.push_back(std::move(entry));
+    current->children.push_back(inode);
 }
 
 void InitramfsMountPoint::parse_tar_headers()
@@ -149,7 +130,6 @@ void InitramfsMountPoint::parse_tar_headers()
     log::info("Parsing tar headers");
 
     root_inode = new InitramfsDirectoryInode{this};
-    root_inode->mountpoint = this;
     root_inode->ino = next_ino++;
     root_inode->parent = nullptr;
 
@@ -160,6 +140,7 @@ void InitramfsMountPoint::parse_tar_headers()
 
     while (addr < end) {
         TarHeader* header = reinterpret_cast<TarHeader*>(addr);
+        Inode* new_inode = nullptr;
 
         std::uintmax_t size = fmt::parse_uint((const char*)header->size, 12, fmt::NumberFormat::OCT);
         std::uintmax_t num_blocks = (size + 511) / 512;
@@ -184,29 +165,22 @@ void InitramfsMountPoint::parse_tar_headers()
         log::debugf("tar header found, size = {}, block = {}, name = '{}'", size, num_blocks, kstring{filename});
 
         if (header->typeflag == TYPEFLAG_DIR) {
-            auto* dir = new InitramfsDirectoryInode{this};
+            new_inode = new InitramfsDirectoryInode{this};
 
-            dir->mountpoint = this;
-            dir->ino = next_ino++;
-
-            insert_inode(filename, dir, nullptr);
+            new_inode->ino = next_ino++;
         } else {
-            auto* file = new InitramfsFileInode{};
+            new_inode = new InitramfsFileInode{this, addr + 512};
 
-            file->mountpoint = this;
-            file->tar_data = addr + 512;
-            file->size = size;
-            file->ino = next_ino++;
-
-            insert_inode(filename, nullptr, file);
+            new_inode->size = size;
+            new_inode->ino = next_ino++;
         }
+
+        insert_inode(filename, new_inode);
 
     next:
         addr += 512 + (num_blocks * 512);
     }
 }
-
-DirectoryInode* InitramfsMountPoint::root() { return root_inode; }
 
 const char* InitramfsFileSystem::name() { return "initramfs"; }
 
@@ -217,7 +191,7 @@ MountPoint* InitramfsFileSystem::mount_from_mem(std::uint8_t* buffer, std::size_
     return new InitramfsMountPoint{buffer, size};
 }
 
-void init(std::uint8_t* addr, std::size_t)
+void init(std::uint8_t*, std::size_t)
 {
     //tar::init(addr);
     //fs::mount("/", &initramfs_fs);

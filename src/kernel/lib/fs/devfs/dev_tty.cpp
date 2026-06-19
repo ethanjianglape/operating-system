@@ -166,9 +166,12 @@ char scancode_to_ascii(ScanCode code, bool caps)
     return ascii;
 }
 
-DevTtyInode::DevTtyInode()
+DevTtyInode::DevTtyInode(MountPoint* mp, Inode* parent, int ino)
+    : Inode{mp}
 {
-    type = FileType::CHAR_DEVICE;
+    this->type = FileType::CHAR_DEVICE;
+    this->parent = parent;
+    this->ino = ino;
 }
 
 void DevTtyInode::insert_char(char c)

@@ -8,12 +8,15 @@ namespace fs::devfs {
 
 class DevMountPoint;
 
+constexpr int DEV_ROOT_INO = 1;
+constexpr int DEV_NULL_INO = 2;
+constexpr int DEV_TTY1_INO = 3;
+constexpr int DEV_TTY2_INO = 4;
+
 class DevDirectoryInode final : public DirectoryInode {
 private:
-    DevMountPoint* dev_mp;
-
 public:
-    explicit DevDirectoryInode(DevMountPoint* mp);
+    DevDirectoryInode(DevMountPoint* mp, int ino);
 
     Inode* lookup(const char* name) override;
     int readdir(kvector<DirEntry>& entries) override;
@@ -21,20 +24,16 @@ public:
     int create(const char* name, int mode) override;
     int open(FileDescriptor* fd, int flags) override;
     int close(FileDescriptor* fd) override;
-    int lseek(FileDescriptor* fd, int offset, int whence) override;
     int stat(Stat* stat) override;
 };
 
 class DevMountPoint final : public MountPoint {
 public:
-    DevDirectoryInode root_inode;
-    DevNullInode null_inode;
-    DevTtyInode tty1_inode;
-    DevTtyInode tty2_inode;
+    DevNullInode* null_inode;
+    DevTtyInode* tty1_inode;
+    DevTtyInode* tty2_inode;
 
     DevMountPoint();
-
-    DirectoryInode* root() override;
 };
 
 class DevFileSystem final : public FileSystem {

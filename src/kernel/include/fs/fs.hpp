@@ -1,5 +1,6 @@
 #pragma once
 
+#include "containers/klist.hpp"
 #include <cerrno>
 #include <containers/kstring.hpp>
 #include <containers/kvector.hpp>
@@ -64,7 +65,7 @@ public:
     const char* path;
     FileSystem* fs;
     Inode* mounted_on;
-    virtual DirectoryInode* root() = 0;
+    Inode* root_inode;
 };
 
 class Inode {
@@ -76,33 +77,42 @@ public:
     FileType type;
     kstring name;
 
-    Inode() = default;
+    explicit Inode(MountPoint* mp);
+    Inode() = delete;
     virtual ~Inode() = default;
     Inode(const Inode&) = delete;
     Inode(Inode&&) = delete;
     Inode& operator=(const Inode&) = delete;
     Inode& operator=(Inode&&) = delete;
 
-    virtual Inode* lookup(const char* name) { return nullptr; }
     virtual int open(FileDescriptor* fd, int flags) = 0;
     virtual int read(FileDescriptor* fd, void* buf, std::size_t count) = 0;
     virtual int write(FileDescriptor* fd, const void* buf, std::size_t count) = 0;
     virtual int close(FileDescriptor* fd) = 0;
     virtual int lseek(FileDescriptor* fd, int offset, int whence) = 0;
     virtual int stat(Stat* stat) = 0;
+
+    virtual Inode* lookup(const char*) { return nullptr; }
+    virtual int readdir(kvector<DirEntry>&) { return -ENOTDIR; }
+    virtual int mkdir(const char*, int) { return -ENOTDIR; }
+    virtual int create(const char*, int) { return -ENOTDIR; }
 };
 
 class DirectoryInode : public Inode {
 public:
-    DirectoryInode() = default;
+    klist<Inode*> children;
+
+    explicit DirectoryInode(MountPoint* mpt);
+    DirectoryInode() = delete;
     virtual ~DirectoryInode() = default;
+    DirectoryInode(const DirectoryInode&) = delete;
+    DirectoryInode(DirectoryInode&&) = delete;
+    DirectoryInode& operator=(const DirectoryInode&) = delete;
+    DirectoryInode& operator=(DirectoryInode&&) = delete;
 
     int read(FileDescriptor*, void*, std::size_t) final override { return -EISDIR; }
     int write(FileDescriptor*, const void*, std::size_t) final override { return -EISDIR; }
-
-    virtual int readdir(kvector<DirEntry>& entries) = 0;
-    virtual int mkdir(const char* name, int mode) = 0;
-    virtual int create(const char* name, int mode) = 0;
+    int lseek(FileDescriptor*, int, int) final override { return -EISDIR; }
 };
 
 /**

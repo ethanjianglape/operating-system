@@ -14,26 +14,27 @@ MountPoint* TmpFileSystem::mount(const char*)
     return new TmpMountPoint{};
 }
 
-DirectoryInode* TmpMountPoint::root() { return root_inode; }
-
 TmpMountPoint::TmpMountPoint()
 {
-    root_inode = new TmpDirectoryInode{};
-    root_inode->type = FileType::DIRECTORY;
-    root_inode->mountpoint = this;
+    root_inode = new TmpDirectoryInode{this};
     root_inode->ino = next_ino++;
     root_inode->parent = nullptr;
+}
+
+TmpFileInode::TmpFileInode(MountPoint* mp)
+    : Inode{mp}
+{
 }
 
 int TmpFileInode::open(FileDescriptor*, int) { return 0; }
 int TmpFileInode::close(FileDescriptor*) { return 0; }
 
-int TmpFileInode::write(FileDescriptor*, const void* buf, std::size_t count)
+int TmpFileInode::write(FileDescriptor*, const void*, std::size_t)
 {
     return 0;
 }
 
-int TmpFileInode::read(FileDescriptor*, void* buf, std::size_t count)
+int TmpFileInode::read(FileDescriptor*, void*, std::size_t)
 {
     return 0;
 }
@@ -48,6 +49,11 @@ int TmpFileInode::stat(Stat* stat)
     stat->size = size;
     stat->type = type;
     return 0;
+}
+
+TmpDirectoryInode::TmpDirectoryInode(MountPoint* mp)
+    : DirectoryInode{mp}
+{
 }
 
 Inode* TmpDirectoryInode::lookup(const char* name)
@@ -89,10 +95,9 @@ int TmpDirectoryInode::mkdir(const char* name, int)
         return -1;
     }
 
-    auto* dir = new TmpDirectoryInode{};
+    auto* dir = new TmpDirectoryInode{parent->mountpoint};
 
     dir->type = FileType::DIRECTORY;
-    dir->mountpoint = parent->mountpoint;
     // dir->ino = parent->mountpoint->ne
     dir->parent = parent;
     dir->name = name;
@@ -111,10 +116,9 @@ int TmpDirectoryInode::create(const char* name, int)
         return -1;
     }
 
-    auto* file = new TmpFileInode{};
+    auto* file = new TmpFileInode{parent->mountpoint};
 
     file->type = FileType::REGULAR;
-    file->mountpoint = parent->mountpoint;
     // dir->ino = parent->mountpoint->ne
     file->parent = parent;
     file->name = name;
@@ -128,7 +132,6 @@ int TmpDirectoryInode::create(const char* name, int)
 
 int TmpDirectoryInode::open(FileDescriptor*, int) { return 0; }
 int TmpDirectoryInode::close(FileDescriptor*) { return 0; }
-int TmpDirectoryInode::lseek(FileDescriptor*, int, int) { return 0; }
 int TmpDirectoryInode::stat(Stat* stat)
 {
     stat->size = size;

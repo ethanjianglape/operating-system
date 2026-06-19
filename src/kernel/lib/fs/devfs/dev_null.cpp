@@ -2,9 +2,12 @@
 #include <fs/fs.hpp>
 
 namespace fs::devfs {
-DevNullInode::DevNullInode()
+DevNullInode::DevNullInode(MountPoint* mp, Inode* parent, int ino)
+    : Inode(mp)
 {
     type = FileType::CHAR_DEVICE;
+    this->parent = parent;
+    this->ino = ino;
 }
 
 int DevNullInode::open(FileDescriptor*, int)

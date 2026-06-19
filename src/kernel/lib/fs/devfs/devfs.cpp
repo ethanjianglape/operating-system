@@ -5,28 +5,28 @@
 
 namespace fs::devfs {
 
-static DevFileSystem g_devfs{};
-
-DevDirectoryInode::DevDirectoryInode(DevMountPoint* mp)
-    : dev_mp{mp}
+DevDirectoryInode::DevDirectoryInode(DevMountPoint* mp, int ino)
+    : DirectoryInode{mp}
 {
-    type = FileType::DIRECTORY;
+    this->ino = ino;
 }
 
 Inode* DevDirectoryInode::lookup(const char* name)
 {
     kstring name_str{name};
 
+    auto dev_mp = static_cast<DevMountPoint*>(mountpoint);
+
     if (name_str == "null") {
-        return &dev_mp->null_inode;
+        return dev_mp->null_inode;
     }
 
     if (name_str == "tty1") {
-        return &dev_mp->tty1_inode;
+        return dev_mp->tty1_inode;
     }
 
     if (name_str == "tty2") {
-        return &dev_mp->tty2_inode;
+        return dev_mp->tty2_inode;
     }
 
     return nullptr;
@@ -41,58 +41,38 @@ int DevDirectoryInode::readdir(kvector<DirEntry>& entries)
     return entries.size();
 }
 
-int DevDirectoryInode::mkdir(const char* name, int mode)
+int DevDirectoryInode::mkdir(const char*, int)
 {
     return 0;
 }
 
-int DevDirectoryInode::create(const char* name, int mode)
+int DevDirectoryInode::create(const char*, int)
 {
     return 0;
 }
 
-int DevDirectoryInode::open(FileDescriptor* fd, int flags)
+int DevDirectoryInode::open(FileDescriptor*, int)
 {
     return 0;
 }
 
-int DevDirectoryInode::close(FileDescriptor* fd)
+int DevDirectoryInode::close(FileDescriptor*)
 {
     return 0;
 }
 
-int DevDirectoryInode::lseek(FileDescriptor* fd, int offset, int whence)
-{
-    return 0;
-}
-
-int DevDirectoryInode::stat(Stat* stat)
+int DevDirectoryInode::stat(Stat*)
 {
     return 0;
 }
 
 DevMountPoint::DevMountPoint()
-    : root_inode{this}
 {
-    int ino = 1;
-
-    root_inode.ino = ino++;
-    root_inode.mountpoint = this;
-
-    null_inode.ino = ino++;
-    null_inode.mountpoint = this;
-    null_inode.parent = &root_inode;
-
-    tty1_inode.ino = ino++;
-    tty1_inode.mountpoint = this;
-    tty1_inode.parent = &root_inode;
-
-    tty2_inode.ino = ino++;
-    tty2_inode.mountpoint = this;
-    tty2_inode.parent = &root_inode;
+    root_inode = new DevDirectoryInode{this, DEV_ROOT_INO};
+    null_inode = new DevNullInode{this, root_inode, DEV_NULL_INO};
+    tty1_inode = new DevTtyInode{this, root_inode, DEV_TTY1_INO};
+    tty2_inode = new DevTtyInode{this, root_inode, DEV_TTY2_INO};
 }
-
-DirectoryInode* DevMountPoint::root() { return &root_inode; }
 
 const char* DevFileSystem::name()
 {
