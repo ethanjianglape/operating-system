@@ -1,3 +1,4 @@
+#include "fs/tmpfs/tmpfs.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
@@ -13,6 +14,7 @@
 #include <containers/kstring.hpp>
 #include <framebuffer/framebuffer.hpp>
 #include <fs/devfs/dev_tty.hpp>
+#include <fs/devfs/devfs.hpp>
 #include <log/log.hpp>
 #include <scheduler/scheduler.hpp>
 
@@ -48,8 +50,14 @@ void kernel_main()
     test::run_all();
 #endif
 
+    auto* devfs = new fs::devfs::DevFileSystem{};
+    auto* tmpfs = new fs::tmpfs::TmpFileSystem{};
+
+    fs::mount("/dev", devfs, nullptr);
+    fs::mount("/tmp", tmpfs, nullptr);
+
     console::init();
-    fs::devfs::tty::init();
+    fs::devfs::init_tty();
     scheduler::init();
 
     while (true) {

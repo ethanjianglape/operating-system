@@ -1,4 +1,3 @@
-#include "fs/devfs/dev_random.hpp"
 #include <arch.hpp>
 #include <cerrno>
 #include <console/console.hpp>
@@ -12,39 +11,10 @@
 #include <process/process.hpp>
 #include <scheduler/scheduler.hpp>
 
-namespace fs::devfs::tty {
-namespace keyboard = arch::drivers::keyboard;
+namespace fs::devfs {
 
 using ScanCode = keyboard::ScanCode;
 using ExtendedScanCode = keyboard::ExtendedScanCode;
-
-static kstring buffer{};
-static kvector<kstring> history{};
-
-static std::size_t buffer_index = 0;
-static std::size_t history_index = 0;
-
-static int tty_read(FileDescriptor* fd, void* buf, std::size_t count);
-static int tty_write(FileDescriptor* fd, const void* buf, std::size_t count);
-static int tty_close(FileDescriptor* fd);
-static int tty_lseek(FileDescriptor*, int, int);
-static int tty_fstat(FileDescriptor*, fs::Stat*);
-
-static const FileOps tty_ops = {
-    .read = tty_read,
-    .write = tty_write,
-    .close = tty_close,
-    .lseek = tty_lseek,
-    .fstat = tty_fstat};
-
-static Inode tty_inode = {
-    .type = FileType::CHAR_DEVICE,
-    .size = 0,
-    .ops = &tty_ops,
-    .private_data = nullptr,
-};
-
-Inode* get_tty_inode() { return &tty_inode; }
 
 // Scancode Set 1 to ASCII lookup table (lowercase, unshifted)
 // Index = scancode value, value = ASCII char (0 = non-printable)
@@ -196,7 +166,15 @@ char scancode_to_ascii(ScanCode code, bool caps)
     return ascii;
 }
 
-void insert_char(char c)
+DevTtyInode::DevTtyInode(MountPoint* mp, Inode* parent, int ino)
+    : Inode{mp}
+{
+    this->type = FileType::CHAR_DEVICE;
+    this->parent = parent;
+    this->ino = ino;
+}
+
+void DevTtyInode::insert_char(char c)
 {
     buffer.insert(buffer_index, c);
     buffer_index++;
@@ -213,7 +191,7 @@ void insert_char(char c)
     console::move_cursor(-len, 0);
 }
 
-void delete_back()
+void DevTtyInode::delete_back()
 {
     if (buffer_index == 0) {
         return;
@@ -234,7 +212,7 @@ void delete_back()
     console::move_cursor(-len, 0);
 }
 
-void delete_forward()
+void DevTtyInode::delete_forward()
 {
     if (buffer_index == buffer.size()) {
         return;
@@ -253,7 +231,7 @@ void delete_forward()
     console::move_cursor(-len, 0);
 }
 
-void move_left()
+void DevTtyInode::move_left()
 {
     if (buffer_index > 0) {
         buffer_index--;
@@ -261,7 +239,7 @@ void move_left()
     }
 }
 
-void move_right()
+void DevTtyInode::move_right()
 {
     if (buffer_index < buffer.size()) {
         buffer_index++;
@@ -269,7 +247,7 @@ void move_right()
     }
 }
 
-void move_to_start()
+void DevTtyInode::move_to_start()
 {
     if (buffer_index == 0) {
         return;
@@ -279,7 +257,7 @@ void move_to_start()
     buffer_index = 0;
 }
 
-void move_to_end()
+void DevTtyInode::move_to_end()
 {
     if (buffer_index == buffer.size()) {
         return;
@@ -291,13 +269,13 @@ void move_to_end()
     buffer_index = buffer.size();
 }
 
-void delete_to_end()
+void DevTtyInode::delete_to_end()
 {
     buffer.truncate(buffer_index);
     console::erase_in_line(console::get_cursor_x(), console::get_screen_cols());
 }
 
-void add_buffer_history()
+void DevTtyInode::add_buffer_history()
 {
     // do not add empty string or back to back duplicates to history
     if (buffer.empty()) {
@@ -312,7 +290,7 @@ void add_buffer_history()
     history_index = history.size();
 }
 
-void buffer_history_up()
+void DevTtyInode::buffer_history_up()
 {
     if (!history.empty() && history_index > 0) {
         move_to_start();
@@ -325,7 +303,7 @@ void buffer_history_up()
     }
 }
 
-void buffer_history_down()
+void DevTtyInode::buffer_history_down()
 {
     move_to_start();
     delete_to_end();
@@ -342,7 +320,7 @@ void buffer_history_down()
     console::put(buffer);
 }
 
-void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode)
+void DevTtyInode::process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode)
 {
     if (c == ScanCode::A) {
         move_to_start();
@@ -359,57 +337,53 @@ void process_ctrl(keyboard::ScanCode c, keyboard::ExtendedScanCode)
     }
 }
 
-void page_up()
+void DevTtyInode::page_up()
 {
     console::scroll_up();
 }
 
-void page_down()
+void DevTtyInode::page_down()
 {
     console::scroll_down();
 }
 
 void run_tty_program(const kstring& name)
 {
-    Inode* inode = fs::open(name, fs::O_RDONLY);
+    fs::FileDescriptor* fd = fs::open(name.c_str(), 0);
 
-    if (!inode) {
+    if (!fd) {
         log::warn("run_tty_program: failed to open ", name);
         return;
     }
 
-    std::size_t size = inode->size;
+    auto size = fd->inode->size;
     auto* data = new std::uint8_t[size];
 
-    FileDescriptor fd = {
-        .inode = inode,
-        .path = "",
-        .offset = 0,
-        .flags = O_RDONLY,
-    };
+    log::debugf("loaded tty program addr={}, size={}", fd, size);
 
-    inode->ops->read(&fd, data, size);
+    fd->inode->read(fd, data, size);
 
     process::Process* p = process::create_process(data, size);
-
-    inode->ops->close(&fd);
 
     scheduler::add_process(p);
 }
 
-void init()
+void init_tty()
 {
     log::init_start("/dev/tty");
 
-    buffer.reserve(128);
-
-    //run_tty_program("/bin/shell");
-    run_tty_program("/bin/musl");
+    run_tty_program("/bin/shell");
+    //run_tty_program("/bin/musl");
 
     log::init_end("/dev/tty");
 }
 
-static int tty_read(FileDescriptor*, void* buff, std::size_t count)
+int DevTtyInode::open(FileDescriptor*, int)
+{
+    return 0;
+}
+
+int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
 {
     buffer = "";
     buffer_index = 0;
@@ -467,7 +441,7 @@ static int tty_read(FileDescriptor*, void* buff, std::size_t count)
     }
 }
 
-static int tty_write(FileDescriptor*, const void* buffer, std::size_t count)
+int DevTtyInode::write(FileDescriptor*, const void* buffer, std::size_t count)
 {
     const auto* cbuffer = reinterpret_cast<const char*>(buffer);
     kstring str(cbuffer, count);
@@ -478,18 +452,18 @@ static int tty_write(FileDescriptor*, const void* buffer, std::size_t count)
     return str.size();
 }
 
-static int tty_close(FileDescriptor*)
+int DevTtyInode::close(FileDescriptor*)
 {
     // TTY inode is static, nothing to free
     return 0;
 }
 
-static int tty_lseek(FileDescriptor*, int, int)
+int DevTtyInode::lseek(FileDescriptor*, int, int)
 {
     return -ESPIPE;
 }
 
-static int tty_fstat(FileDescriptor*, Stat* stat)
+int DevTtyInode::stat(Stat* stat)
 {
     stat->size = 0;
     stat->type = FileType::CHAR_DEVICE;

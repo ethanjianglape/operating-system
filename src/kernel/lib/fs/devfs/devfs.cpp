@@ -1,90 +1,87 @@
-#include "log/log.hpp"
 #include <fs/devfs/dev_null.hpp>
-#include <fs/devfs/dev_random.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/devfs/devfs.hpp>
 #include <fs/fs.hpp>
 
 namespace fs::devfs {
-static Inode* devfs_open(FileSystem* self, const kstring& path, int flags);
-static int devfs_stat(FileSystem* self, const kstring& path, Stat* out);
-static int devfs_readdir(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
-static int devfs_mkdir(FileSystem*, const kstring&, int);
 
-static FileSystem devfs_fs = {
-    .name = "devfs",
-    .private_data = nullptr,
-    .open = devfs_open,
-    .stat = devfs_stat,
-    .readdir = devfs_readdir,
-    .mkdir = devfs_mkdir};
-
-// represents the /dev directory itself
-static Inode devfs_inode = {
-    .type = FileType::DIRECTORY,
-    .size = 0,
-    .ops = nullptr,
-    .private_data = nullptr};
-
-void init()
+DevDirectoryInode::DevDirectoryInode(DevMountPoint* mp, int ino)
+    : DirectoryInode{mp}
 {
-    fs::mount("/dev", &devfs_fs);
+    this->ino = ino;
 }
 
-static Inode* devfs_open(FileSystem*, const kstring& path, int)
+Inode* DevDirectoryInode::lookup(const char* name)
 {
-    if (path.empty()) {
-        // open() called on /dev itself
-        return &devfs_inode;
+    kstring name_str{name};
+
+    auto dev_mp = static_cast<DevMountPoint*>(mountpoint);
+
+    if (name_str == "null") {
+        return dev_mp->null_inode;
     }
 
-    if (path == "/tty1") {
-        return tty::get_tty_inode();
+    if (name_str == "tty1") {
+        return dev_mp->tty1_inode;
     }
 
-    if (path == "/null") {
-        return null::get_null_inode();
-    }
-
-    if (path == "/random") {
-        return random::get_random_inode();
+    if (name_str == "tty2") {
+        return dev_mp->tty2_inode;
     }
 
     return nullptr;
 }
 
-static int devfs_stat(FileSystem*, const kstring& path, Stat* out)
+int DevDirectoryInode::readdir(kvector<DirEntry>& entries)
 {
-    if (path == "/tty1" || path == "/null") {
-        out->type = FileType::CHAR_DEVICE;
-        out->size = 0;
-        return 0;
-    }
+    entries.push_back(DirEntry{.name = "null", .type = FileType::CHAR_DEVICE});
+    entries.push_back(DirEntry{.name = "tty1", .type = FileType::CHAR_DEVICE});
+    entries.push_back(DirEntry{.name = "tty2", .type = FileType::CHAR_DEVICE});
 
-    return -1;
+    return entries.size();
 }
 
-static int devfs_readdir(FileSystem*, const kstring& path, kvector<DirEntry>& out)
-{
-    if (path.empty()) {
-        out.push_back(DirEntry{
-            .name = "tty1",
-            .type = FileType::CHAR_DEVICE,
-        });
-
-        out.push_back(DirEntry{
-            .name = "null",
-            .type = FileType::CHAR_DEVICE,
-        });
-
-        return 0;
-    }
-
-    return -1;
-}
-
-static int devfs_mkdir(FileSystem*, const kstring&, int)
+int DevDirectoryInode::mkdir(const char*, int)
 {
     return 0;
 }
+
+int DevDirectoryInode::create(const char*, int)
+{
+    return 0;
+}
+
+int DevDirectoryInode::open(FileDescriptor*, int)
+{
+    return 0;
+}
+
+int DevDirectoryInode::close(FileDescriptor*)
+{
+    return 0;
+}
+
+int DevDirectoryInode::stat(Stat*)
+{
+    return 0;
+}
+
+DevMountPoint::DevMountPoint()
+{
+    root_inode = new DevDirectoryInode{this, DEV_ROOT_INO};
+    null_inode = new DevNullInode{this, root_inode, DEV_NULL_INO};
+    tty1_inode = new DevTtyInode{this, root_inode, DEV_TTY1_INO};
+    tty2_inode = new DevTtyInode{this, root_inode, DEV_TTY2_INO};
+}
+
+const char* DevFileSystem::name()
+{
+    return "devfs";
+}
+
+MountPoint* DevFileSystem::mount(const char*)
+{
+    return new DevMountPoint{};
+}
+
 }

@@ -36,7 +36,7 @@ struct Process {
     WaitReason wait_reason;
     int exit_status;
 
-    kstring working_dir;
+    fs::Inode* cwd_inode;
 
     // Address space
     arch::vmm::PageTableEntry* pml4;
@@ -55,7 +55,7 @@ struct Process {
     kvector<ProcessAllocation> allocations;
 
     // File Descriptors
-    kvector<fs::FileDescriptor> fd_table;
+    kvector<fs::FileDescriptor*> fd_table;
 
     // Sleep
     std::uint64_t wake_time_ms;

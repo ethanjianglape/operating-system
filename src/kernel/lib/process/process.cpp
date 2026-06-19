@@ -49,7 +49,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->wake_time_ms = 0;
     p->has_kernel_context = true;
     p->has_user_context = true;
-    p->working_dir = "/";
     p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
     p->fs_base = 0;
     p->tidptr = 0;
@@ -83,7 +82,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
         }
     }
 
-    std::size_t stack_pages = arch::vmm::map_mem_at(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER);
+    std::size_t stack_pages = arch::vmm::map_mem_at(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
     p->allocations.push_back(ProcessAllocation{
         .virt_addr = USER_STACK_BASE,
@@ -140,11 +139,17 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
     p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
 
-    fs::Inode* tty_inode = fs::devfs::tty::get_tty_inode();
+    //fs::Inode* tty_inode = fs::devfs::tty::get_tty_inode();
 
-    p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stdin
-    p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stdout
-    p->fd_table.push_back({.inode = tty_inode, .path = "/dev/tty1", .offset = 0, .flags = fs::O_RDONLY}); // stderr
+    fs::FileDescriptor* stdin = fs::open("/dev/tty1", 0);
+    fs::FileDescriptor* stdout = fs::open("/dev/tty1", 0);
+    fs::FileDescriptor* stderr = fs::open("/dev/tty1", 0);
+
+    log::debugf("stdin={}, stdout={}, stderr={}", stdin, stdout, stderr);
+
+    p->fd_table.push_back(stdin);
+    p->fd_table.push_back(stdout);
+    p->fd_table.push_back(stderr);
 
     arch::vmm::switch_kernel_pml4();
 
@@ -181,8 +186,8 @@ void terminate_process(Process* proc)
     auto frames_before = pmm::get_free_frames();
     auto slabs_before = slab::total_slabs();
 
-    for (auto& fd : proc->fd_table) {
-        fd.inode->ops->close(&fd);
+    for (fs::FileDescriptor* fd : proc->fd_table) {
+        fd->inode->close(fd);
     }
 
     for (auto& allocation : proc->allocations) {

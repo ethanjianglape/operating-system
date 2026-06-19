@@ -23,6 +23,8 @@ void cmd_help(void)
     puts("  help     - Show this help");
     puts("  pwd      - Print working directory");
     puts("  cd PATH  - Change directory");
+    puts("  ls PATH  - List directory entries");
+    puts("  cat PATH - Display contents of a file");
     puts("  pid      - Show process ID");
     puts("  mmap     - Test mmap syscall");
     puts("  mkdir    - Test mkdir syscall");
@@ -46,9 +48,32 @@ void cmd_cd(const char* path)
     }
 }
 
-void cmd_ls()
+void cmd_ls(const char* path)
 {
-    DIR* dir = opendir("/");
+    DIR* dir = opendir(path);
+
+    struct dirent* entry;
+
+    while ((entry = readdir(dir)) != NULL) {
+        printf("%s\n", entry->d_name);
+    }
+}
+
+void cmd_cat(const char* path)
+{
+    FILE* file = fopen(path, "r");
+
+    if (!file) {
+        return;
+    }
+
+    char buffer[1024];
+
+    int bytes = fread(buffer, 1, sizeof(buffer), file);
+
+    buffer[bytes] = '\0';
+
+    printf("%s\n", buffer);
 }
 
 void cmd_pid(void)
@@ -92,13 +117,9 @@ void cmd_mmap(void)
     }
 }
 
-void cmd_mkdir()
+void cmd_mkdir(const char* path)
 {
-    puts("testing mkdir");
-    mkdir("/tmp/dir/test/a", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    mkdir("/tmp/dir/test/b", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    mkdir("/tmp/dir/test/c", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    mkdir("/tmp/dir/files", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 }
 
 // ============================================================================
@@ -129,7 +150,7 @@ void process_command(char* cmd)
     if (strcmp(cmd, "help") == 0) {
         cmd_help();
     } else if (strcmp(cmd, "mkdir") == 0) {
-        cmd_mkdir();
+        cmd_mkdir(arg);
     } else if (strcmp(cmd, "pwd") == 0) {
         cmd_pwd();
     } else if (strcmp(cmd, "cd") == 0) {
@@ -145,7 +166,17 @@ void process_command(char* cmd)
     } else if (strcmp(cmd, "exit") == 0) {
         exit(0);
     } else if (strcmp(cmd, "ls") == 0) {
-        cmd_ls();
+        if (*arg) {
+            cmd_ls(arg);
+        } else {
+            cmd_ls("./");
+        }
+    } else if (strcmp(cmd, "cat") == 0) {
+        if (*arg) {
+            cmd_cat(arg);
+        } else {
+            printf("cat: missing file\n");
+        }
     } else {
         printf("unknown command: '%s'\n", cmd);
     }

@@ -7,7 +7,6 @@
 #include <fs/fs.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
-#include <string.h>
 #include <syscall/sys_fd.hpp>
 
 #include <cerrno>
@@ -16,7 +15,7 @@ namespace syscall {
 static int alloc_fd(process::Process* process)
 {
     for (std::size_t i = 0; i < process->fd_table.size(); i++) {
-        if (process->fd_table[i].inode == nullptr) {
+        if (process->fd_table[i]->inode == nullptr) {
             return i;
         }
     }
@@ -34,26 +33,20 @@ static fs::FileDescriptor* get_fd(int fd)
         return nullptr;
     }
 
-    return &process->fd_table[fd];
+    return process->fd_table[fd];
 }
 
 int sys_open(const char* path, int flags)
 {
     process::Process* process = arch::percpu::current_process();
+    fs::FileDescriptor* desc = fs::open(path, flags);
 
-    fs::Inode* inode = fs::open(path, flags);
-
-    if (!inode) {
+    if (!desc) {
         return -ENOENT;
     }
 
     int fd = alloc_fd(process);
-
-    process->fd_table[fd].inode = inode;
-    process->fd_table[fd].offset = 0;
-    process->fd_table[fd].flags = flags;
-    process->fd_table[fd].path = fs::canonicalize(path);
-
+    process->fd_table[fd] = desc;
     return fd;
 }
 
@@ -65,7 +58,7 @@ int sys_read(int fd, void* buffer, std::size_t count)
         return -EBADF;
     }
 
-    return desc->inode->ops->read(desc, buffer, count);
+    return desc->inode->read(desc, buffer, count);
 }
 
 int sys_write(int fd, const void* buffer, std::size_t count)
@@ -76,7 +69,40 @@ int sys_write(int fd, const void* buffer, std::size_t count)
         return -EBADF;
     }
 
-    return desc->inode->ops->write(desc, buffer, count);
+    return desc->inode->write(desc, buffer, count);
+}
+
+int sys_readv(int fd, const linux::iovec* iov, int iovcnt)
+{
+    fs::FileDescriptor* desc = get_fd(fd);
+
+    if (!desc) {
+        log::debug("sys_writev fd = null");
+        return -EBADF;
+    }
+
+    if (iovcnt < 0) {
+        log::debug("sys_writev iovcnt < 0");
+        return -EINVAL;
+    }
+
+    int total = 0;
+
+    for (int i = 0; i < iovcnt; i++) {
+        if (iov[i].iov_len == 0) {
+            continue;
+        }
+
+        int read = desc->inode->read(desc, iov[i].iov_base, iov[i].iov_len);
+
+        if (read < 0) {
+            return total > 0 ? total : read;
+        }
+
+        total += read;
+    }
+
+    return total;
 }
 
 int sys_writev(int fd, const linux::iovec* iov, int iovcnt)
@@ -96,10 +122,11 @@ int sys_writev(int fd, const linux::iovec* iov, int iovcnt)
     int total = 0;
 
     for (int i = 0; i < iovcnt; i++) {
-        if (iov[i].iov_len == 0)
+        if (iov[i].iov_len == 0) {
             continue;
+        }
 
-        int written = desc->inode->ops->write(desc, iov[i].iov_base, iov[i].iov_len);
+        int written = desc->inode->write(desc, iov[i].iov_base, iov[i].iov_len);
 
         if (written < 0) {
             return total > 0 ? total : written;
@@ -141,10 +168,8 @@ int sys_close(int fd)
         return -EBADF;
     }
 
-    int result = desc->inode->ops->close(desc);
-
-    process->fd_table[fd] = {};
-
+    int result = desc->inode->close(desc);
+    process->fd_table[fd] = nullptr;
     return result;
 }
 
@@ -161,7 +186,7 @@ int sys_fstat(int fd, fs::Stat* stat)
         return -EBADF;
     }
 
-    return desc->inode->ops->fstat(desc, stat);
+    return desc->inode->stat(stat);
 }
 
 int sys_lseek(int fd, std::size_t offset, int whence)
@@ -172,45 +197,38 @@ int sys_lseek(int fd, std::size_t offset, int whence)
         return -EBADF;
     }
 
-    return desc->inode->ops->lseek(desc, offset, whence);
+    return desc->inode->lseek(desc, offset, whence);
 }
 
 long sys_getcwd(char* buffer, std::size_t size)
 {
     process::Process* proc = arch::percpu::current_process();
-    std::size_t len = proc->working_dir.length();
+    kstring cwd = fs::getcwd(proc->cwd_inode);
 
-    if (len + 1 > size) {
+    if (cwd.length() + 1 > size) {
         return -ERANGE;
     }
 
-    memcpy(buffer, proc->working_dir.c_str(), len);
-    buffer[len] = '\0';
+    memcpy(buffer, cwd.c_str(), cwd.size());
+    buffer[cwd.size()] = '\0';
 
     return reinterpret_cast<long>(buffer);
 }
 
-int sys_chdir(const char* buffer)
+int sys_chdir(const char* path)
 {
     auto* proc = arch::percpu::current_process();
-    const kstring& cwd = proc->working_dir;
-    const kstring relative{buffer};
-    kstring path = fs::relative_to_absolute(cwd, relative);
-    fs::Stat stat;
+    fs::FileDescriptor* desc = fs::open(path, fs::O_RDONLY);
 
-    int stat_res = fs::stat(path, &stat);
-
-    log::debugf("cwd = {}, relative = {}, path = {}", cwd, relative, path);
-
-    if (stat_res != 0) {
-        return stat_res;
+    if (!desc) {
+        return -EBADF;
     }
 
-    if (stat.type != fs::FileType::DIRECTORY) {
+    if (desc->inode->type != fs::FileType::DIRECTORY) {
         return -ENOTDIR;
     }
 
-    proc->working_dir = std::move(path);
+    proc->cwd_inode = desc->inode;
 
     return 0;
 }
@@ -228,7 +246,7 @@ int sys_fchdir(int fd)
         return -ENOTDIR;
     }
 
-    proc->working_dir = desc->path;
+    proc->cwd_inode = desc->inode;
 
     return 0;
 }
@@ -252,8 +270,6 @@ int sys_getdents64(int fd, void* buffer, unsigned int count)
     if (!desc) {
         return -EBADF;
     }
-
-    log::debugf("getdents fd: path={}, off={}, size={}", desc->path, desc->offset, desc->inode->size);
 
     kvector<fs::DirEntry> entries;
 

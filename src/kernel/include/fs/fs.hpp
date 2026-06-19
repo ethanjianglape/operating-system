@@ -1,5 +1,7 @@
 #pragma once
 
+#include "containers/klist.hpp"
+#include <cerrno>
 #include <containers/kstring.hpp>
 #include <containers/kvector.hpp>
 
@@ -20,46 +22,14 @@ constexpr int SEEK_SET = 0;
 constexpr int SEEK_CUR = 1;
 constexpr int SEEK_END = 2;
 
-struct Inode;
 struct FileDescriptor;
-struct FileSystem;
 struct Stat;
+struct DirEntry;
 
-/**
- * @brief Operations on an open file (fd-level).
- *
- * Each file type (regular, char device, etc.) provides its own implementation.
- * The implementation decides how to handle offset (use it, ignore it, etc.)
- */
-struct FileOps {
-    int (*read)(FileDescriptor* fd, void* buf, std::size_t count);
-    int (*write)(FileDescriptor* fd, const void* buf, std::size_t count);
-    int (*close)(FileDescriptor* fd);
-    int (*lseek)(FileDescriptor* fd, int offset, int whence);
-    int (*fstat)(FileDescriptor* fd, Stat* stat);
-};
-
-/**
- * @brief A file or directory in the filesystem.
- *
- * Created by FileSystem::open(), freed by FileOps::close().
- */
-struct Inode {
-    FileType type;
-    std::size_t size;
-    const FileOps* ops;
-    void* private_data;
-};
-
-/**
- * @brief An open file handle (per-process).
- */
-struct FileDescriptor {
-    Inode* inode;
-    kstring path;
-    std::size_t offset;
-    int flags;
-};
+class Inode;
+class DirectoryInode;
+class FileSystem;
+class MountPoint;
 
 /**
  * @brief File metadata (for stat() without opening).
@@ -77,37 +47,93 @@ struct DirEntry {
     FileType type;
 };
 
-/**
- * @brief A mounted filesystem (path-based operations).
- *
- * Handles path resolution and inode creation. Does NOT handle read/write.
- */
-struct FileSystem {
-    const char* name;
-    void* private_data;
+class FileSystem {
+public:
+    virtual const char* name() = 0;
+    virtual MountPoint* mount(const char* dir) = 0;
 
-    Inode* (*open)(FileSystem* self, const kstring& path, int flags);
-    int (*stat)(FileSystem* self, const kstring& path, Stat* out);
-    int (*readdir)(FileSystem* self, const kstring& path, kvector<DirEntry>& out);
-    int (*mkdir)(FileSystem* self, const kstring& path, int mode);
+    FileSystem() {};
+    virtual ~FileSystem() = default;
+    FileSystem(const FileSystem&) = delete;
+    FileSystem(FileSystem&&) = delete;
+    FileSystem& operator=(const FileSystem&) = delete;
+    FileSystem& operator=(FileSystem&&) = delete;
+};
+
+class MountPoint {
+public:
+    const char* path;
+    FileSystem* fs;
+    Inode* mounted_on;
+    Inode* root_inode;
+};
+
+class Inode {
+public:
+    MountPoint* mountpoint;
+    Inode* parent;
+    std::uint64_t ino;
+    std::uint64_t size;
+    FileType type;
+    kstring name;
+
+    explicit Inode(MountPoint* mp);
+    Inode() = delete;
+    virtual ~Inode() = default;
+    Inode(const Inode&) = delete;
+    Inode(Inode&&) = delete;
+    Inode& operator=(const Inode&) = delete;
+    Inode& operator=(Inode&&) = delete;
+
+    virtual int open(FileDescriptor* fd, int flags) = 0;
+    virtual int read(FileDescriptor* fd, void* buf, std::size_t count) = 0;
+    virtual int write(FileDescriptor* fd, const void* buf, std::size_t count) = 0;
+    virtual int close(FileDescriptor* fd) = 0;
+    virtual int lseek(FileDescriptor* fd, int offset, int whence) = 0;
+    virtual int stat(Stat* stat) = 0;
+
+    virtual Inode* lookup(const char*) { return nullptr; }
+    virtual int readdir(kvector<DirEntry>&) { return -ENOTDIR; }
+    virtual int mkdir(const char*, int) { return -ENOTDIR; }
+    virtual int create(const char*, int) { return -ENOTDIR; }
+};
+
+class DirectoryInode : public Inode {
+public:
+    klist<Inode*> children;
+
+    explicit DirectoryInode(MountPoint* mpt);
+    DirectoryInode() = delete;
+    virtual ~DirectoryInode() = default;
+    DirectoryInode(const DirectoryInode&) = delete;
+    DirectoryInode(DirectoryInode&&) = delete;
+    DirectoryInode& operator=(const DirectoryInode&) = delete;
+    DirectoryInode& operator=(DirectoryInode&&) = delete;
+
+    int read(FileDescriptor*, void*, std::size_t) final override { return -EISDIR; }
+    int write(FileDescriptor*, const void*, std::size_t) final override { return -EISDIR; }
+    int lseek(FileDescriptor*, int, int) final override { return -EISDIR; }
 };
 
 /**
- * @brief A filesystem mounted at a path.
+ * @brief An open file handle (per-process).
  */
-struct MountPoint {
-    kstring root;
-    FileSystem* filesystem;
+struct FileDescriptor {
+    Inode* inode;
+    kstring path;
+    std::size_t offset;
+    int flags;
 };
 
 // ============================================================================
 // VFS operations - global path-based file access
 // ============================================================================
 
-kstring canonicalize(const kstring& path);
-kstring relative_to_absolute(const kstring& root, const kstring& relative);
-void mount(const kstring& path, FileSystem* fs);
-Inode* open(const kstring& path, int flags);
+kstring getcwd(const Inode* inode);
+void register_mount(const char* path, MountPoint* mp);
+FileDescriptor* open(const char* path, int flags);
+void mount(const char* path, FileSystem* fs, const char* source);
+
 int stat(const kstring& path, Stat* out);
 int readdir(const kstring& path, kvector<DirEntry>& out);
 int mkdir(const kstring& path, int mode);

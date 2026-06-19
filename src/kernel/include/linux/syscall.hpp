@@ -24,6 +24,7 @@ namespace linux {
     constexpr std::uint64_t SYS_MUNMAP       = 11;
     constexpr std::uint64_t SYS_BRK          = 12;
     constexpr std::uint64_t SYS_IOCTL        = 16;
+    constexpr std::uint64_t SYS_READV        = 19;
     constexpr std::uint64_t SYS_WRITEV       = 20;
     constexpr std::uint64_t SYS_NANOSLEEP    = 35;
     constexpr std::uint64_t SYS_GETPID       = 39;

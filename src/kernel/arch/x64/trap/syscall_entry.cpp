@@ -165,6 +165,8 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
         return syscall::sys_munmap(reinterpret_cast<void*>(arg1), arg2);
     case SYS_IOCTL:
         return syscall::sys_ioctl(arg1, arg2, reinterpret_cast<void*>(arg3));
+    case linux::SYS_READV:
+        return syscall::sys_readv(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
     case SYS_WRITEV:
         return syscall::sys_writev(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
     case SYS_BRK:
