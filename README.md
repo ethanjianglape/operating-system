@@ -30,7 +30,7 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 - Per-process address spaces with user/kernel separation
 
 ### Filesystem
-- Unix-like VFS with single dispatch (`fd->inode->ops->read()`)
+- Unix-like VFS via a polymorphic `Inode` base class (`fd->inode->read()`, `write()`, etc. — virtual dispatch, no separate ops table)
 - Initramfs (tar-based) mounted at `/`
 - Devfs mounted at `/dev`
   - `/dev/tty1` - TTY with line editing and command history
@@ -40,15 +40,18 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 ### Process Management
 - ELF64 binary loading from initramfs
 - Ring 3 userspace execution
-- Preemptive scheduling via APIC timer
-- Cooperative scheduling via `sys_yield`
+- Kernel threads (`process::create_kthread`) for in-kernel background work (e.g. the framebuffer compositor), alongside full ELF user processes
+- Preemptive scheduling via APIC timer (user-mode processes only)
+- Cooperative scheduling via `yield_blocked`/`yield_dead` (used internally by blocking syscalls and kernel threads, which are never preempted)
 - Process states: RUNNING, READY, BLOCKED, DEAD
 - Per-process page tables and file descriptor tables
 
 ### Syscalls
-- `sys_read`, `sys_write`, `sys_open`, `sys_close`
-- `sys_exit`, `sys_yield`
-- `sys_sleep_ms` for timed blocking
+- File I/O: `sys_read`, `sys_write`, `sys_readv`, `sys_writev`, `sys_open`, `sys_close`, `sys_ioctl`
+- Filesystem/paths: `sys_stat`, `sys_fstat`, `sys_lseek`, `sys_getcwd`, `sys_chdir`, `sys_fchdir`, `sys_mkdir`, `sys_fcntl`, `sys_getdents64`
+- Process: `sys_getpid`, `sys_exit`/`sys_exit_group`, `sys_set_tid_address`, `sys_arch_prctl`
+- Memory: `sys_brk`, `sys_mmap`, `sys_munmap`
+- Timing: `sys_sleep_ms` (via `SYS_NANOSLEEP`) for timed blocking
 
 ### Hardware Support
 - GDT with ring 0/3 segments
@@ -56,11 +59,12 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 - ACPI table parsing (RSDP, XSDT, MADT)
 - APIC support (LAPIC + IOAPIC)
 - PS/2 keyboard driver with scancode translation
-- Framebuffer console with PSF font rendering
+- Double-buffered framebuffer console with PSF font rendering, flushed at a fixed 30fps by a dedicated kernel thread (not the timer ISR)
 - Serial output (COM1) for kernel logging
 
 ### Infrastructure
 - Dynamic containers (`kstring`, `kvector`, `klist`)
+- Spinlocks matched to context: `kspinlock` (preemption-only) for data only touched by threads/kthreads, `kspinlock_irqsave` (also masks interrupts) for data shared with IRQ handlers
 - In-kernel unit test framework (160+ tests)
 - Modern C++23 with freestanding implementation
 
@@ -79,6 +83,7 @@ os/
 │   │   │   ├── scheduler/          # Process scheduler
 │   │   │   ├── syscall/            # Syscall declarations
 │   │   │   ├── containers/         # kstring, kvector
+│   │   │   ├── exclusive/          # kspinlock, kspinlock_irqsave, katomic
 │   │   │   └── ...
 │   │   ├── lib/                    # Implementations
 │   │   │   ├── fs/                 # VFS, initramfs, devfs, dev_tty, dev_null
@@ -167,12 +172,12 @@ See `src/kernel/CONVENTIONS.md` for namespace and code style conventions.
 **VFS Architecture:**
 ```
 sys_read(fd, buf, count)
-  → fd->inode->ops->read(fd, buf, count)    // single dispatch
+  → fd->inode->read(fd, buf, count)    // virtual dispatch on Inode
         │
-        ├─ fs_file_ops (regular files)
-        │    └─ memcpy from FsFileMeta->data
+        ├─ TmpFileInode::read()        (tmpfs, regular files)
+        │    └─ memcpy from in-memory data buffer
         │
-        └─ tty_ops (char devices)
+        └─ DevTtyInode::read()         (devfs, char devices)
              └─ keyboard input / console output
 ```
 
