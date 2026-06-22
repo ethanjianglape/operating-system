@@ -1,4 +1,5 @@
 #include "containers/kvector.hpp"
+#include "exclusive/katomic.hpp"
 #include "fmt/fmt.hpp"
 #include "fs/devfs/dev_tty.hpp"
 #include "fs/fs.hpp"
@@ -19,7 +20,7 @@ constexpr std::uintptr_t USER_STACK_TOP = USER_STACK_BASE + USER_STACK_SIZE;
 
 constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024;
 
-static std::uint64_t g_pid = 1;
+static katomic<std::uint64_t> g_pid{1};
 
 extern "C" void userspace_entry_trampoline();
 
@@ -52,6 +53,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
     p->fs_base = 0;
     p->tidptr = 0;
+    p->cwd_inode = nullptr;
 
     for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
         auto virt = header.p_vaddr;
@@ -139,11 +141,9 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
     p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
 
-    //fs::Inode* tty_inode = fs::devfs::tty::get_tty_inode();
-
-    fs::FileDescriptor* stdin = fs::open("/dev/tty1", 0);
-    fs::FileDescriptor* stdout = fs::open("/dev/tty1", 0);
-    fs::FileDescriptor* stderr = fs::open("/dev/tty1", 0);
+    fs::FileDescriptor* stdin = fs::open("/dev/tty1", fs::O_RDONLY);
+    fs::FileDescriptor* stdout = fs::open("/dev/tty1", fs::O_WRONLY);
+    fs::FileDescriptor* stderr = fs::open("/dev/tty1", fs::O_WRONLY);
 
     log::debugf("stdin={}, stdout={}, stderr={}", stdin, stdout, stderr);
 
@@ -158,9 +158,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     log::debug("  kernel_rsp = ", fmt::hex{p->kernel_rsp});
     log::debug("  context_frame @ ", fmt::hex{p->context_frame});
     log::debug("  context_frame->r15 = ", fmt::hex{p->context_frame->r15});
-
-    log::debug("p2 context_frame virt = ", fmt::hex{(uint64_t)p->context_frame});
-    log::debug("p2 context_frame phys = ", fmt::hex{arch::vmm::hhdm_virt_to_phys(p->context_frame)});
 
     return p;
 }

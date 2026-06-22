@@ -64,6 +64,7 @@
 #include "percpu.hpp"
 
 #include <arch/x64/cpu/cpu.hpp>
+#include <cstdint>
 #include <fmt/fmt.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
@@ -76,16 +77,32 @@ namespace x64::percpu {
  * in kernel mode, so GS_BASE gets the kernel value. KERNEL_GS_BASE starts
  * as 0 (unused until first SWAPGS when entering userspace).
  */
+
+void early_init()
+{
+    static PerCPU per;
+
+    per.self = &per;
+    per.kernel_rsp = 0;
+    per.user_rsp = 0;
+    per.process = nullptr;
+    per.preemption_enabled = false;
+
+    cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(&per));
+    cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
+}
+
 void init()
 {
     log::init_start("PerCPU");
 
-    PerCPU* per_cpu_data = new PerCPU{};
+    auto* per_cpu_data = new PerCPU{};
 
     per_cpu_data->self = per_cpu_data; // For C++ access via get()
     per_cpu_data->kernel_rsp = 0;      // Set by scheduler before running process
     per_cpu_data->user_rsp = 0;        // Saved by syscall_entry
     per_cpu_data->process = nullptr;   // Set by scheduler
+    per_cpu_data->preemption_enabled = true;
 
     // Set GS_BASE to our per-CPU struct. We're in kernel mode at boot.
     cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(per_cpu_data));
@@ -116,8 +133,38 @@ PerCPU* get()
     return ptr;
 }
 
+bool preemption_enabled()
+{
+    PerCPU* percpu = get();
+
+    if (percpu) {
+        return percpu->preemption_enabled;
+    }
+
+    return false;
+}
+
+void disable_preemption()
+{
+    PerCPU* percpu = get();
+
+    if (percpu) {
+        percpu->preemption_enabled = false;
+    }
+}
+
+void enable_preemption()
+{
+    PerCPU* percpu = get();
+
+    if (percpu) {
+        percpu->preemption_enabled = true;
+    }
+}
+
 process::Process* current_process()
 {
     return get()->process;
 }
+
 }

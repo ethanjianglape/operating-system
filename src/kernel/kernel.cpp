@@ -26,6 +26,7 @@
 void kernel_main()
 {
     x64::cpu::init();
+    x64::percpu::early_init();
     x64::drivers::serial::init();
 
     log::info("MyOS Booted into kernel_main() using Limine.");
@@ -46,19 +47,22 @@ void kernel_main()
 
     x64::cpu::dump();
 
-#ifdef KERNEL_TESTS
-    test::run_all();
-#endif
-
     auto* devfs = new fs::devfs::DevFileSystem{};
     auto* tmpfs = new fs::tmpfs::TmpFileSystem{};
 
     fs::mount("/dev", devfs, nullptr);
     fs::mount("/tmp", tmpfs, nullptr);
 
+#ifdef KERNEL_TESTS
+    test::run_all();
+#endif
+
     console::init();
     fs::devfs::init_tty();
     scheduler::init();
+
+    x64::cpu::sti();
+    x64::percpu::enable_preemption();
 
     while (true) {
         x64::cpu::hlt();

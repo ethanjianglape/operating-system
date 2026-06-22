@@ -8,7 +8,7 @@ class TmpFileInode final : public Inode {
 public:
     kvector<std::uint8_t> data;
 
-    explicit TmpFileInode(MountPoint* mp);
+    TmpFileInode(kstring name, Inode* parent);
 
     int open(FileDescriptor* fd, int flags) override;
     int read(FileDescriptor* fd, void* buf, std::size_t count) override;
@@ -20,7 +20,8 @@ public:
 
 class TmpDirectoryInode final : public DirectoryInode {
 public:
-    explicit TmpDirectoryInode(MountPoint* mp);
+    TmpDirectoryInode(MountPoint* mp);
+    TmpDirectoryInode(kstring name, Inode* parent);
 
     Inode* lookup(const char* name) override;
     int readdir(kvector<DirEntry>& entries) override;
@@ -32,10 +33,8 @@ public:
 };
 
 class TmpMountPoint final : public MountPoint {
-private:
-    int next_ino = 1;
-
 public:
+    int next_ino = 1;
     TmpMountPoint();
 };
 

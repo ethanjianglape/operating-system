@@ -28,8 +28,7 @@ add_compile_options(
   $<$<COMPILE_LANGUAGE:C,CXX>:-mcmodel=kernel>
   $<$<COMPILE_LANGUAGE:C,CXX>:-mabi=sysv>
   $<$<COMPILE_LANGUAGE:C,CXX>:-mno-red-zone>
-  $<$<COMPILE_LANGUAGE:C,CXX>:-mno-80387>
-  $<$<COMPILE_LANGUAGE:C,CXX>:-mno-mmx>
+  $<$<COMPILE_LANGUAGE:C,CXX>:-mgeneral-regs-only>
   $<$<COMPILE_LANGUAGE:C,CXX>:-ffreestanding>
   $<$<COMPILE_LANGUAGE:C,CXX>:-ffunction-sections>
   $<$<COMPILE_LANGUAGE:C,CXX>:-fno-stack-protector>

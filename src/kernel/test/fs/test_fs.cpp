@@ -176,6 +176,166 @@ void test_tmpfs_nested_mkdir()
     test::assert_eq(b->type, fs::FileType::DIRECTORY, "tmpfs: nested 'b' is DIRECTORY");
 }
 
+void test_tmpfs_write_then_read_roundtrip()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("rw.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("rw.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+
+    const char* msg = "hello";
+    int written = file->write(&fd, msg, 5);
+    test::assert_eq(written, 5, "tmpfs: write returns byte count");
+    test::assert_eq(fd.offset, 5ul, "tmpfs: write advances fd offset");
+
+    log::debug("test file->read");
+
+    fd.offset = 0;
+    char buf[5] = {};
+    int read = file->read(&fd, buf, sizeof(buf));
+
+    log::debugf("bytes read={}, buff={}", read, kstring(buf, 5));
+
+    test::assert_eq(read, 5, "tmpfs: read returns byte count");
+    test::assert_eq(kstring(buf, 5), kstring("hello"), "tmpfs: read returns previously written data");
+    test::assert_eq(fd.offset, 5ul, "tmpfs: read advances fd offset");
+}
+
+void test_tmpfs_write_updates_size()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("size.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("size.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    file->write(&fd, "hello world", 11);
+
+    fs::Stat st{};
+    file->stat(&st);
+    test::assert_eq(st.size, static_cast<std::size_t>(11), "tmpfs: write grows inode size");
+}
+
+void test_tmpfs_read_short_at_eof()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("short.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("short.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    file->write(&fd, "hello", 5);
+
+    fd.offset = 0;
+    char buf[1024] = {};
+    int read = file->read(&fd, buf, sizeof(buf));
+    test::assert_eq(read, 5, "tmpfs: read clamps to remaining bytes, not requested count");
+    test::assert_eq(fd.offset, 5ul, "tmpfs: short read advances offset only by bytes read");
+}
+
+void test_tmpfs_read_past_eof_returns_zero()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("eof.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("eof.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    file->write(&fd, "hi", 2);
+
+    char buf[16];
+    int read = file->read(&fd, buf, sizeof(buf));
+    test::assert_eq(read, 0, "tmpfs: read at EOF returns 0");
+}
+
+void test_tmpfs_lseek_set()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("seekset.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("seekset.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    file->write(&fd, "hello world", 11);
+
+    int result = file->lseek(&fd, 3, fs::SEEK_SET);
+    test::assert_eq(result, 0, "tmpfs: lseek SEEK_SET returns 0");
+    test::assert_eq(fd.offset, 3ul, "tmpfs: lseek SEEK_SET sets absolute offset");
+}
+
+void test_tmpfs_lseek_cur()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("seekcur.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("seekcur.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    fd.offset = 5;
+
+    int result = file->lseek(&fd, 2, fs::SEEK_CUR);
+    test::assert_eq(result, 0, "tmpfs: lseek SEEK_CUR returns 0");
+    test::assert_eq(fd.offset, 7ul, "tmpfs: lseek SEEK_CUR adds to current offset");
+
+    result = file->lseek(&fd, -3, fs::SEEK_CUR);
+    test::assert_eq(result, 0, "tmpfs: lseek SEEK_CUR backwards returns 0");
+    test::assert_eq(fd.offset, 4ul, "tmpfs: lseek SEEK_CUR can move backwards");
+}
+
+void test_tmpfs_lseek_end()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("seekend.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("seekend.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    file->write(&fd, "hello world", 11);
+
+    int result = file->lseek(&fd, -4, fs::SEEK_END);
+    test::assert_eq(result, 0, "tmpfs: lseek SEEK_END returns 0");
+    test::assert_eq(fd.offset, 7ul, "tmpfs: lseek SEEK_END is relative to file size");
+}
+
+void test_tmpfs_lseek_negative_result_returns_einval()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("seekneg.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("seekneg.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+    fd.offset = 2;
+
+    int result = file->lseek(&fd, -10, fs::SEEK_CUR);
+    test::assert_eq(result, -EINVAL, "tmpfs: lseek SEEK_CUR below 0 returns -EINVAL");
+    test::assert_eq(fd.offset, 2ul, "tmpfs: failed lseek leaves offset unchanged");
+}
+
+void test_tmpfs_lseek_invalid_whence_returns_einval()
+{
+    fs::tmpfs::TmpMountPoint mp{};
+    auto* root = static_cast<fs::tmpfs::TmpDirectoryInode*>(mp.root_inode);
+    root->create("seekbad.txt", 0);
+    auto* file = static_cast<fs::tmpfs::TmpFileInode*>(root->lookup("seekbad.txt"));
+
+    fs::FileDescriptor fd{};
+    fd.inode = file;
+
+    int result = file->lseek(&fd, 0, 99);
+    test::assert_eq(result, -EINVAL, "tmpfs: lseek with invalid whence returns -EINVAL");
+}
+
 // =========================================================================
 // getcwd tests
 // =========================================================================
@@ -290,9 +450,12 @@ void test_devfs_readdir_has_devices()
     bool found_tty1 = false;
     bool found_tty2 = false;
     for (std::size_t i = 0; i < entries.size(); i++) {
-        if (entries[i].name == "null") found_null = true;
-        if (entries[i].name == "tty1") found_tty1 = true;
-        if (entries[i].name == "tty2") found_tty2 = true;
+        if (entries[i].name == "null")
+            found_null = true;
+        if (entries[i].name == "tty1")
+            found_tty1 = true;
+        if (entries[i].name == "tty2")
+            found_tty2 = true;
     }
     test::assert_true(found_null, "devfs: readdir contains 'null'");
     test::assert_true(found_tty1, "devfs: readdir contains 'tty1'");
@@ -476,6 +639,15 @@ void run()
     test_tmpfs_file_stat();
     test_tmpfs_dir_stat();
     test_tmpfs_nested_mkdir();
+    test_tmpfs_write_then_read_roundtrip();
+    test_tmpfs_write_updates_size();
+    test_tmpfs_read_short_at_eof();
+    test_tmpfs_read_past_eof_returns_zero();
+    test_tmpfs_lseek_set();
+    test_tmpfs_lseek_cur();
+    test_tmpfs_lseek_end();
+    test_tmpfs_lseek_negative_result_returns_einval();
+    test_tmpfs_lseek_invalid_whence_returns_einval();
 
     // getcwd tests
     test_getcwd_root();

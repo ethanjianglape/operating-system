@@ -59,10 +59,10 @@ Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
         return nullptr;
     }
 
-    Inode* current = g_root_mountpoint->root_inode;
     process::Process* proc = arch::percpu::current_process();
+    Inode* current = nullptr;
 
-    if (path.front() == '/' || proc->cwd_inode == nullptr) {
+    if (path.front() == '/' || proc == nullptr || proc->cwd_inode == nullptr) {
         current = g_root_mountpoint->root_inode;
     } else {
         current = proc->cwd_inode;
@@ -138,10 +138,12 @@ FileDescriptor* open(const char* path, int flags)
 
     auto* fd = new FileDescriptor{};
 
-    fd->inode = inode;
     fd->flags = flags;
-    fd->offset = 0;
+    fd->inode = inode;
     fd->path = path;
+    fd->offset = 0;
+
+    inode->open(fd, flags);
 
     return fd;
 }

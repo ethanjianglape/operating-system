@@ -7,6 +7,8 @@
 #include <log/log.hpp>
 #include <test/test.hpp>
 
+#include <utility>
+
 namespace test_klist {
 void test_default_constructor()
 {
@@ -167,7 +169,7 @@ void test_move_constructor()
     l1.push_back(1);
     l1.push_back(2);
     l1.push_back(3);
-    klist<int> l2(static_cast<klist<int>&&>(l1));
+    klist<int> l2(std::move(l1));
     test::assert_eq(l2.size(), 3ul, "move constructor transfers size");
     test::assert_eq(l2[0], 1, "move constructor transfers elements");
     test::assert_true(l1.empty(), "move constructor empties source");
@@ -194,7 +196,7 @@ void test_move_assignment()
     l1.push_back(2);
     l1.push_back(3);
     klist<int> l2;
-    l2 = static_cast<klist<int>&&>(l1);
+    l2 = std::move(l1);
     test::assert_eq(l2.size(), 3ul, "move assignment transfers size");
     test::assert_eq(l2[0], 1, "move assignment transfers elements");
     test::assert_true(l1.empty(), "move assignment empties source");
@@ -386,7 +388,7 @@ void test_nested_move_outer()
     inner.push_back(kstring("string"));
     outer1.push_back(inner);
 
-    klist<klist<kstring>> outer2(static_cast<klist<klist<kstring>>&&>(outer1));
+    klist<klist<kstring>> outer2(std::move(outer1));
 
     test::assert_true(outer1.empty(), "nested move outer: source emptied");
     test::assert_eq(outer2.size(), 1ul, "nested move outer: dest has 1 element");

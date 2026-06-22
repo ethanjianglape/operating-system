@@ -15,6 +15,7 @@
  * scans for consecutive free frames.
  */
 
+#include "exclusive/kspinlock.hpp"
 #include <arch.hpp>
 #include <fmt/fmt.hpp>
 #include <kpanic/kpanic.hpp>
@@ -25,6 +26,7 @@
 #include <cstdint>
 
 namespace pmm {
+
 // Bitmap where each bit represents a 4KiB frame (0 = free, 1 = used)
 static std::size_t frame_bitmap[FRAME_BITMAP_SIZE];
 static std::size_t frame_bitmap_start;
@@ -33,6 +35,8 @@ static std::size_t frame_bitmap_end;
 static std::size_t total_memory;
 static std::size_t total_frames;
 static std::size_t free_frames;
+
+static kspinlock g_pmm_spinlock;
 
 bool is_frame_free(std::size_t frame)
 {
@@ -65,6 +69,8 @@ void set_frame_free(std::size_t frame)
 
 void init()
 {
+    g_pmm_spinlock.lock();
+
     // all pages set to used by default
     for (std::size_t i = 0; i < FRAME_BITMAP_SIZE; i++) {
         frame_bitmap[i] = 0xFFFFFFFFFFFFFFFF;
@@ -73,6 +79,8 @@ void init()
     total_memory = 0;
     total_frames = 0;
     free_frames = 0;
+
+    g_pmm_spinlock.unlock();
 }
 
 /**
@@ -86,12 +94,14 @@ void init()
  */
 void add_free_memory(std::size_t addr, std::size_t len)
 {
+    g_pmm_spinlock.lock();
+
     std::uint64_t end = addr + len;
 
     if (end >= MAX_MEMORY_BYTES) {
         if (addr >= MAX_MEMORY_BYTES) {
             log::warn("Ignoring memory region at ", fmt::hex{addr}, " (beyond max)");
-            return;
+            goto cleanup;
         }
 
         log::warn("Truncating memory region from ", fmt::hex{end}, " to ", fmt::hex{MAX_MEMORY_BYTES});
@@ -104,6 +114,9 @@ void add_free_memory(std::size_t addr, std::size_t len)
 
     set_addr_free(addr, len);
     set_frame_used(0);
+
+cleanup:
+    g_pmm_spinlock.unlock();
 }
 
 std::size_t get_total_memory()
@@ -141,18 +154,25 @@ void set_addr_used(std::size_t addr, std::size_t length)
 
 void free_frame(std::uintptr_t phys)
 {
-    std::size_t frame = phys / FRAME_SIZE;
+    g_pmm_spinlock.lock();
 
+    std::size_t frame = phys / FRAME_SIZE;
     set_frame_free(frame);
+
+    g_pmm_spinlock.unlock();
 }
 
 void free_contiguous_frames(std::uintptr_t phys, std::size_t count)
 {
+    g_pmm_spinlock.lock();
+
     std::size_t frame = phys / FRAME_SIZE;
 
     for (std::size_t i = 0; i < count; i++) {
         set_frame_free(frame + i);
     }
+
+    g_pmm_spinlock.unlock();
 }
 
 /**
@@ -165,12 +185,17 @@ void free_contiguous_frames(std::uintptr_t phys, std::size_t count)
  */
 void* alloc_frame()
 {
+    g_pmm_spinlock.lock();
+
     std::size_t frame = frame_bitmap_start;
 
     while (frame < frame_bitmap_end) {
         if (is_frame_free(frame)) {
             set_frame_used(frame);
             frame_bitmap_start = frame + 1;
+
+            g_pmm_spinlock.unlock();
+
             return (void*)(frame * FRAME_SIZE);
         }
 
@@ -178,8 +203,6 @@ void* alloc_frame()
     }
 
     kpanic("PMM: Out of physical memory");
-
-    return nullptr;
 }
 
 /**
@@ -195,6 +218,8 @@ void* alloc_frame()
  */
 void* alloc_contiguous_frames(std::size_t num_frames)
 {
+    g_pmm_spinlock.lock();
+
     std::size_t consecutive = 0;
     std::size_t start_frame = 0;
 
@@ -210,6 +235,8 @@ void* alloc_contiguous_frames(std::size_t num_frames)
                 for (std::size_t i = start_frame; i < start_frame + num_frames; i++) {
                     set_frame_used(i);
                 }
+
+                g_pmm_spinlock.unlock();
 
                 return reinterpret_cast<void*>(start_frame * FRAME_SIZE);
             }

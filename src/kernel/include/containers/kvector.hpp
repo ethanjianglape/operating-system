@@ -16,7 +16,6 @@
 
 template <typename T>
 concept kvector_storable = requires {
-    requires sizeof(T) > 0;
     requires sizeof(T) <= 4096;
     requires std::destructible<T>;
     requires std::move_constructible<T> || std::copy_constructible<T>;
@@ -33,9 +32,9 @@ private:
     std::size_t _size;
     std::size_t _capacity;
 
-    void ensure_capacity(std::size_t new_size)
+    void ensure_capacity(std::size_t new_capacity)
     {
-        while (_capacity < new_size) {
+        while (_capacity < new_capacity) {
             grow();
         }
     }
@@ -253,7 +252,27 @@ public:
         kfree(_data);
     }
 
-    void reserve(std::size_t capacity) { ensure_capacity(capacity); }
+    void reserve(std::size_t new_capcity) { ensure_capacity(new_capcity); }
+
+    void resize(std::size_t new_size)
+    {
+        if (new_size <= _size) {
+            // for now, do not allow shrinking
+            return;
+        }
+
+        ensure_capacity(new_size);
+
+        for (std::size_t i = _size; i < new_size; i++) {
+            if constexpr (std::is_trivially_constructible_v<T>) {
+                _data[i] = T{};
+            } else {
+                new (&_data[i]) T{};
+            }
+        }
+
+        _size = new_size;
+    }
 
     std::size_t capacity() const { return _capacity; }
     std::size_t size() const { return _size; }

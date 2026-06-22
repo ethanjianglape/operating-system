@@ -9,6 +9,7 @@ struct InterruptFrame;
 }
 
 namespace x64::cpu {
+
 void init();
 
 // Dump current CPU state (control regs, segment regs, flags)
@@ -120,4 +121,19 @@ inline void cli()
 {
     asm volatile("cli" : : : "memory");
 }
+
+[[gnu::always_inline]]
+inline std::uint64_t read_rflags()
+{
+    std::uint64_t rflags;
+    asm volatile("pushfq; pop %0" : "=r"(rflags) : : "memory");
+    return rflags;
+}
+
+[[gnu::always_inline]]
+inline void write_rflags(std::uint64_t rflags)
+{
+    asm volatile("push %%rax; popfq" : : "a"(rflags) : "memory", "cc");
+}
+
 }

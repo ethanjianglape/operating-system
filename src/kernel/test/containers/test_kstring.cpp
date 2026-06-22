@@ -6,6 +6,8 @@
 #include <log/log.hpp>
 #include <test/test.hpp>
 
+#include <utility>
+
 namespace test_kstring {
 void test_default_constructor()
 {
@@ -151,7 +153,7 @@ void test_copy_constructor()
 void test_move_constructor()
 {
     kstring s1("hello");
-    kstring s2(static_cast<kstring&&>(s1));
+    kstring s2(std::move(s1));
     test::assert_true(s2 == "hello", "move constructor transfers content");
     test::assert_true(s1.empty(), "move constructor empties source");
 }
@@ -168,7 +170,7 @@ void test_move_assignment()
 {
     kstring s1("hello");
     kstring s2;
-    s2 = static_cast<kstring&&>(s1);
+    s2 = std::move(s1);
     test::assert_true(s2 == "hello", "move assignment transfers content");
     test::assert_true(s1.empty(), "move assignment empties source");
 }

@@ -77,7 +77,7 @@ void init()
 int putchar(char c)
 {
     while (!is_transmit_ready()) {
-        cpu::hlt();
+        cpu::pause();
     }
 
     if (c == '\n') {

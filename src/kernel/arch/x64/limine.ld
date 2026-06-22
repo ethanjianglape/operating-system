@@ -37,6 +37,12 @@ SECTIONS
         KEEP(*(.limine_requests_end))
     } :rodata
 
+    .init_array ALIGN(8) : {
+        PROVIDE_HIDDEN(__init_array_start = .);
+        KEEP(*(.init_array .init_array.*))
+        PROVIDE_HIDDEN(__init_array_end = .);
+    } :rodata
+
     .data ALIGN(4K) : {
         *(.data .data.*)
     } :data

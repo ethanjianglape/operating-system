@@ -1,4 +1,6 @@
 #include "arch/x64/cpu/cpu.hpp"
+#include "arch/x64/percpu/percpu.hpp"
+#include "exclusive/kspinlock.hpp"
 #include "kpanic/kpanic.hpp"
 #include <arch.hpp>
 #include <log/log.hpp>
@@ -9,13 +11,19 @@
 #include <cstdint>
 
 namespace scheduler {
+
 static klist<process::Process*> g_processes;
+static kspinlock g_processes_lock;
 
 extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
 static void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFrame*)
 {
-    arch::cpu::cli();
+    if (!arch::percpu::preemption_enabled()) {
+        return;
+    }
+
+    g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         auto* proc = g_processes[i];
@@ -27,12 +35,17 @@ static void wake_sleeping_processes(std::uintmax_t ticks, arch::irq::InterruptFr
         }
     }
 
-    arch::cpu::sti();
+    g_processes_lock.unlock();
 }
 
 static void terminate_dead_processes(std::uintmax_t, arch::irq::InterruptFrame*)
 {
-    arch::cpu::cli();
+    if (!arch::percpu::preemption_enabled()) {
+        return;
+    }
+
+    g_processes_lock.lock();
+
     auto* current_proc = arch::percpu::current_process();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
@@ -47,7 +60,7 @@ static void terminate_dead_processes(std::uintmax_t, arch::irq::InterruptFrame*)
         g_processes.erase(i);
     }
 
-    arch::cpu::sti();
+    g_processes_lock.unlock();
 }
 
 static process::Process* find_ready_kernel_process()
@@ -76,14 +89,22 @@ static process::Process* find_ready_user_process()
     return nullptr;
 };
 
-static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
+static void preempt_process(std::uintmax_t, arch::irq::InterruptFrame* frame)
 {
+    if (!arch::percpu::preemption_enabled()) {
+        log::debug("preemption disabled");
+        return;
+    }
+
+    g_processes_lock.lock();
+
     auto* per_cpu = arch::percpu::get();
     auto* current = per_cpu->process;
+    process::Process* p = nullptr;
 
     if (current != nullptr) {
         if (frame->cs == 0x08) {
-            return;
+            goto cleanup;
         }
 
         per_cpu->process = nullptr;
@@ -119,7 +140,7 @@ static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
         current->r15 = frame->r15;
     }
 
-    process::Process* p = find_ready_user_process();
+    p = find_ready_user_process();
 
     if (p != nullptr) {
         g_processes.rotate_next();
@@ -159,11 +180,14 @@ static void schedule(std::uintmax_t, arch::irq::InterruptFrame* frame)
         frame->r14 = p->r14;
         frame->r15 = p->r15;
     }
+
+cleanup:
+    g_processes_lock.unlock();
 }
 
 void wake_single(process::WaitReason wait_reason)
 {
-    arch::cpu::cli();
+    g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         auto* p = g_processes[i];
@@ -176,12 +200,12 @@ void wake_single(process::WaitReason wait_reason)
     }
 
 cleanup:
-    arch::cpu::sti();
+    g_processes_lock.unlock();
 }
 
 void wake_all(process::WaitReason wait_reason)
 {
-    arch::cpu::cli();
+    g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         auto* p = g_processes[i];
@@ -192,7 +216,7 @@ void wake_all(process::WaitReason wait_reason)
         }
     }
 
-    arch::cpu::sti();
+    g_processes_lock.unlock();
 }
 
 void yield_dead(process::Process* proc)
@@ -203,11 +227,21 @@ void yield_dead(process::Process* proc)
     per_cpu->process = nullptr;
 
     while (true) {
+        g_processes_lock.lock();
+
         process::Process* ready = find_ready_kernel_process();
 
         if (ready == nullptr) {
             ready = find_ready_user_process();
         }
+
+        if (ready != nullptr) {
+            ready->state = process::ProcessState::RUNNING;
+        }
+
+        bool no_other_processes = g_processes.empty();
+
+        g_processes_lock.unlock();
 
         if (ready != nullptr) {
             arch::cpu::cli();
@@ -218,12 +252,10 @@ void yield_dead(process::Process* proc)
             arch::vmm::switch_pml4(ready->pml4);
             arch::tls::set_fs_base(ready->fs_base);
 
-            ready->state = process::ProcessState::RUNNING;
-
             context_switch(&proc->kernel_rsp_saved, ready->kernel_rsp_saved);
 
             kpanic("Context switch back to DEAD process");
-        } else if (g_processes.empty()) {
+        } else if (no_other_processes) {
             log::info("========================================");
             log::info("All processes terminated. System halted.");
             log::info("========================================");
@@ -250,13 +282,23 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
     process->wait_reason = wait_reason;
 
     while (process->state == process::ProcessState::BLOCKED) {
+        g_processes_lock.lock();
+
         process::Process* ready = find_ready_kernel_process();
 
         if (ready == nullptr) {
             ready = find_ready_user_process();
         }
 
-        if (ready != nullptr && ready->pid != process->pid) {
+        const bool can_context_switch = ready != nullptr && ready->pid != process->pid;
+
+        if (can_context_switch) {
+            ready->state = process::ProcessState::RUNNING;
+        }
+
+        g_processes_lock.unlock();
+
+        if (can_context_switch) {
             arch::cpu::cli();
 
             auto* per_cpu = arch::percpu::get();
@@ -265,8 +307,6 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
 
             arch::vmm::switch_pml4(ready->pml4);
             arch::tls::set_fs_base(ready->fs_base);
-
-            ready->state = process::ProcessState::RUNNING;
 
             context_switch(&process->kernel_rsp_saved, ready->kernel_rsp_saved);
 
@@ -284,22 +324,20 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
 
 void add_process(process::Process* p)
 {
+    g_processes_lock.lock();
     g_processes.push_back(p);
+    g_processes_lock.unlock();
 }
 
 void init()
 {
-    arch::cpu::cli();
-
     log::init_start("Scheduler");
     log::info("Registering schedulers...");
 
     timer::register_handler(wake_sleeping_processes);
     timer::register_handler(terminate_dead_processes);
-    timer::register_handler(schedule);
+    timer::register_handler(preempt_process);
 
     log::init_end("Scheduler");
-
-    arch::cpu::sti();
 }
 }

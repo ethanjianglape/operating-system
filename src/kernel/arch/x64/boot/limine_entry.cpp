@@ -15,9 +15,27 @@
 
 extern void kernel_main();
 
+extern "C" {
+using ctor_fn = void (*)();
+extern ctor_fn __init_array_start[];
+extern ctor_fn __init_array_end[];
+}
+
+// Calls C++ global/static constructors. The linker collects one function
+// pointer per non-trivially-constructed global into .init_array; nothing
+// calls them unless we walk that table ourselves before touching any global.
+static void call_global_constructors()
+{
+    for (ctor_fn* fn = __init_array_start; fn != __init_array_end; ++fn) {
+        (*fn)();
+    }
+}
+
 extern "C" [[noreturn]]
 void _start(void)
 {
+    call_global_constructors();
+
     kernel_main();
 
     while (true) {

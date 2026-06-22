@@ -29,7 +29,7 @@ static fs::FileDescriptor* get_fd(int fd)
 {
     process::Process* process = arch::percpu::current_process();
 
-    if (fd < 0 || (std::size_t)fd >= process->fd_table.size()) {
+    if (fd < 0 || process == nullptr || (std::size_t)fd >= process->fd_table.size()) {
         return nullptr;
     }
 
@@ -218,17 +218,17 @@ long sys_getcwd(char* buffer, std::size_t size)
 int sys_chdir(const char* path)
 {
     auto* proc = arch::percpu::current_process();
-    fs::FileDescriptor* desc = fs::open(path, fs::O_RDONLY);
+    auto* fd = fs::open(path, fs::O_RDONLY);
 
-    if (!desc) {
+    if (fd == nullptr) {
         return -EBADF;
     }
 
-    if (desc->inode->type != fs::FileType::DIRECTORY) {
+    if (fd->inode->type != fs::FileType::DIRECTORY) {
         return -ENOTDIR;
     }
 
-    proc->cwd_inode = desc->inode;
+    proc->cwd_inode = fd->inode;
 
     return 0;
 }

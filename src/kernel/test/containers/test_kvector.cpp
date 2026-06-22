@@ -6,6 +6,8 @@
 #include <log/log.hpp>
 #include <test/test.hpp>
 
+#include <utility>
+
 namespace test_kvector {
 void test_default_constructor()
 {
@@ -102,7 +104,7 @@ void test_copy_constructor()
 void test_move_constructor()
 {
     kvector<int> v1 = {1, 2, 3};
-    kvector<int> v2(static_cast<kvector<int>&&>(v1));
+    kvector<int> v2(std::move(v1));
     test::assert_eq(v2.size(), 3ul, "move constructor transfers size");
     test::assert_eq(v2[0], 1, "move constructor transfers elements");
     test::assert_true(v1.empty(), "move constructor empties source");
@@ -121,7 +123,7 @@ void test_move_assignment()
 {
     kvector<int> v1 = {1, 2, 3};
     kvector<int> v2;
-    v2 = static_cast<kvector<int>&&>(v1);
+    v2 = std::move(v1);
     test::assert_eq(v2.size(), 3ul, "move assignment transfers size");
     test::assert_true(v1.empty(), "move assignment empties source");
 }
@@ -366,7 +368,7 @@ void test_nested_kvector_grow_outer()
         inner.push_back(i * 10);
         inner.push_back(i * 10 + 1);
         inner.push_back(i * 10 + 2);
-        outer.push_back(static_cast<kvector<int>&&>(inner));
+        outer.push_back(std::move(inner));
     }
 
     test::assert_eq(outer.size(), 20ul, "nested grow outer: 20 inner vectors");
@@ -387,7 +389,7 @@ void test_nested_kvector_grow_inner_after_outer_grows()
     for (int i = 0; i < 20; i++) {
         kvector<int> inner;
         inner.push_back(i);
-        outer.push_back(static_cast<kvector<int>&&>(inner));
+        outer.push_back(std::move(inner));
     }
 
     // Now grow an inner vector (tests that move left inner in valid state)
@@ -408,7 +410,7 @@ void test_nested_kvector_multiple_grows()
     // Create 50 lines (forces outer to grow: 16→32→64)
     for (int line = 0; line < 50; line++) {
         kvector<std::uint8_t> new_line;
-        lines.push_back(static_cast<kvector<std::uint8_t>&&>(new_line));
+        lines.push_back(std::move(new_line));
     }
 
     test::assert_eq(lines.size(), 50ul, "nested multiple: 50 lines created");
@@ -452,7 +454,7 @@ void test_nested_kvector_move_semantics()
     bool all_moves_worked = true;
     for (int i = 0; i < 20; i++) {
         kvector<int> inner = {i, i + 1, i + 2};
-        outer.push_back(static_cast<kvector<int>&&>(inner));
+        outer.push_back(std::move(inner));
         if (!inner.empty()) {
             all_moves_worked = false;
         }
@@ -480,7 +482,7 @@ void test_prefilled_inner_vectors()
     // Create pre-filled lines (like console init)
     for (std::size_t i = 0; i < LINE_COUNT; i++) {
         kvector<int> line(LINE_WIDTH, 0); // Pre-fill with zeros
-        lines.push_back(static_cast<kvector<int>&&>(line));
+        lines.push_back(std::move(line));
     }
 
     test::assert_eq(lines.size(), LINE_COUNT, "prefilled: correct line count");
@@ -512,7 +514,7 @@ void test_grow_outer_with_prefilled_inner()
     // Initial lines
     for (int i = 0; i < 10; i++) {
         kvector<int> line(LINE_WIDTH, i);
-        lines.push_back(static_cast<kvector<int>&&>(line));
+        lines.push_back(std::move(line));
     }
 
     // Write to first 10 lines
@@ -523,7 +525,7 @@ void test_grow_outer_with_prefilled_inner()
     // Grow outer vector by adding more lines (triggers outer growth at 16)
     for (int i = 10; i < 30; i++) {
         kvector<int> line(LINE_WIDTH, i);
-        lines.push_back(static_cast<kvector<int>&&>(line));
+        lines.push_back(std::move(line));
     }
 
     // Verify original lines survived outer growth
@@ -552,7 +554,7 @@ void test_interleaved_access_and_growth()
         // Add a new line
         kvector<int> new_line;
         new_line.push_back(cycle * 100);
-        lines.push_back(static_cast<kvector<int>&&>(new_line));
+        lines.push_back(std::move(new_line));
 
         // Write to a previous line (if any exist)
         if (cycle > 0) {
@@ -586,7 +588,7 @@ void test_stress_many_small_inner_grows()
     // Create 100 lines
     for (int i = 0; i < 100; i++) {
         kvector<std::uint8_t> line;
-        lines.push_back(static_cast<kvector<std::uint8_t>&&>(line));
+        lines.push_back(std::move(line));
     }
 
     // Grow each line by 1 element in round-robin fashion

@@ -16,7 +16,9 @@ enum class FileType : std::uint8_t {
     CHAR_DEVICE = 3,
 };
 
-constexpr int O_RDONLY = 0x01;
+constexpr int O_RDONLY = 0x00;
+constexpr int O_WRONLY = 0x01;
+constexpr int O_RDWR = 0x02;
 
 constexpr int SEEK_SET = 0;
 constexpr int SEEK_CUR = 1;
@@ -45,6 +47,16 @@ struct Stat {
 struct DirEntry {
     kstring name;
     FileType type;
+};
+
+/**
+ * @brief An open file handle (per-process).
+ */
+struct FileDescriptor {
+    Inode* inode;
+    kstring path;
+    std::size_t offset;
+    int flags;
 };
 
 class FileSystem {
@@ -113,16 +125,6 @@ public:
     int read(FileDescriptor*, void*, std::size_t) final override { return -EISDIR; }
     int write(FileDescriptor*, const void*, std::size_t) final override { return -EISDIR; }
     int lseek(FileDescriptor*, int, int) final override { return -EISDIR; }
-};
-
-/**
- * @brief An open file handle (per-process).
- */
-struct FileDescriptor {
-    Inode* inode;
-    kstring path;
-    std::size_t offset;
-    int flags;
 };
 
 // ============================================================================

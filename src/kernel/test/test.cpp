@@ -23,6 +23,18 @@ void run();
 namespace test_kvector {
 void run();
 }
+namespace test_kunique_ptr {
+void run();
+}
+namespace test_kshared_ptr {
+void run();
+}
+namespace test_katomic {
+void run();
+}
+namespace test_kspinlock {
+void run();
+}
 namespace test_kstring {
 void run();
 }
@@ -77,6 +89,10 @@ void run_all()
     test_slab::run();
     test_kmalloc::run();
     test_kvector::run();
+    test_kunique_ptr::run();
+    test_kshared_ptr::run();
+    test_katomic::run();
+    test_kspinlock::run();
     test_kstring::run();
     test_klist::run();
     test_fmt::run();
@@ -87,21 +103,22 @@ void run_all()
     auto slabs_after_test = slab::total_slabs();
 
     log::info("======================================");
-    log::info("            Test Results              ");
+    log::info("          Unit Test Results           ");
     log::info("======================================");
     log::info("* PMM free frames before test: ", frames_before_test);
     log::info("* PMM free frames after test:  ", frames_after_test);
     log::info("* Slab count before test: ", slabs_before_test);
     log::info("* Slab count after test:  ", slabs_after_test);
-    log::info("* Passed: ", results.passed, "/", results.passed + results.failed);
-    log::info("* Failed: ", results.failed, "/", results.passed + results.failed);
-    log::info("======================================");
+    log::info("* Tests Passed: ", results.passed, "/", results.passed + results.failed);
+    log::info("* Tests Failed: ", results.failed, "/", results.passed + results.failed);
 
     if (results.failed == 0) {
-        log::success("All tests passed!");
+        log::info("* All tests passed!");
     } else {
-        log::error("Some tests failed!");
+        log::error("!! Some tests failed !!");
     }
+
+    log::info("======================================");
 }
 }
 

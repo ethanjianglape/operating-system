@@ -56,13 +56,6 @@ static inline void write_cr4(std::uint64_t cr4)
     asm volatile("mov %0, %%cr4" : : "r"(cr4));
 }
 
-static inline std::uint64_t read_rflags()
-{
-    std::uint64_t value;
-    asm volatile("pushfq; pop %0" : "=r"(value));
-    return value;
-}
-
 static inline std::uint16_t read_cs()
 {
     std::uint16_t value;

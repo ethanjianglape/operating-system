@@ -27,9 +27,15 @@ struct [[gnu::packed]] PerCPU {
     std::uint64_t kernel_rsp;  // Where to switch RSP on syscall entry
     std::uint64_t user_rsp;    // User's RSP saved here during syscall
     process::Process* process; // Current process running on this CPU
+    bool preemption_enabled;
 };
 
+void early_init();
 void init();
+
+bool preemption_enabled();
+void disable_preemption();
+void enable_preemption();
 
 PerCPU* get();
 

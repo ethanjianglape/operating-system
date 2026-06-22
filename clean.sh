@@ -9,23 +9,19 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 log_section() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "${YELLOW}[$CURRENT_TIME] $1${NC}"
+    echo -e "${YELLOW}$1${NC}"
 }
 
 log_failure() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "${RED}[$CURRENT_TIME] FAILURE! $1${NC}"
+    echo -e "${RED} FAILURE!$1${NC}"
 }
 
 log_success() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "${GREEN}[$CURRENT_TIME] $1${NC}"
+    echo -e "${GREEN}$1${NC}"
 }
 
 log() {
-    CURRENT_TIME=$(date +"%T.%3N")
-    echo -e "[$CURRENT_TIME] $1${NC}"
+    echo -e "$1${NC}"
 }
 
 log_section "Cleaning MyOS build and output files"
