@@ -1,16 +1,19 @@
-#include "arch/x64/interrupts/irq.hpp"
-#include "memory/memory.hpp"
-#include "timer/timer.hpp"
 #include <arch.hpp>
 #include <console/console.hpp>
 #include <crt/crt.h>
+#include <exclusive/kspinlock.hpp>
 #include <fmt/fmt.hpp>
 #include <framebuffer/framebuffer.hpp>
 #include <log/log.hpp>
+#include <memory/memory.hpp>
+#include <process/process.hpp>
+#include <scheduler/scheduler.hpp>
+#include <timer/timer.hpp>
 
 #include <cstdint>
 
 namespace framebuffer {
+
 static std::uint64_t fb_width;
 static std::uint64_t fb_height;
 static std::uint64_t fb_num_pixels;
@@ -25,6 +28,8 @@ static std::uint8_t* vram_buff = nullptr;
 static std::uint8_t* vram_buff_end = nullptr;
 
 static bool needs_redraw = false;
+
+static kspinlock g_fb_spinlock;
 
 std::uint32_t get_screen_width()
 {
@@ -47,8 +52,25 @@ void draw_timer(std::uintmax_t ticks, arch::irq::InterruptFrame*)
     constexpr int ms_per_frame = 1000 / target_fps;
 
     if (ticks % ms_per_frame == 0 && needs_redraw) {
-        buffer();
-        needs_redraw = false;
+        scheduler::wake_all(process::WaitReason::FRAMEBUFFER);
+    }
+}
+
+static void redraw()
+{
+    g_fb_spinlock.lock();
+    memcpy(vram, static_cast<const std::uint8_t*>(vram_buff), vram_size);
+    needs_redraw = false;
+    g_fb_spinlock.unlock();
+}
+
+static void redraw_kthread()
+{
+    auto* self = arch::percpu::current_process();
+
+    while (true) {
+        redraw();
+        scheduler::yield_blocked(self, process::WaitReason::FRAMEBUFFER);
     }
 }
 
@@ -69,6 +91,9 @@ void init(const FrameBufferInfo& info)
     vram_buff = kalloc<std::uint8_t>(vram_size);
     vram_buff_end = vram_buff + vram_size;
 
+    process::Process* proc = process::create_kthread(redraw_kthread);
+    scheduler::add_process(proc);
+
     timer::register_handler(draw_timer);
 
     log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
@@ -81,7 +106,19 @@ void init(const FrameBufferInfo& info)
     log::init_end("Framebuffer");
 }
 
-void draw_pixel(std::uint32_t x,
+static std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y)
+{
+    std::uint32_t pixel = 0x00000000;
+    const auto offset = get_pixel_offset(x, y);
+
+    pixel |= vram_buff[offset + RGB_OFFB];
+    pixel |= vram_buff[offset + RGB_OFFG] << 8;
+    pixel |= vram_buff[offset + RGB_OFFR] << 16;
+
+    return pixel;
+}
+
+static void draw_pixel(std::uint32_t x,
     std::uint32_t y,
     std::uint8_t red,
     std::uint8_t green,
@@ -96,7 +133,7 @@ void draw_pixel(std::uint32_t x,
     needs_redraw = true;
 }
 
-void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color)
+static void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color)
 {
     const auto blue = color & 0xFF;
     const auto green = (color >> 8) & 0xFF;
@@ -105,23 +142,24 @@ void draw_pixel(std::uint32_t x, std::uint32_t y, std::uint32_t color)
     draw_pixel(x, y, red, green, blue);
 }
 
-void buffer()
-{
-    memcpy(vram, static_cast<const std::uint8_t*>(vram_buff), vram_size);
-}
-
 void invert_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h)
 {
+    g_fb_spinlock.lock();
+
     for (std::uint32_t px = x; px < x + w; px++) {
         for (std::uint32_t py = y; py < y + h; py++) {
             const auto color = get_pixel(px, py);
             draw_pixel(px, py, ~color);
         }
     }
+
+    g_fb_spinlock.unlock();
 }
 
 void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h, std::uint32_t color)
 {
+    g_fb_spinlock.lock();
+
     const auto blue = color & 0xFF;
     const auto green = (color >> 8) & 0xFF;
     const auto red = (color >> 16) & 0xFF;
@@ -131,18 +169,29 @@ void draw_rec(std::uint32_t x, std::uint32_t y, std::uint32_t w, std::uint32_t h
             draw_pixel(px, py, red, green, blue);
         }
     }
+
+    g_fb_spinlock.unlock();
 }
 
-std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y)
+void draw_glyph(const std::uint32_t x, const std::uint32_t y, std::uint32_t w, std::uint32_t h, const std::uint8_t* glyph, std::uint32_t fg, std::uint32_t bg)
 {
-    std::uint32_t pixel = 0x00000000;
-    const auto offset = get_pixel_offset(x, y);
+    g_fb_spinlock.lock();
 
-    pixel |= vram_buff[offset + RGB_OFFB];
-    pixel |= vram_buff[offset + RGB_OFFG] << 8;
-    pixel |= vram_buff[offset + RGB_OFFR] << 16;
+    for (std::uint8_t gy = 0; gy < h; gy++) {
+        const std::uint8_t byte = glyph[gy];
 
-    return pixel;
+        for (std::uint8_t gx = 0; gx < w; gx++) {
+            const std::uint8_t pixel = (byte >> (w - gx - 1)) & 1;
+
+            if (pixel == 1) {
+                draw_pixel(x + gx, y + gy, fg);
+            } else {
+                draw_pixel(x + gx, y + gy, bg);
+            }
+        }
+    }
+
+    g_fb_spinlock.unlock();
 }
 
 void clear_black()
@@ -152,6 +201,8 @@ void clear_black()
 
 void clear(std::uint32_t color)
 {
+    g_fb_spinlock.lock();
+
     auto* start = reinterpret_cast<std::uint32_t*>(vram_buff);
     auto* end = reinterpret_cast<std::uint32_t*>(vram_buff_end);
 
@@ -159,6 +210,8 @@ void clear(std::uint32_t color)
         *start = color;
         start++;
     }
+
+    g_fb_spinlock.unlock();
 }
 
 void log()
@@ -167,4 +220,5 @@ void log()
     log::info("VRAM   = ", fmt::hex{vram});
     log::info("VRAM Back Buffer = ", fmt::hex{vram_buff});
 }
+
 }

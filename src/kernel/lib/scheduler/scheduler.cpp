@@ -1,8 +1,6 @@
-#include "arch/x64/cpu/cpu.hpp"
-#include "arch/x64/percpu/percpu.hpp"
-#include "exclusive/kspinlock.hpp"
-#include "kpanic/kpanic.hpp"
 #include <arch.hpp>
+#include <exclusive/kspinlock_irqsave.hpp>
+#include <kpanic/kpanic.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
 #include <scheduler/scheduler.hpp>
@@ -13,7 +11,7 @@
 namespace scheduler {
 
 static klist<process::Process*> g_processes;
-static kspinlock g_processes_lock;
+static kspinlock_irqsave g_processes_lock;
 
 extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
@@ -92,7 +90,6 @@ static process::Process* find_ready_user_process()
 static void preempt_process(std::uintmax_t, arch::irq::InterruptFrame* frame)
 {
     if (!arch::percpu::preemption_enabled()) {
-        log::debug("preemption disabled");
         return;
     }
 

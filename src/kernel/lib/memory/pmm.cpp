@@ -15,7 +15,7 @@
  * scans for consecutive free frames.
  */
 
-#include "exclusive/kspinlock.hpp"
+#include "exclusive/kspinlock_irqsave.hpp"
 #include <arch.hpp>
 #include <fmt/fmt.hpp>
 #include <kpanic/kpanic.hpp>
@@ -36,7 +36,7 @@ static std::size_t total_memory;
 static std::size_t total_frames;
 static std::size_t free_frames;
 
-static kspinlock g_pmm_spinlock;
+static kspinlock_irqsave g_pmm_spinlock;
 
 bool is_frame_free(std::size_t frame)
 {

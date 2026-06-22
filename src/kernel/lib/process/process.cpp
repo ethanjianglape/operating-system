@@ -3,6 +3,7 @@
 #include "fmt/fmt.hpp"
 #include "fs/devfs/dev_tty.hpp"
 #include "fs/fs.hpp"
+#include "scheduler/scheduler.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
 #include <cstddef>
@@ -24,6 +25,80 @@ static katomic<std::uint64_t> g_pid{1};
 
 extern "C" void userspace_entry_trampoline();
 
+extern "C" void kthread_entry_trampoline()
+{
+    auto* proc = arch::percpu::current_process();
+
+    (reinterpret_cast<void (*)()>(proc->rip))();
+
+    scheduler::yield_dead(proc);
+}
+
+Process* create_kthread(void (*entry)())
+{
+    auto* p = new Process{};
+
+    log::debugf("create kthread addr={}", reinterpret_cast<std::uintptr_t>(entry));
+
+    p->pid = g_pid++;
+    p->state = ProcessState::READY;
+    p->wait_reason = WaitReason::NONE;
+    p->exit_status = 0;
+    p->heap_break = 0;
+    p->pml4 = arch::vmm::get_kernel_pml4();
+    p->fd_table = {};
+    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+    p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
+    p->wake_time_ms = 0;
+    p->has_kernel_context = true;
+    p->has_user_context = false;
+    p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
+    p->fs_base = 0;
+    p->tidptr = 0;
+    p->cwd_inode = nullptr;
+
+    p->rsp = p->kernel_rsp;
+
+    // Initial instruction pointer
+    p->rip = reinterpret_cast<std::uintptr_t>(entry);
+
+    // IF enabled, reserved bit 1 set
+    p->rflags = 0x202;
+
+    // Segment selectors with RPL=3 for userspace
+    p->cs = 0x20 | 3; // User Code
+    p->ss = 0x18 | 3; // User Data
+
+    // Zero all general purpose registers
+    p->rax = 0;
+    p->rbx = 0;
+    p->rcx = 0;
+    p->rdx = 0;
+    p->rsi = 0;
+    p->rdi = 0;
+    p->rbp = 0;
+    p->r8 = 0;
+    p->r9 = 0;
+    p->r10 = 0;
+    p->r11 = 0;
+    p->r12 = 0;
+    p->r13 = 0;
+    p->r14 = 0;
+    p->r15 = 0;
+
+    p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
+    p->context_frame->r15 = 0xABC12300; // Magic numbers to help with debugging
+    p->context_frame->r14 = 0x67676767;
+    p->context_frame->r13 = 0xDEADBEEF;
+    p->context_frame->r12 = 0xABABABAB;
+    p->context_frame->rbp = 0x77777777;
+    p->context_frame->rbx = 0x12345678;
+    p->context_frame->rip = reinterpret_cast<std::uintptr_t>(kthread_entry_trampoline);
+    p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+
+    return p;
+}
+
 Process* load_elf(std::uint8_t* buffer, std::size_t size)
 {
     elf::Elf64_File file = elf::parse_file(buffer, size);
@@ -41,7 +116,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->state = ProcessState::READY;
     p->wait_reason = WaitReason::NONE;
     p->exit_status = 0;
-    p->entry = file.entry;
     p->heap_break = 0;
     p->pml4 = pml4;
     p->fd_table = {};

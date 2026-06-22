@@ -1,19 +1,19 @@
-#include "arch/x64/percpu/percpu.hpp"
-#include "containers/kstring.hpp"
-
-#include "kpanic/kpanic.hpp"
-#include "process/process.hpp"
 #include <algo/algo.hpp>
+#include <arch/x64/percpu/percpu.hpp>
+#include <containers/kstring.hpp>
+#include <exclusive/kspinlock_irqsave.hpp>
 #include <fs/devfs/devfs.hpp>
 #include <fs/fs.hpp>
+#include <kpanic/kpanic.hpp>
 #include <log/log.hpp>
+#include <process/process.hpp>
 
 namespace fs {
 
 static MountPoint* g_root_mountpoint;
 static kvector<MountPoint*> g_mountpoints;
 
-static devfs::DevFileSystem dev_fs{};
+static kspinlock_irqsave g_fs_spinlock;
 
 Inode::Inode(MountPoint* mp)
     : mountpoint{mp}
@@ -35,6 +35,7 @@ kstring getcwd(const Inode* inode)
         if (inode->name.length() > 0) {
             path.push_front(inode->name);
         }
+
         inode = inode->parent;
     }
 
@@ -110,6 +111,7 @@ Inode* resolve_path(const kstring& path)
 
 void register_mount(const char* path, MountPoint* mp)
 {
+    g_fs_spinlock.lock();
     mp->path = path;
 
     if (g_root_mountpoint == nullptr) {
@@ -118,6 +120,7 @@ void register_mount(const char* path, MountPoint* mp)
     }
 
     g_mountpoints.push_back(mp);
+    g_fs_spinlock.unlock();
 }
 
 void mount(const char* path, FileSystem* fs, const char* source)

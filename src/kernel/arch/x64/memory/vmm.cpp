@@ -445,6 +445,8 @@ PageTableEntry* create_user_pml4()
 
 void switch_pml4(PageTableEntry* pml4) { asm volatile("mov %0, %%cr3" : : "r"(hhdm_virt_to_phys(pml4)) : "memory"); }
 
+PageTableEntry* get_kernel_pml4() { return kernel_pml4; }
+
 void switch_kernel_pml4() { switch_pml4(kernel_pml4); }
 
 /**

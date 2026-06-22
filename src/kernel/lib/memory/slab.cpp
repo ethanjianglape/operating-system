@@ -66,6 +66,7 @@
 #include <cstdint>
 
 namespace slab {
+
 constexpr std::uint8_t chunks_per_slab(std::size_t chunk_size)
 {
     return (arch::vmm::PAGE_SIZE - sizeof(Slab)) / chunk_size;
@@ -120,18 +121,23 @@ SizeClass* get_size_class(std::size_t bytes)
     if (bytes <= SIZE_32) {
         return &classes[0];
     }
+
     if (bytes <= SIZE_64) {
         return &classes[1];
     }
+
     if (bytes <= SIZE_128) {
         return &classes[2];
     }
+
     if (bytes <= SIZE_256) {
         return &classes[3];
     }
+
     if (bytes <= SIZE_512) {
         return &classes[4];
     }
+
     if (bytes <= SIZE_1024) {
         return &classes[5];
     }

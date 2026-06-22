@@ -72,6 +72,7 @@ void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pag
 
 void free_page_tables(PageTableEntry* pml4);
 
+PageTableEntry* get_kernel_pml4();
 PageTableEntry* create_user_pml4();
 
 void switch_pml4(PageTableEntry* pml4);

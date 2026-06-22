@@ -1,4 +1,3 @@
-#include "fs/tmpfs/tmpfs.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
@@ -15,6 +14,7 @@
 #include <framebuffer/framebuffer.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/devfs/devfs.hpp>
+#include <fs/tmpfs/tmpfs.hpp>
 #include <log/log.hpp>
 #include <scheduler/scheduler.hpp>
 

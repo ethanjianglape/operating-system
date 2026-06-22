@@ -3,19 +3,19 @@
 #ifdef KERNEL_TESTS
 
 #include <arch.hpp>
-#include <exclusive/kspinlock.hpp>
+#include <exclusive/kspinlock_irqsave.hpp>
 #include <log/log.hpp>
 #include <test/test.hpp>
 
 #include <cstdint>
 
-namespace test_kspinlock {
+namespace test_kspinlock_irqsave {
 
 constexpr std::uint64_t IF_BIT = 1ull << 9;
 
 void test_basic_lock_unlock()
 {
-    kspinlock lock;
+    kspinlock_irqsave lock;
     lock.lock();
     lock.unlock();
     test::assert_true(true, "lock() followed by unlock() completes without hanging");
@@ -23,7 +23,7 @@ void test_basic_lock_unlock()
 
 void test_relock_after_unlock()
 {
-    kspinlock lock;
+    kspinlock_irqsave lock;
 
     lock.lock();
     lock.unlock();
@@ -35,7 +35,7 @@ void test_relock_after_unlock()
 
 void test_disables_preemption_while_held()
 {
-    kspinlock lock;
+    kspinlock_irqsave lock;
     lock.lock();
     test::assert_true(!arch::percpu::preemption_enabled(), "preemption is disabled while spinlock is held");
     lock.unlock();
@@ -43,7 +43,7 @@ void test_disables_preemption_while_held()
 
 void test_restores_preemption_after_unlock()
 {
-    kspinlock lock;
+    kspinlock_irqsave lock;
     bool before = arch::percpu::preemption_enabled();
 
     lock.lock();
@@ -54,7 +54,7 @@ void test_restores_preemption_after_unlock()
 
 void test_disables_interrupts_while_held()
 {
-    kspinlock lock;
+    kspinlock_irqsave lock;
     lock.lock();
     test::assert_eq(arch::cpu::read_rflags() & IF_BIT, 0ull, "interrupts are disabled while spinlock is held");
     lock.unlock();
@@ -62,7 +62,7 @@ void test_disables_interrupts_while_held()
 
 void test_restores_interrupts_after_unlock()
 {
-    kspinlock lock;
+    kspinlock_irqsave lock;
     std::uint64_t before = arch::cpu::read_rflags() & IF_BIT;
 
     lock.lock();
@@ -77,7 +77,7 @@ void test_preserves_already_disabled_interrupts()
 
     arch::cpu::cli();
 
-    kspinlock lock;
+    kspinlock_irqsave lock;
     lock.lock();
     lock.unlock();
 
@@ -93,7 +93,7 @@ void test_preserves_already_disabled_preemption()
 
     arch::percpu::disable_preemption();
 
-    kspinlock lock;
+    kspinlock_irqsave lock;
     lock.lock();
     lock.unlock();
 
@@ -107,7 +107,7 @@ void test_preserves_already_disabled_preemption()
 
 void run()
 {
-    log::info("Running kspinlock tests...");
+    log::info("Running kspinlock_irqsave tests...");
 
     test_basic_lock_unlock();
     test_relock_after_unlock();

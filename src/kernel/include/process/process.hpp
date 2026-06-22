@@ -22,6 +22,7 @@ enum class WaitReason : std::uint8_t {
     NONE = 0,
     KEYBOARD = 1,
     SLEEP = 2,
+    FRAMEBUFFER = 3
 };
 
 struct ProcessAllocation {
@@ -40,7 +41,6 @@ struct Process {
 
     // Address space
     arch::vmm::PageTableEntry* pml4;
-    std::uintptr_t entry;
     std::uintptr_t heap_break;
     std::uintptr_t mmap_min_addr;
 
@@ -74,6 +74,8 @@ struct Process {
 };
 
 Process* create_process(std::uint8_t* buffer, std::size_t size);
+
+Process* create_kthread(void (*entry)());
 
 void terminate_process(Process* process);
 }

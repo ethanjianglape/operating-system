@@ -226,19 +226,7 @@ void draw_character_at(char c, std::size_t row, std::size_t col, std::uint32_t f
 
     const std::uint8_t* glyph = fonts::get_glyph(c);
 
-    for (std::uint8_t y = 0; y < fonts::FONT_HEIGHT; y++) {
-        const std::uint8_t byte = glyph[y];
-
-        for (std::uint8_t x = 0; x < fonts::FONT_WIDTH; x++) {
-            const std::uint8_t pixel = (byte >> (fonts::FONT_WIDTH - x - 1)) & 1;
-
-            if (pixel == 1) {
-                fb::draw_pixel(pixel_x + x, pixel_y + y, fg);
-            } else {
-                fb::draw_pixel(pixel_x + x, pixel_y + y, bg);
-            }
-        }
-    }
+    fb::draw_glyph(pixel_x, pixel_y, fonts::FONT_WIDTH, fonts::FONT_HEIGHT, glyph, fg, bg);
 }
 
 int put(char c)

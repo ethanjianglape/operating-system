@@ -1,16 +1,20 @@
 #include "keyboard.hpp"
-#include "containers/klist.hpp"
 
+#include <containers/klist.hpp>
 #include <containers/kvector.hpp>
+#include <exclusive/kspinlock_irqsave.hpp>
 #include <log/log.hpp>
 
 namespace x64::drivers::keyboard {
+
 static klist<KeyEvent> event_buffer;
 
 static bool shift_held = false;
 static bool control_held = false;
 static bool alt_held = false;
 static bool caps_lock = false;
+
+static kspinlock_irqsave g_keyboard_spinlock;
 
 void update_modifiers(ScanCode scancode, ExtendedScanCode extended, bool released)
 {
@@ -40,12 +44,17 @@ bool is_caps_lock_on() { return caps_lock; }
 
 void push_event(const KeyEvent& event)
 {
+    g_keyboard_spinlock.lock();
     event_buffer.push_back(event);
+    g_keyboard_spinlock.unlock();
 }
 
 KeyEvent* poll()
 {
+    g_keyboard_spinlock.lock();
+
     if (event_buffer.empty()) {
+        g_keyboard_spinlock.unlock();
         return nullptr;
     }
 
@@ -53,6 +62,8 @@ KeyEvent* poll()
     static KeyEvent current_event;
     current_event = event_buffer.front();
     event_buffer.erase(0);
+
+    g_keyboard_spinlock.unlock();
 
     return &current_event;
 }
