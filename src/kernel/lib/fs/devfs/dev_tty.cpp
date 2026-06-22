@@ -372,8 +372,8 @@ void init_tty()
 {
     log::init_start("/dev/tty");
 
-    run_tty_program("/bin/shell");
-    //run_tty_program("/bin/musl");
+    // run_tty_program("/bin/shell");
+    run_tty_program("/bin/musl");
 
     log::init_end("/dev/tty");
 }

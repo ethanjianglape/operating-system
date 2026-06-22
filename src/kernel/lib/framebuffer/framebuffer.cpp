@@ -46,16 +46,6 @@ inline constexpr std::size_t get_pixel_offset(std::uint32_t x, std::uint32_t y)
     return (y * fb_pitch) + (x * (fb_bpp / 8));
 }
 
-void draw_timer(std::uintmax_t ticks, arch::irq::InterruptFrame*)
-{
-    constexpr int target_fps = 30;
-    constexpr int ms_per_frame = 1000 / target_fps;
-
-    if (ticks % ms_per_frame == 0 && needs_redraw) {
-        scheduler::wake_all(process::WaitReason::FRAMEBUFFER);
-    }
-}
-
 static void redraw()
 {
     g_fb_spinlock.lock();
@@ -66,11 +56,15 @@ static void redraw()
 
 static void redraw_kthread()
 {
-    auto* self = arch::percpu::current_process();
+    constexpr int target_fps = 30;
+    constexpr int ms_per_frame = 1000 / target_fps;
 
     while (true) {
         redraw();
-        scheduler::yield_blocked(self, process::WaitReason::FRAMEBUFFER);
+
+        auto* self = arch::percpu::current_process();
+        self->wake_time_ms = timer::get_ticks() + ms_per_frame;
+        scheduler::yield_blocked(self, process::WaitReason::SLEEP);
     }
 }
 
@@ -91,10 +85,7 @@ void init(const FrameBufferInfo& info)
     vram_buff = kalloc<std::uint8_t>(vram_size);
     vram_buff_end = vram_buff + vram_size;
 
-    process::Process* proc = process::create_kthread(redraw_kthread);
-    scheduler::add_process(proc);
-
-    timer::register_handler(draw_timer);
+    scheduler::add_process(process::create_kthread(redraw_kthread));
 
     log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
     log::info("Framebuffer # pixels: ", fb_num_pixels);

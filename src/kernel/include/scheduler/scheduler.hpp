@@ -5,6 +5,11 @@
 namespace scheduler {
 void init();
 
+// Called directly by apic_timer_handler, not via timer::register_handler —
+// it may context_switch() into a different process and not return for an
+// arbitrary time, which the generic per-tick handler list does not allow.
+void preempt();
+
 void wake_single(process::WaitReason wait_reason);
 void wake_all(process::WaitReason wait_reason);
 

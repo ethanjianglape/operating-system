@@ -96,6 +96,7 @@
 
 #include "apic.hpp"
 #include <acpi/madt.hpp>
+#include <scheduler/scheduler.hpp>
 #include <timer/timer.hpp>
 
 #include <arch/x64/cpu/cpu.hpp>
@@ -440,16 +441,30 @@ void init()
 /**
  * @brief Timer interrupt handler called every LAPIC timer tick.
  *
- * Increments the global tick counter and signals End of Interrupt.
+ * Signals End of Interrupt, runs the generic per-tick handlers (assumed to
+ * all return promptly within this same tick), then runs the scheduler's
+ * preemption logic as a separate, explicit last step.
  *
  * @param vector The interrupt vector number (unused).
  *
- * @warning Must call send_eoi() or no further timer interrupts will occur.
+ * @warning EOI must happen before scheduler::preempt(), not after.
+ *          preempt() may context_switch() directly into a different
+ *          process's dormant call stack and not return to this exact
+ *          invocation until the originally-interrupted process is
+ *          rescheduled — possibly much later. If EOI were sent afterward,
+ *          it would never fire for this interrupt, and no further timer
+ *          interrupts would ever occur.
+ *
+ * @note scheduler::preempt() is called directly here rather than through
+ *       timer::register_handler() specifically because of the above — that
+ *       mechanism is a plain vector of handlers assumed to always return
+ *       promptly, which preempt() cannot promise.
  */
 void apic_timer_handler(irq::InterruptFrame* frame)
 {
-    timer::tick(frame);
     send_eoi();
+    timer::tick(frame);
+    scheduler::preempt();
 }
 
 /**

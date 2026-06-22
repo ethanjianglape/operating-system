@@ -1,35 +1,45 @@
-#include "containers/kvector.hpp"
-#include "exclusive/katomic.hpp"
-#include "fmt/fmt.hpp"
-#include "fs/devfs/dev_tty.hpp"
-#include "fs/fs.hpp"
-#include "scheduler/scheduler.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
-#include <cstddef>
-#include <cstdint>
+#include <exclusive/katomic.hpp>
+#include <fmt/fmt.hpp>
+#include <fs/devfs/dev_tty.hpp>
+#include <fs/fs.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
 #include <memory/slab.hpp>
 #include <process/elf.hpp>
 #include <process/process.hpp>
+#include <scheduler/scheduler.hpp>
+
+#include <cstddef>
+#include <cstdint>
 
 namespace process {
+
 constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
-constexpr std::size_t USER_STACK_SIZE = 16 * 1024; // 16KiB
+constexpr std::uintptr_t USER_STACK_SIZE = 64 * 1024;   // 16KiB
 constexpr std::uintptr_t USER_STACK_TOP = USER_STACK_BASE + USER_STACK_SIZE;
 
-constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024;
+constexpr std::uintptr_t KERNEL_STACK_SIZE = 64 * 1024; // 16KiB
 
 static katomic<std::uint64_t> g_pid{1};
 
 extern "C" void userspace_entry_trampoline();
 
-extern "C" void kthread_entry_trampoline()
+static void kthread_entry_trampoline()
 {
-    auto* proc = arch::percpu::current_process();
+    // context_switch()'s `ret` never touches rflags — IF here is whatever
+    // it was at the call site that dispatched us (e.g. 0 if reached from
+    // inside the timer ISR). userspace_entry_trampoline gets this for free
+    // via its own iretq; we don't have one, so set it explicitly.
+    arch::cpu::sti();
 
-    (reinterpret_cast<void (*)()>(proc->rip))();
+    auto* proc = arch::percpu::current_process();
+    auto* entry_func = reinterpret_cast<void (*)()>(proc->entry);
+
+    log::debugf("kthread trampoline entry={}", fmt::hex{proc->entry});
+
+    entry_func();
 
     scheduler::yield_dead(proc);
 }
@@ -41,7 +51,7 @@ Process* create_kthread(void (*entry)())
     log::debugf("create kthread addr={}", reinterpret_cast<std::uintptr_t>(entry));
 
     p->pid = g_pid++;
-    p->state = ProcessState::READY;
+    p->state = ProcessState::NEW;
     p->wait_reason = WaitReason::NONE;
     p->exit_status = 0;
     p->heap_break = 0;
@@ -50,41 +60,13 @@ Process* create_kthread(void (*entry)())
     p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
     p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
     p->wake_time_ms = 0;
-    p->has_kernel_context = true;
-    p->has_user_context = false;
     p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
     p->fs_base = 0;
     p->tidptr = 0;
     p->cwd_inode = nullptr;
+    p->entry = reinterpret_cast<std::uintptr_t>(entry);
 
-    p->rsp = p->kernel_rsp;
-
-    // Initial instruction pointer
-    p->rip = reinterpret_cast<std::uintptr_t>(entry);
-
-    // IF enabled, reserved bit 1 set
-    p->rflags = 0x202;
-
-    // Segment selectors with RPL=3 for userspace
-    p->cs = 0x20 | 3; // User Code
-    p->ss = 0x18 | 3; // User Data
-
-    // Zero all general purpose registers
-    p->rax = 0;
-    p->rbx = 0;
-    p->rcx = 0;
-    p->rdx = 0;
-    p->rsi = 0;
-    p->rdi = 0;
-    p->rbp = 0;
-    p->r8 = 0;
-    p->r9 = 0;
-    p->r10 = 0;
-    p->r11 = 0;
-    p->r12 = 0;
-    p->r13 = 0;
-    p->r14 = 0;
-    p->r15 = 0;
+    log::debugf("kthread entry={}", fmt::hex{p->entry});
 
     p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
     p->context_frame->r15 = 0xABC12300; // Magic numbers to help with debugging
@@ -113,7 +95,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     auto* p = new Process{};
 
     p->pid = g_pid++;
-    p->state = ProcessState::READY;
+    p->state = ProcessState::NEW;
     p->wait_reason = WaitReason::NONE;
     p->exit_status = 0;
     p->heap_break = 0;
@@ -122,8 +104,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
     p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
     p->wake_time_ms = 0;
-    p->has_kernel_context = true;
-    p->has_user_context = true;
     p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
     p->fs_base = 0;
     p->tidptr = 0;
@@ -164,9 +144,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
         .virt_addr = USER_STACK_BASE,
         .num_pages = stack_pages});
 
-    // Initial instruction pointer
-    p->rip = file.entry;
-
     // Set up initial stack for Linux ABI compatibility
     // musl libc expects: argc, argv[], NULL, envp[], NULL, auxv[], AT_NULL
     // All zeros: argc=0, argv/envp terminated by NULL, auxv terminated by AT_NULL(0,0)
@@ -179,35 +156,9 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     *(--stack) = 0; // argv terminator (NULL)
     *(--stack) = 0; // argc = 0
 
-    p->rsp = reinterpret_cast<std::uintptr_t>(stack);
-
-    // IF enabled, reserved bit 1 set
-    p->rflags = 0x202;
-
-    // Segment selectors with RPL=3 for userspace
-    p->cs = 0x20 | 3; // User Code
-    p->ss = 0x18 | 3; // User Data
-
-    // Zero all general purpose registers
-    p->rax = 0;
-    p->rbx = 0;
-    p->rcx = 0;
-    p->rdx = 0;
-    p->rsi = 0;
-    p->rdi = 0;
-    p->rbp = 0;
-    p->r8 = 0;
-    p->r9 = 0;
-    p->r10 = 0;
-    p->r11 = 0;
-    p->r12 = 0;
-    p->r13 = 0;
-    p->r14 = 0;
-    p->r15 = 0;
-
     p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
-    p->context_frame->r15 = p->rip;
-    p->context_frame->r14 = p->rsp;
+    p->context_frame->r15 = file.entry;
+    p->context_frame->r14 = reinterpret_cast<std::uintptr_t>(stack);
     p->context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
     p->context_frame->r12 = 0xABABABAB;
     p->context_frame->rbp = 0x77777777;

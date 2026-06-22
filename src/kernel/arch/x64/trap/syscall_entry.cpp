@@ -125,13 +125,6 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
 {
     using namespace linux;
 
-    auto* process = x64::percpu::current_process();
-
-    // Track context state for scheduler (see INSIGHTS.md "Why the scheduler
-    // must check CS before context switching")
-    process->has_kernel_context = true;
-    process->has_user_context = false;
-
     const std::uint64_t syscall_num = frame->rax;
     const std::uint64_t arg1 = frame->rdi;
     const std::uint64_t arg2 = frame->rsi;

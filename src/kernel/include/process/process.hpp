@@ -1,16 +1,16 @@
 #pragma once
 
 #include "arch/x64/context/context.hpp"
-#include "containers/kstring.hpp"
-#include "containers/kvector.hpp"
-#include "fs/fs.hpp"
 #include <arch.hpp>
+#include <containers/kvector.hpp>
+#include <fs/fs.hpp>
 
 #include <cstddef>
 #include <cstdint>
 
 namespace process {
 enum class ProcessState : std::uint8_t {
+    NEW = 0,
     RUNNING = 1,
     READY = 2,
     BLOCKED = 3,
@@ -46,10 +46,11 @@ struct Process {
 
     std::uint8_t* kernel_stack;      // Base of kernel stack
     std::uintptr_t kernel_rsp;       // Top of stack (initially)
-    std::uintptr_t kernel_rsp_saved; // Used for context switching within syscall
+    std::uintptr_t kernel_rsp_saved; // The ONLY resume point — every
+                                      // suspension (preemptive or
+                                      // cooperative) goes through
+                                      // context_switch() against this.
     arch::context::ContextFrame* context_frame;
-    bool has_kernel_context;         // Can be resumed via context_switch
-    bool has_user_context;           // Can be resumed via schedule/iretq
 
     // VMM page info
     kvector<ProcessAllocation> allocations;
@@ -60,14 +61,7 @@ struct Process {
     // Sleep
     std::uint64_t wake_time_ms;
 
-    // Save CPU state
-    std::uintptr_t rip;
-    std::uintptr_t rsp;
-    std::uintptr_t rflags;
-
-    std::uint64_t cs, ss;
-    std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-    std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+    std::uintptr_t entry;
 
     std::uint64_t fs_base; // For thread local storage (TLS)
     int* tidptr;

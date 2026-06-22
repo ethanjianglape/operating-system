@@ -6,7 +6,7 @@ int main(void)
 {
     puts("Hello from musl userspace!");
 
-    sleep(10);
+    /* sleep(10); */
 
     return 0;
     /*
