@@ -5,6 +5,7 @@
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
 #include <arch/x64/drivers/serial/serial.hpp>
+#include <arch/x64/gdt/gdt.hpp>
 #include <arch/x64/memory/vmm.hpp>
 #include <arch/x64/percpu/percpu.hpp>
 #include <arch/x64/tls/tls.hpp>
@@ -20,4 +21,5 @@ namespace context = ::x64::context;
 namespace trap = ::x64::trap;
 namespace percpu = ::x64::percpu;
 namespace tls = ::x64::tls;
+namespace gdt = ::x64::gdt;
 }

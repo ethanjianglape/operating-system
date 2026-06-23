@@ -58,7 +58,11 @@ int sys_read(int fd, void* buffer, std::size_t count)
         return -EBADF;
     }
 
-    return desc->inode->read(desc, buffer, count);
+    int read = desc->inode->read(desc, buffer, count);
+
+    log::debugf("sys_readv done {}", read);
+
+    return read;
 }
 
 int sys_write(int fd, const void* buffer, std::size_t count)
@@ -102,6 +106,8 @@ int sys_readv(int fd, const linux::iovec* iov, int iovcnt)
         total += read;
     }
 
+    log::debugf("sys_readv done {}", total);
+
     return total;
 }
 
@@ -126,6 +132,8 @@ int sys_writev(int fd, const linux::iovec* iov, int iovcnt)
             continue;
         }
 
+        log::debug("desc->inode->write()");
+
         int written = desc->inode->write(desc, iov[i].iov_base, iov[i].iov_len);
 
         if (written < 0) {
@@ -134,6 +142,8 @@ int sys_writev(int fd, const linux::iovec* iov, int iovcnt)
 
         total += written;
     }
+
+    log::debugf("sys_writev done {}", total);
 
     return total;
 }

@@ -107,6 +107,8 @@ void preempt()
 
     process::Process* p = find_ready_process();
 
+    // log::debugf("preempting process {}", fmt::hex{p});
+
     if (p == nullptr || p == current) {
         // p == current shouldn't normally happen (find_ready_process()
         // doesn't return RUNNING processes), but yield_blocked's own
@@ -116,6 +118,7 @@ void preempt()
         // to maintain that invariant. Dispatching a process into itself
         // would push a context_switch frame and then jump to its own
         // stale, already-on-the-call-stack resume point — stack corruption.
+        // log::warn("no processes found to preempt");
         g_processes_lock.unlock();
         return;
     }
@@ -128,13 +131,14 @@ void preempt()
 
     p->state = process::ProcessState::RUNNING;
 
-    g_processes_lock.unlock();
-
     per_cpu->process = p;
     per_cpu->kernel_rsp = p->kernel_rsp;
 
     arch::vmm::switch_pml4(p->pml4);
     arch::tls::set_fs_base(p->fs_base);
+    arch::gdt::set_kernel_stack(p->kernel_rsp);
+
+    g_processes_lock.unlock();
 
     // current == nullptr means we're preempting out of the idle loop in
     // kernel_main, which has no Process to save into — discard is never
@@ -151,6 +155,7 @@ void preempt()
 
     arch::vmm::switch_pml4(current->pml4);
     arch::tls::set_fs_base(current->fs_base);
+    arch::gdt::set_kernel_stack(current->kernel_rsp);
 }
 
 void wake_single(process::WaitReason wait_reason)
@@ -220,6 +225,7 @@ void yield_dead(process::Process* proc)
 
             arch::vmm::switch_pml4(ready->pml4);
             arch::tls::set_fs_base(ready->fs_base);
+            arch::gdt::set_kernel_stack(ready->kernel_rsp);
 
             context_switch(&proc->kernel_rsp_saved, ready->kernel_rsp_saved);
 
@@ -285,6 +291,9 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
 
             arch::vmm::switch_pml4(ready->pml4);
             arch::tls::set_fs_base(ready->fs_base);
+            arch::gdt::set_kernel_stack(ready->kernel_rsp);
+
+            log::debugf("cooperative switch to process {}, old rsp={}, new rsp={}", fmt::hex{ready}, fmt::hex{process->kernel_rsp_saved}, fmt::hex{ready->kernel_rsp_saved});
 
             context_switch(&process->kernel_rsp_saved, ready->kernel_rsp_saved);
 
@@ -293,6 +302,7 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
 
             arch::vmm::switch_pml4(process->pml4);
             arch::tls::set_fs_base(process->fs_base);
+            arch::gdt::set_kernel_stack(process->kernel_rsp);
             arch::cpu::sti();
         } else {
             arch::cpu::sti();
@@ -313,7 +323,7 @@ void init()
     log::init_start("Scheduler");
     log::info("Registering schedulers...");
 
-    add_process(process::create_kthread(reaper_kthread));
+    // add_process(process::create_kthread(reaper_kthread));
 
     log::init_end("Scheduler");
 }

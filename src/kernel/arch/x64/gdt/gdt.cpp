@@ -230,6 +230,18 @@ void init_tss()
 }
 
 /**
+ * @brief Updates TSS.RSP0 to the given stack top.
+ *
+ * Called on every process switch so that a ring3->ring0 transition (an
+ * interrupt or exception taken from userspace) lands on the CURRENTLY
+ * running process's own kernel stack, rather than the static boot-time one.
+ */
+void set_kernel_stack(std::uintptr_t rsp0)
+{
+    tss.rsp0 = rsp0;
+}
+
+/**
  * @brief Logs a GDT entry's fields for debugging.
  * @param entry The GDT entry to log.
  * @param i The index of the entry in the GDT.

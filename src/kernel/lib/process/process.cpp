@@ -17,7 +17,7 @@
 namespace process {
 
 constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
-constexpr std::uintptr_t USER_STACK_SIZE = 64 * 1024;   // 16KiB
+constexpr std::uintptr_t USER_STACK_SIZE = 16 * 1024;   // 16KiB
 constexpr std::uintptr_t USER_STACK_TOP = USER_STACK_BASE + USER_STACK_SIZE;
 
 constexpr std::uintptr_t KERNEL_STACK_SIZE = 64 * 1024; // 16KiB

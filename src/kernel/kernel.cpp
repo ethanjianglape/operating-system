@@ -106,9 +106,9 @@ void kernel_main()
     fs::devfs::init_tty();
     scheduler::init();
 
-    scheduler::add_process(process::create_kthread(kthread1));
-    scheduler::add_process(process::create_kthread(kthread2));
-    scheduler::add_process(process::create_kthread(kthread3));
+    // scheduler::add_process(process::create_kthread(kthread1));
+    // scheduler::add_process(process::create_kthread(kthread2));
+    // scheduler::add_process(process::create_kthread(kthread3));
 
     x64::percpu::enable_preemption();
     x64::cpu::sti();

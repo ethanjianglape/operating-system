@@ -188,7 +188,7 @@ void process_command(char* cmd)
 
 int main(void)
 {
-    puts("MyOS Shell");
+    puts("MyOS Shell asdf asdf asdf");
     puts("Type 'help' for available commands.\n");
 
     char buf[256];

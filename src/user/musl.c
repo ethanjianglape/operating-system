@@ -5,10 +5,12 @@
 int main(void)
 {
     puts("Hello from musl userspace!");
-
-    /* sleep(10); */
+    puts("line 2");
+    puts("line 3");
+    puts("line 4");
 
     return 0;
+
     /*
     DIR* dir = opendir("/dev");
 

@@ -1,3 +1,4 @@
+#include "timer/timer.hpp"
 #include <arch.hpp>
 #include <cerrno>
 #include <console/console.hpp>
@@ -372,8 +373,8 @@ void init_tty()
 {
     log::init_start("/dev/tty");
 
-    // run_tty_program("/bin/shell");
-    run_tty_program("/bin/musl");
+    run_tty_program("/bin/shell");
+    // run_tty_program("/bin/musl");
 
     log::init_end("/dev/tty");
 }
@@ -389,7 +390,11 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
     buffer_index = 0;
 
     while (true) {
+        log::debug("start keyboard loop");
+
         while (keyboard::KeyEvent* event = keyboard::poll()) {
+            log::debugf("keyboard event found {}", event);
+
             keyboard::ScanCode scancode = event->scancode;
             keyboard::ExtendedScanCode extended = event->extended_scancode;
 
@@ -401,6 +406,8 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
             bool ctrl = event->control_held;
 
             char ascii = scancode_to_ascii(scancode, caps);
+
+            log::debugf("ascii = {}", ascii);
 
             if (ctrl) {
                 process_ctrl(scancode, extended);
@@ -437,7 +444,9 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
 
         auto* process = arch::percpu::current_process();
 
+        log::debug("dev_tty yielding");
         scheduler::yield_blocked(process, process::WaitReason::KEYBOARD);
+        log::debug("dev_tty returned");
     }
 }
 

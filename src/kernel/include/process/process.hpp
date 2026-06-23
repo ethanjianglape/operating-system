@@ -47,9 +47,9 @@ struct Process {
     std::uint8_t* kernel_stack;      // Base of kernel stack
     std::uintptr_t kernel_rsp;       // Top of stack (initially)
     std::uintptr_t kernel_rsp_saved; // The ONLY resume point — every
-                                      // suspension (preemptive or
-                                      // cooperative) goes through
-                                      // context_switch() against this.
+                                     // suspension (preemptive or
+                                     // cooperative) goes through
+                                     // context_switch() against this.
     arch::context::ContextFrame* context_frame;
 
     // VMM page info

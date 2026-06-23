@@ -87,4 +87,14 @@ struct [[gnu::packed]] GdtTable {
 };
 
 void init();
+
+/**
+ * @brief Updates TSS.RSP0 — the kernel stack the CPU switches to on a
+ * ring3->ring0 transition (hardware interrupt/exception taken from
+ * userspace). Must be called on every process switch, mirroring how
+ * PerCPU::kernel_rsp is kept in sync for the SYSCALL entry path. Without
+ * this, every process's userspace traps land on the same static boot-time
+ * stack, corrupting whichever other process's saved state is sitting there.
+ */
+void set_kernel_stack(std::uintptr_t rsp0);
 }

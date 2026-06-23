@@ -31,9 +31,14 @@
  *   │     0x08 = kernel code    0x10 = kernel data                           │
  *   │     0x18 = user data      0x20 = user code                             │
  *   │                                                                        │
- *   │   STAR = (0x10 << 48) | (0x08 << 32)                                   │
+ *   │   SYSRET forces RPL=3 onto the resulting CS selector, but NOT onto     │
+ *   │   SS — SS gets (base+8) loaded completely raw. So the base must        │
+ *   │   already encode RPL 3 for SS to come out right; we get CS "for       │
+ *   │   free" either way since hardware fixes it up regardless.              │
+ *   │                                                                        │
+ *   │   STAR = (0x13 << 48) | (0x08 << 32)                                   │
  *   │     SYSCALL: CS=0x08, SS=0x10 (kernel)                                 │
- *   │     SYSRET:  CS=0x10+16=0x20, SS=0x10+8=0x18 (user, with RPL=3)        │
+ *   │     SYSRET:  CS=0x13+16=0x23, SS=0x13+8=0x1B (user, RPL=3 both)        │
  *   ├────────────────────────────────────────────────────────────────────────┤
  *   │ MSR_LSTAR (0xC0000082) — Long Mode SYSCALL Target                      │
  *   │   Address of syscall_entry (in syscall_entry.s)                        │
@@ -133,6 +138,8 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
     const std::uint64_t arg5 = frame->r8;
     const std::uint64_t arg6 = frame->r9;
 
+    log::debugf("syscall ss={}, cs={}", fmt::hex{frame->ss}, fmt::hex{frame->cs});
+
     switch (syscall_num) {
     case SYS_READ:
         return syscall::sys_read(arg1, reinterpret_cast<char*>(arg2), arg3);
@@ -158,10 +165,19 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
         return syscall::sys_munmap(reinterpret_cast<void*>(arg1), arg2);
     case SYS_IOCTL:
         return syscall::sys_ioctl(arg1, arg2, reinterpret_cast<void*>(arg3));
-    case linux::SYS_READV:
-        return syscall::sys_readv(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
-    case SYS_WRITEV:
-        return syscall::sys_writev(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
+    case linux::SYS_READV: {
+        log::debug("sys_readv syscall enter");
+        const auto read = syscall::sys_readv(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
+        log::debugf("sys_readv syscall done {}", read);
+        return read;
+    }
+    case SYS_WRITEV: {
+        log::debug("sys_writev syscall enter");
+        const auto wrote = syscall::sys_writev(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
+        log::debugf("sys_writev syscall done {}", wrote);
+        return wrote;
+    }
+
     case SYS_BRK:
         return syscall::sys_brk(reinterpret_cast<void*>(arg1));
     case SYS_EXIT:
@@ -202,10 +218,11 @@ void init()
     log::init_start("Syscall");
 
     // STAR MSR encodes segment selectors for both SYSCALL and SYSRET:
-    //   [63:48] = 0x10: SYSRET base. CPU computes CS=base+16=0x20, SS=base+8=0x18
+    //   [63:48] = 0x13: SYSRET base. CPU computes CS=base+16=0x23, SS=base+8=0x1B
     //   [47:32] = 0x08: SYSCALL target. CS=0x08 (kernel code), SS=CS+8=0x10 (kernel data)
-    // Note: SYSRET adds 16/8 and ORs with 3 for RPL, so user gets CS=0x23, SS=0x1B
-    std::uint64_t star = (0x10UL << 48) | (0x08UL << 32);
+    // SYSRET forces RPL=3 onto CS, but loads SS raw (no RPL forcing) — base is
+    // 0x13 (not 0x10) so base+8 already lands on 0x1B instead of 0x18.
+    std::uint64_t star = (0x13UL << 48) | (0x08UL << 32);
     std::uint64_t lstar = reinterpret_cast<std::uint64_t>(syscall_entry);
     std::uint64_t sfmask = SFMASK_DF | SFMASK_IF | SFMASK_TF;
     std::uint64_t efer = cpu::rdmsr(MSR_EFER) | EFER_SCE;
