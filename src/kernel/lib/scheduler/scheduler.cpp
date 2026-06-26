@@ -80,32 +80,58 @@ static void reaper_kthread()
 
 void preempt()
 {
+    // Certain sensitive kernel actions, including this preempt() function itself,
+    // must disable process preemption to safely perform their actions, so there is
+    // nothing to do if preemption has been disabled
     if (!arch::percpu::preemption_enabled()) {
         return;
     }
 
+    // ********************************
+    // **** Begin Mutual Exclusion ****
+    // ********************************
+    //
+    // The following section must be performed within a mutually exclusive
+    // spinlock that disables both CPU interrupts and preemption
+    //
+    // We require mutual exclusion because we are directly manipulating the
+    // global list of kernel processes (g_processes) and per CPU data fields
+    // including the PML4, FS register, TSS.RSP0. And we do not want any anyone
+    // else to manipulate these while we are working with them.
+
     g_processes_lock.lock();
 
-    auto* per_cpu = arch::percpu::get();
-    auto* current = per_cpu->process;
+    auto* cpu = arch::percpu::get();
+    auto* current = cpu->process;
 
     process::Process* p = find_ready_process();
 
-    if (p == nullptr || p == current) {
+    // If there are no processes to schedule, resort to using the
+    // idle process on this cpu
+    if (p == nullptr) {
+        p = cpu->idle_process;
+    } else {
+        g_processes.rotate_next();
+    }
+
+    // We never want a process to context switch to itself, so we can
+    // just leave early if a process wants to switch to itself, after
+    // releasing our spinlock of course
+    if (p == current) {
         g_processes_lock.unlock();
         return;
     }
 
-    g_processes.rotate_next();
-
-    if (current != nullptr && current->state == process::ProcessState::RUNNING) {
+    // The process that was interrupted might be blocked, so only set it
+    // to ready if it was actively running
+    if (current->state == process::ProcessState::RUNNING) {
         current->state = process::ProcessState::READY;
     }
 
     p->state = process::ProcessState::RUNNING;
 
-    per_cpu->process = p;
-    per_cpu->kernel_rsp = p->kernel_rsp;
+    cpu->process = p;
+    cpu->kernel_rsp = p->kernel_rsp;
 
     arch::vmm::switch_pml4(p->pml4);
     arch::tls::set_fs_base(p->fs_base);
@@ -113,19 +139,10 @@ void preempt()
 
     g_processes_lock.unlock();
 
-    // current == nullptr means this preempt() call is coming from a context
-    // that had no running process on this cpu, such as the kernel_main() hlt loop.
-    // that means no other process should ever context_swtich() back to this.
-    if (current == nullptr) {
-        std::uint64_t discard;
-        context_switch(&discard, p->kernel_rsp_saved);
-        kpanic("preempt() switched back to a null process");
-    }
-
     context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
 
-    per_cpu->process = current;
-    per_cpu->kernel_rsp = current->kernel_rsp;
+    cpu->process = current;
+    cpu->kernel_rsp = current->kernel_rsp;
 
     arch::vmm::switch_pml4(current->pml4);
     arch::tls::set_fs_base(current->fs_base);

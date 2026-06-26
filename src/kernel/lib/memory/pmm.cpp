@@ -189,6 +189,8 @@ void* alloc_frame()
 
     std::size_t frame = frame_bitmap_start;
 
+    log::debug("alloc_frame start frame = ", frame);
+
     while (frame < frame_bitmap_end) {
         if (is_frame_free(frame)) {
             set_frame_used(frame);

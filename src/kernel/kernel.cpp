@@ -1,4 +1,3 @@
-#include "exclusive/katomic.hpp"
 #include "process/process.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
@@ -25,45 +24,10 @@
 #include <test/test.hpp>
 #endif
 
-static int counter1;
-static int counter2;
-static int counter3;
-
-void kthread1()
+static void kthread()
 {
     while (true) {
-        counter1++;
-        if (counter1 % 100 == 0) {
-            log::debug("kthread1");
-        }
         x64::cpu::hlt();
-    }
-}
-
-void kthread2()
-{
-    while (true) {
-        counter2++;
-        if (counter2 % 100 == 0) {
-            log::debug("kthread2");
-        }
-
-        x64::cpu::hlt();
-    }
-}
-
-void kthread3()
-{
-    auto* self = arch::percpu::current_process();
-
-    while (true) {
-        counter3++;
-        if (counter3 % 100 == 0) {
-            log::debug("kthread3");
-        }
-
-        self->wake_time_ms = timer::get_ticks() + 10;
-        scheduler::yield_blocked(self, process::WaitReason::SLEEP);
     }
 }
 
@@ -79,14 +43,16 @@ void kernel_main()
 
     boot::init();
 
-    x64::gdt::init();
-    x64::idt::init();
-    x64::percpu::init();
-    x64::trap::init();
-
     x64::drivers::pic::init();
     x64::drivers::apic::init();
     x64::drivers::keyboard::init();
+
+    x64::gdt::init();
+    x64::idt::init();
+    x64::trap::init();
+    x64::percpu::init();
+
+    scheduler::add_process(process::create_kthread(kthread));
 
     log::success("all core kernel features initialized!");
 
@@ -105,10 +71,6 @@ void kernel_main()
     console::init();
     fs::devfs::init_tty();
     scheduler::init();
-
-    // scheduler::add_process(process::create_kthread(kthread1));
-    // scheduler::add_process(process::create_kthread(kthread2));
-    // scheduler::add_process(process::create_kthread(kthread3));
 
     x64::percpu::enable_preemption();
     x64::cpu::sti();

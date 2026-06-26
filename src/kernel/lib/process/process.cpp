@@ -20,7 +20,7 @@ constexpr std::uintptr_t USER_STACK_BASE = 0x00800000;
 constexpr std::uintptr_t USER_STACK_SIZE = 16 * 1024;   // 16KiB
 constexpr std::uintptr_t USER_STACK_TOP = USER_STACK_BASE + USER_STACK_SIZE;
 
-constexpr std::uintptr_t KERNEL_STACK_SIZE = 64 * 1024; // 16KiB
+constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024; // 16KiB
 
 static katomic<std::uint64_t> g_pid{1};
 
@@ -48,7 +48,7 @@ Process* create_kthread(void (*entry)())
 {
     auto* p = new Process{};
 
-    log::debugf("create kthread addr={}", reinterpret_cast<std::uintptr_t>(entry));
+    log::debugf("create kthread addr={}", fmt::hex{reinterpret_cast<std::uintptr_t>(entry)});
 
     p->pid = g_pid++;
     p->state = ProcessState::NEW;
@@ -57,16 +57,14 @@ Process* create_kthread(void (*entry)())
     p->heap_break = 0;
     p->pml4 = arch::vmm::get_kernel_pml4();
     p->fd_table = {};
-    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+    p->kernel_stack = kalloc<std::uint8_t>(KERNEL_STACK_SIZE); // new std::uint8_t[KERNEL_STACK_SIZE];
     p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
     p->wake_time_ms = 0;
-    p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
+    p->mmap_min_addr = 65536;                                  // based on /proc/sys/vm/mmap_min_addr in Linux
     p->fs_base = 0;
     p->tidptr = 0;
     p->cwd_inode = nullptr;
     p->entry = reinterpret_cast<std::uintptr_t>(entry);
-
-    log::debugf("kthread entry={}", fmt::hex{p->entry});
 
     p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
     p->context_frame->r15 = 0xABC12300; // Magic numbers to help with debugging

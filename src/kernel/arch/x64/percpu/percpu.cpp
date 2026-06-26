@@ -86,10 +86,19 @@ void early_init()
     per.kernel_rsp = 0;
     per.user_rsp = 0;
     per.process = nullptr;
+    per.idle_process = nullptr;
     per.preemption_enabled = false;
 
     cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(&per));
     cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
+}
+
+static void idle_process_kthread()
+{
+    while (true) {
+        cpu::sti();
+        cpu::hlt();
+    }
 }
 
 void init()
@@ -98,17 +107,18 @@ void init()
 
     auto* per_cpu_data = new PerCPU{};
 
-    per_cpu_data->self = per_cpu_data; // For C++ access via get()
-    per_cpu_data->kernel_rsp = 0;      // Set by scheduler before running process
-    per_cpu_data->user_rsp = 0;        // Saved by syscall_entry
-    per_cpu_data->process = nullptr;   // Set by scheduler
-    per_cpu_data->preemption_enabled = true;
-
     // Set GS_BASE to our per-CPU struct. We're in kernel mode at boot.
     cpu::wrmsr(MSR_GS_BASE, reinterpret_cast<std::uintptr_t>(per_cpu_data));
 
     // KERNEL_GS_BASE is the "other" slot for SWAPGS. Starts unused.
     cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
+
+    per_cpu_data->self = per_cpu_data; // For C++ access via get()
+    per_cpu_data->kernel_rsp = 0;      // Set by scheduler before running process
+    per_cpu_data->user_rsp = 0;        // Saved by syscall_entry
+    per_cpu_data->idle_process = process::create_kthread(idle_process_kthread);
+    per_cpu_data->process = per_cpu_data->idle_process;
+    per_cpu_data->preemption_enabled = true;
 
     log::info("GS_BASE = ", fmt::hex{reinterpret_cast<std::uintptr_t>(per_cpu_data)});
 
