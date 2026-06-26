@@ -104,20 +104,12 @@ syscall_entry:
     push %r14
     push %r15
 
-    # Push CS/SS for SyscallFrame completeness (useful for debugging)
-    mov %cs, %r15
-    push %r15
-    mov %ss, %r15
-    push %r15
-
     # Call C++ dispatcher: syscall_dispatcher(SyscallFrame* frame)
     mov %rsp, %rdi  # First argument = pointer to SyscallFrame
     call syscall_dispatcher
     # Return value is now in RAX
 
     # Restore registers (skip ss/cs, they're not real saved state)
-    pop %r15        # Discard ss
-    pop %r15        # Discard cs
     pop %r15
     pop %r14
     pop %r13

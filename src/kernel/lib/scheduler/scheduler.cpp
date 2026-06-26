@@ -15,50 +15,51 @@ static kspinlock_irqsave g_processes_lock;
 
 extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
-// Scans once for both jobs: wakes every BLOCKED process whose sleep timer
-// has expired (formerly a separate wake_sleeping_processes timer handler —
-// folded in here so a sleeping kthread, including reaper_kthread below, can
-// be woken without needing its own independent "who wakes the waker"
-// mechanism), and returns the first READY/NEW process found. Called from
-// every scheduling decision (preempt/yield_blocked/yield_dead), so sleepers
-// are checked at least as often as the old per-tick handler did.
-static process::Process* find_ready_process()
+/// @brief wakes any process that is marked as BLOCKED and has a wake time
+/// that is now in the past
+static void wake_sleeping_processes()
 {
-    auto ticks = timer::get_ticks();
-    process::Process* ready = nullptr;
+    const std::uintmax_t ticks = timer::get_ticks();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
-        auto* p = g_processes[i];
+        process::Process* p = g_processes[i];
 
-        if (p->state == process::ProcessState::BLOCKED && p->wake_time_ms > 0 && ticks > p->wake_time_ms) {
+        if (p->state == process::ProcessState::BLOCKED && p->wait_reason == process::WaitReason::SLEEP && p->wake_time_ms > 0 && ticks > p->wake_time_ms) {
             p->state = process::ProcessState::READY;
             p->wait_reason = process::WaitReason::NONE;
             p->wake_time_ms = 0;
         }
+    }
+}
 
-        if (ready == nullptr && (p->state == process::ProcessState::READY || p->state == process::ProcessState::NEW)) {
-            ready = p;
+/// @brief Wakes all sleeping processes then
+/// returns the first process that is marked as READY or NEW
+static process::Process* find_ready_process()
+{
+    wake_sleeping_processes();
+
+    for (std::size_t i = 0; i < g_processes.size(); i++) {
+        process::Process* p = g_processes[i];
+
+        if (p->state == process::ProcessState::READY || p->state == process::ProcessState::NEW) {
+            return p;
         }
     }
 
-    return ready;
+    return nullptr;
 };
 
-// Reaps DEAD processes. Used to be a timer handler run inline on every
-// tick; now it's a regular kthread, since a process can't free its own
-// kernel_stack while still running on it (hence the self-exclusion below)
-// and there's no reason this needs to run inside an interrupt context.
-constexpr std::uint64_t REAP_INTERVAL_TICKS = 50;
+constexpr std::uint64_t REAP_INTERVAL_MS = 50;
 
 static void reaper_kthread()
 {
-    auto* self = arch::percpu::current_process();
+    process::Process* self = arch::percpu::current_process();
 
     while (true) {
         g_processes_lock.lock();
 
         for (std::size_t i = 0; i < g_processes.size(); i++) {
-            auto* proc = g_processes[i];
+            process::Process* proc = g_processes[i];
 
             if (proc->state != process::ProcessState::DEAD || proc->pid == self->pid) {
                 continue;
@@ -71,29 +72,12 @@ static void reaper_kthread()
 
         g_processes_lock.unlock();
 
-        self->wake_time_ms = timer::get_ticks() + REAP_INTERVAL_TICKS;
-        yield_blocked(self, process::WaitReason::SLEEP);
+        yield_sleep(self, REAP_INTERVAL_MS);
     }
+
+    __builtin_unreachable();
 }
 
-// The single scheduling primitive: every suspension and resumption, whether
-// triggered by the timer (here) or cooperatively (yield_blocked/yield_dead),
-// goes through context_switch() against kernel_rsp_saved. There is no
-// InterruptFrame-mutation path anymore — `current`'s InterruptFrame (pushed
-// by this exact timer interrupt) is simply left untouched on its own kernel
-// stack. context_switch() may not return until `current` is rescheduled,
-// possibly much later, after any number of other processes have run on this
-// CPU in between — when it does return, we're back inside this exact call,
-// and the rest of this interrupt's call chain (this function -> timer::tick
-// -> apic_timer_handler -> the ISR's asm epilogue) unwinds normally,
-// iretq-ing through `current`'s original, never-touched InterruptFrame.
-//
-// This depends on apic_timer_handler sending EOI *before* calling this —
-// see the warning there. Called directly from apic_timer_handler rather
-// than through timer::register_handler — that mechanism is a plain vector
-// of handlers all expected to return promptly within the same tick, which
-// this function fundamentally cannot promise, so it isn't allowed to share
-// that list.
 void preempt()
 {
     if (!arch::percpu::preemption_enabled()) {
@@ -107,18 +91,7 @@ void preempt()
 
     process::Process* p = find_ready_process();
 
-    // log::debugf("preempting process {}", fmt::hex{p});
-
     if (p == nullptr || p == current) {
-        // p == current shouldn't normally happen (find_ready_process()
-        // doesn't return RUNNING processes), but yield_blocked's own
-        // sleep-wake side effect can flip the currently-running process
-        // straight to READY without it ever actually stopping — guard
-        // against it here too rather than relying solely on every caller
-        // to maintain that invariant. Dispatching a process into itself
-        // would push a context_switch frame and then jump to its own
-        // stale, already-on-the-call-stack resume point — stack corruption.
-        // log::warn("no processes found to preempt");
         g_processes_lock.unlock();
         return;
     }
@@ -140,16 +113,17 @@ void preempt()
 
     g_processes_lock.unlock();
 
-    // current == nullptr means we're preempting out of the idle loop in
-    // kernel_main, which has no Process to save into — discard is never
-    // targeted by anything, so this context_switch simply never returns.
-    std::uint64_t discard;
-    context_switch(current != nullptr ? &current->kernel_rsp_saved : &discard, p->kernel_rsp_saved);
+    // current == nullptr means this preempt() call is coming from a context
+    // that had no running process on this cpu, such as the kernel_main() hlt loop.
+    // that means no other process should ever context_swtich() back to this.
+    if (current == nullptr) {
+        std::uint64_t discard;
+        context_switch(&discard, p->kernel_rsp_saved);
+        kpanic("preempt() switched back to a null process");
+    }
 
-    // Resumed: some later preempt/yield_* call switched back to
-    // `current`. Per-CPU state may have changed to reflect whatever ran in
-    // the meantime, so restore it here — mirrors what yield_blocked does
-    // after its own context_switch returns.
+    context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
+
     per_cpu->process = current;
     per_cpu->kernel_rsp = current->kernel_rsp;
 
@@ -163,11 +137,12 @@ void wake_single(process::WaitReason wait_reason)
     g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
-        auto* p = g_processes[i];
+        process::Process* p = g_processes[i];
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
             p->state = process::ProcessState::READY;
             p->wait_reason = process::WaitReason::NONE;
+            p->wake_time_ms = 0;
             goto cleanup;
         }
     }
@@ -181,11 +156,12 @@ void wake_all(process::WaitReason wait_reason)
     g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
-        auto* p = g_processes[i];
+        process::Process* p = g_processes[i];
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
             p->state = process::ProcessState::READY;
             p->wait_reason = process::WaitReason::NONE;
+            p->wake_time_ms = 0;
         }
     }
 
@@ -201,11 +177,6 @@ void yield_dead(process::Process* proc)
     per_cpu->process = nullptr;
 
     while (true) {
-        // cli() before locking (not after unlocking) — kspinlock_irqsave's
-        // unlock() restores rflags to whatever was captured at lock() time,
-        // which would re-enable interrupts here and reopen a window for the
-        // timer to nest a preemption into this still-in-progress switch,
-        // orphaning `ready` (marked RUNNING but never actually dispatched).
         arch::cpu::cli();
         g_processes_lock.lock();
 
@@ -244,6 +215,14 @@ void yield_dead(process::Process* proc)
             arch::cpu::hlt();
         }
     }
+
+    __builtin_unreachable();
+}
+
+void yield_sleep(process::Process* p, std::uint64_t sleep_time_ms)
+{
+    p->wake_time_ms = timer::get_ticks() + sleep_time_ms;
+    yield_blocked(p, process::WaitReason::SLEEP);
 }
 
 void yield_blocked(process::Process* process, process::WaitReason wait_reason)
@@ -253,47 +232,39 @@ void yield_blocked(process::Process* process, process::WaitReason wait_reason)
         return;
     }
 
+    auto* per_cpu = arch::percpu::get();
+
     process->state = process::ProcessState::BLOCKED;
     process->wait_reason = wait_reason;
 
     while (process->state == process::ProcessState::BLOCKED) {
-        // See yield_dead for why cli() happens before locking rather than
-        // after unlocking.
         arch::cpu::cli();
         g_processes_lock.lock();
 
         process::Process* ready = find_ready_process();
 
+        // find_ready_process() wakes all sleeping processes that are past
+        // their wake time, which could include this very process that is
+        // trying to yield itself while sleeping. We do not want to context
+        // switch a process to itself, so simply set its state to RUNNING and carry on
         const bool woke_self = ready != nullptr && ready->pid == process->pid;
         const bool can_context_switch = ready != nullptr && !woke_self;
 
         if (can_context_switch) {
             ready->state = process::ProcessState::RUNNING;
         } else if (woke_self) {
-            // find_ready_process()'s sleep-wake side effect can flip
-            // `process` itself from BLOCKED straight to READY (it's just
-            // another entry in g_processes) before we get a chance to find
-            // someone else to switch to. We're refusing to "switch" to
-            // ourselves below, so we never actually stopped running —
-            // leaving state as READY here would violate "the currently
-            // running process's state is RUNNING," which preempt() relies
-            // on (it would otherwise see current == p as eligible and try
-            // to context_switch a process into itself).
             process->state = process::ProcessState::RUNNING;
         }
 
         g_processes_lock.unlock();
 
         if (can_context_switch) {
-            auto* per_cpu = arch::percpu::get();
             per_cpu->process = ready;
             per_cpu->kernel_rsp = ready->kernel_rsp;
 
             arch::vmm::switch_pml4(ready->pml4);
             arch::tls::set_fs_base(ready->fs_base);
             arch::gdt::set_kernel_stack(ready->kernel_rsp);
-
-            log::debugf("cooperative switch to process {}, old rsp={}, new rsp={}", fmt::hex{ready}, fmt::hex{process->kernel_rsp_saved}, fmt::hex{ready->kernel_rsp_saved});
 
             context_switch(&process->kernel_rsp_saved, ready->kernel_rsp_saved);
 
@@ -323,8 +294,9 @@ void init()
     log::init_start("Scheduler");
     log::info("Registering schedulers...");
 
-    // add_process(process::create_kthread(reaper_kthread));
+    add_process(process::create_kthread(reaper_kthread));
 
     log::init_end("Scheduler");
 }
+
 }

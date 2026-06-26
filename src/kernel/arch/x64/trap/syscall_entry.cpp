@@ -128,8 +128,6 @@ extern "C" void syscall_entry();
  */
 extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
 {
-    using namespace linux;
-
     const std::uint64_t syscall_num = frame->rax;
     const std::uint64_t arg1 = frame->rdi;
     const std::uint64_t arg2 = frame->rsi;
@@ -138,62 +136,51 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
     const std::uint64_t arg5 = frame->r8;
     const std::uint64_t arg6 = frame->r9;
 
-    log::debugf("syscall ss={}, cs={}", fmt::hex{frame->ss}, fmt::hex{frame->cs});
-
     switch (syscall_num) {
-    case SYS_READ:
+    case linux::SYS_READ:
         return syscall::sys_read(arg1, reinterpret_cast<char*>(arg2), arg3);
-    case SYS_WRITE:
+    case linux::SYS_WRITE:
         return syscall::sys_write(arg1, reinterpret_cast<const char*>(arg2), arg3);
-    case SYS_OPEN:
+    case linux::SYS_OPEN:
         return syscall::sys_open(reinterpret_cast<const char*>(arg1), arg2);
-    case SYS_CLOSE:
+    case linux::SYS_CLOSE:
         return syscall::sys_close(arg1);
-    case SYS_STAT:
+    case linux::SYS_STAT:
         return syscall::sys_stat(reinterpret_cast<const char*>(arg1), reinterpret_cast<fs::Stat*>(arg2));
-    case SYS_FSTAT:
+    case linux::SYS_FSTAT:
         return syscall::sys_fstat(arg1, reinterpret_cast<fs::Stat*>(arg2));
-    case SYS_LSEEK:
+    case linux::SYS_LSEEK:
         return syscall::sys_lseek(arg1, arg2, arg3);
-    case SYS_NANOSLEEP:
+    case linux::SYS_NANOSLEEP:
         return syscall::sys_sleep_ms(arg1);
-    case SYS_GETPID:
+    case linux::SYS_GETPID:
         return syscall::sys_getpid();
-    case SYS_MMAP:
+    case linux::SYS_MMAP:
         return syscall::sys_mmap(reinterpret_cast<void*>(arg1), arg2, arg3, arg4, arg5, arg6);
-    case SYS_MUNMAP:
+    case linux::SYS_MUNMAP:
         return syscall::sys_munmap(reinterpret_cast<void*>(arg1), arg2);
-    case SYS_IOCTL:
+    case linux::SYS_IOCTL:
         return syscall::sys_ioctl(arg1, arg2, reinterpret_cast<void*>(arg3));
-    case linux::SYS_READV: {
-        log::debug("sys_readv syscall enter");
-        const auto read = syscall::sys_readv(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
-        log::debugf("sys_readv syscall done {}", read);
-        return read;
-    }
-    case SYS_WRITEV: {
-        log::debug("sys_writev syscall enter");
-        const auto wrote = syscall::sys_writev(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
-        log::debugf("sys_writev syscall done {}", wrote);
-        return wrote;
-    }
-
-    case SYS_BRK:
+    case linux::SYS_READV:
+        return syscall::sys_readv(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
+    case linux::SYS_WRITEV:
+        return syscall::sys_writev(arg1, reinterpret_cast<const linux::iovec*>(arg2), arg3);
+    case linux::SYS_BRK:
         return syscall::sys_brk(reinterpret_cast<void*>(arg1));
-    case SYS_EXIT:
-    case SYS_EXIT_GROUP:
+    case linux::SYS_EXIT:
+    case linux::SYS_EXIT_GROUP:
         return syscall::sys_exit(arg1);
-    case SYS_GETCWD:
+    case linux::SYS_GETCWD:
         return syscall::sys_getcwd(reinterpret_cast<char*>(arg1), arg2);
-    case SYS_CHDIR:
+    case linux::SYS_CHDIR:
         return syscall::sys_chdir(reinterpret_cast<const char*>(arg1));
-    case SYS_MKDIR:
+    case linux::SYS_MKDIR:
         return syscall::sys_mkdir(reinterpret_cast<const char*>(arg1), arg2);
-    case SYS_ARCH_PRCTL:
+    case linux::SYS_ARCH_PRCTL:
         return syscall::sys_arch_prctl(arg1, arg2);
-    case SYS_SET_TID_ADDR:
+    case linux::SYS_SET_TID_ADDR:
         return syscall::sys_set_tid_address(reinterpret_cast<int*>(arg1));
-    case SYS_FCHDIR:
+    case linux::SYS_FCHDIR:
         return syscall::sys_fchdir(arg1);
     case linux::SYS_FNCTL:
         return syscall::sys_fcntl(arg1, arg2, arg3);

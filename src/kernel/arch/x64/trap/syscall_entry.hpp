@@ -15,7 +15,7 @@ constexpr std::uint64_t SFMASK_DF = (1 << 10); // Direction Flag (ensure string 
 constexpr std::uint64_t SFMASK_TF = (1 << 8);  // Trap Flag (Disable single-stepping)
 
 struct [[gnu::packed]] SyscallFrame {
-    std::uint64_t ss, cs, r15, r14, r13, r12, r11, r10, r9, r8;
+    std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
     std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
 };
 

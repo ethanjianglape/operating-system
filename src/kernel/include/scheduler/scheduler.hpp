@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <process/process.hpp>
 
 namespace scheduler {
@@ -15,6 +16,8 @@ void wake_all(process::WaitReason wait_reason);
 
 [[noreturn]]
 void yield_dead(process::Process* p);
+
+void yield_sleep(process::Process* p, std::uint64_t sleep_time_ms);
 
 void yield_blocked(process::Process* p, process::WaitReason wait_reason);
 
