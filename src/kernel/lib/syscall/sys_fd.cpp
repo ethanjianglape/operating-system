@@ -1,15 +1,14 @@
-#include "arch/x64/percpu/percpu.hpp"
-#include "containers/kstring.hpp"
-#include "linux/dirent.hpp"
 #include <arch.hpp>
 #include <console/console.hpp>
-#include <cstddef>
+#include <containers/kstring.hpp>
 #include <fs/fs.hpp>
+#include <linux/dirent.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
 #include <syscall/sys_fd.hpp>
 
 #include <cerrno>
+#include <cstddef>
 
 namespace syscall {
 static int alloc_fd(process::Process* process)
@@ -148,17 +147,7 @@ int sys_ioctl(int fd, unsigned long request, void* arg)
         return -EBADF;
     }
 
-    if (request == linux::TIOCGWINSZ && desc->inode->type == fs::FileType::CHAR_DEVICE) {
-        auto* ws = reinterpret_cast<linux::winsize*>(arg);
-        ws->ws_row = console::get_screen_rows();
-        ws->ws_col = console::get_screen_cols();
-        ws->ws_xpixel = 0;
-        ws->ws_ypixel = 0;
-
-        return 0;
-    }
-
-    return -ENOTTY;
+    return desc->inode->ioctl(request, arg);
 }
 
 int sys_close(int fd)
@@ -304,4 +293,5 @@ int sys_getdents64(int fd, void* buffer, unsigned int count)
 
     return sizeof(linux::linux_dirent64) * entries_returned;
 }
+
 }

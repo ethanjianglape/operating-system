@@ -44,6 +44,7 @@ public:
     int close(FileDescriptor* fd) override;
     int lseek(FileDescriptor* fd, int offset, int whence) override;
     int stat(Stat* stat) override;
+    int ioctl(unsigned long request, void* arg) override;
 };
 
 void init_tty();

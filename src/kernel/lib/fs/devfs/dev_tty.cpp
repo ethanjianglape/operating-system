@@ -1,3 +1,4 @@
+#include "linux/ioctl.hpp"
 #include "timer/timer.hpp"
 #include <arch.hpp>
 #include <cerrno>
@@ -469,4 +470,20 @@ int DevTtyInode::stat(Stat* stat)
 
     return 0;
 }
+
+int DevTtyInode::ioctl(unsigned long request, void* arg)
+{
+    if (request == linux::TIOCGWINSZ) {
+        auto* ws = reinterpret_cast<linux::winsize*>(arg);
+        ws->ws_row = console::get_screen_rows();
+        ws->ws_col = console::get_screen_cols();
+        ws->ws_xpixel = 0;
+        ws->ws_ypixel = 0;
+
+        return 0;
+    }
+
+    return -ENOTTY;
+}
+
 }

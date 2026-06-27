@@ -6,6 +6,7 @@
  */
 
 #include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -119,7 +120,15 @@ void cmd_mmap(void)
 
 void cmd_mkdir(const char* path)
 {
-    mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    int err;
+
+    if ((err = mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) < 0) {
+        if (err == -EROFS) {
+            puts("Directory is readonly");
+        } else {
+            puts("Failed to create dir");
+        }
+    }
 }
 
 // ============================================================================
@@ -188,7 +197,7 @@ void process_command(char* cmd)
 
 int main(void)
 {
-    puts("MyOS Shell asdf asdf asdf");
+    puts("Welcome to MyOS!");
     puts("Type 'help' for available commands.\n");
 
     char buf[256];

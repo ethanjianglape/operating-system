@@ -104,6 +104,8 @@ public:
     virtual int lseek(FileDescriptor* fd, int offset, int whence) = 0;
     virtual int stat(Stat* stat) = 0;
 
+    virtual int ioctl(unsigned long, void*) { return -ENOTTY; }
+
     virtual Inode* lookup(const char*) { return nullptr; }
     virtual int readdir(kvector<DirEntry>&) { return -ENOTDIR; }
     virtual int mkdir(const char*, int) { return -ENOTDIR; }
