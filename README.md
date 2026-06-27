@@ -41,8 +41,8 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 - ELF64 binary loading from initramfs
 - Ring 3 userspace execution
 - Kernel threads (`process::create_kthread`) for in-kernel background work (e.g. the framebuffer compositor), alongside full ELF user processes
-- Preemptive scheduling via APIC timer (user-mode processes only)
-- Cooperative scheduling via `yield_blocked`/`yield_dead` (used internally by blocking syscalls and kernel threads, which are never preempted)
+- Unified `context_switch()` used for all scheduling paths — both preemptive (APIC timer) and cooperative (`yield_blocked`/`yield_dead`)
+- Spinlock-protected context switches to ensure safe handoff between processes
 - Process states: RUNNING, READY, BLOCKED, DEAD
 - Per-process page tables and file descriptor tables
 

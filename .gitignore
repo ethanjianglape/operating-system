@@ -34,6 +34,8 @@ cmake_install.cmake
 compile_commands.json
 
 # Generated documentation
+INSIGHTS.md
+TODO.md
 docs/
 
 # OS specific
