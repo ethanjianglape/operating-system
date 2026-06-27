@@ -34,6 +34,7 @@
 #include <containers/kstring.hpp>
 
 namespace x64::drivers::serial {
+
 /**
  * @brief Checks if the UART transmit buffer is empty and ready for data.
  * @return true if ready to transmit, false if busy.
@@ -119,4 +120,5 @@ int puts(const unsigned char* str)
 
     return written;
 }
+
 }

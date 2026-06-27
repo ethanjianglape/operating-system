@@ -37,11 +37,9 @@ static void kthread_entry_trampoline()
     auto* proc = arch::percpu::current_process();
     auto* entry_func = reinterpret_cast<void (*)()>(proc->entry);
 
-    log::debugf("kthread trampoline entry={}", fmt::hex{proc->entry});
-
     entry_func();
 
-    scheduler::yield_dead(proc);
+    scheduler::yield_dead();
 }
 
 Process* create_kthread(void (*entry)())

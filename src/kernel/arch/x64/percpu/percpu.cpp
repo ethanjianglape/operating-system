@@ -70,6 +70,7 @@
 #include <process/process.hpp>
 
 namespace x64::percpu {
+
 /**
  * @brief Initializes per-CPU data for the bootstrap processor.
  *

@@ -1,4 +1,3 @@
-#include "process/process.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
@@ -24,13 +23,6 @@
 #include <test/test.hpp>
 #endif
 
-static void kthread()
-{
-    while (true) {
-        x64::cpu::hlt();
-    }
-}
-
 [[noreturn]]
 void kernel_main()
 {
@@ -51,8 +43,6 @@ void kernel_main()
     x64::idt::init();
     x64::trap::init();
     x64::percpu::init();
-
-    scheduler::add_process(process::create_kthread(kthread));
 
     log::success("all core kernel features initialized!");
 

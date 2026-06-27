@@ -10,6 +10,8 @@ private:
     std::uint64_t _rflags;
     bool _preemption_enabled;
 
+    // Performs a test-and-test-and-set loop until the value of _counter
+    // switches from 1 to 0
     void spin()
     {
         while (true) {
@@ -53,8 +55,6 @@ public:
     {
         std::uint64_t rflags = _rflags;
         bool preemption_enabled = _preemption_enabled;
-
-        // log::debug("unlocking");
 
         _counter.store(1);
 

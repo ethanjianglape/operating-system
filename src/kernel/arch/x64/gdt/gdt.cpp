@@ -273,6 +273,9 @@ void init()
     gdtr.base = reinterpret_cast<std::uint64_t>(&gdt_table);
 
     load_gdt(&gdtr);
+
+    log::debug("gdt loaded");
+
     load_tss();
 
     log::info("GDT created with 6 entries");

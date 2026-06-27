@@ -44,8 +44,8 @@ load_gdt:
     mov $KERNEL_DATA_SEG, %ax
     mov %ax, %ds
     mov %ax, %es
-    mov %ax, %fs
-    mov %ax, %gs
+    #mov %ax, %fs
+    #mov %ax, %gs
     mov %ax, %ss
 
     # Reload CS register - this requires a trick:

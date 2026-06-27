@@ -17,6 +17,6 @@ int sys_exit(int status)
 
     proc->exit_status = status;
 
-    scheduler::yield_dead(proc);
+    scheduler::yield_dead();
 }
 }

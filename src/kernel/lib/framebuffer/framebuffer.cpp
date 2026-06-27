@@ -62,9 +62,7 @@ static void redraw_kthread()
     while (true) {
         redraw();
 
-        auto* self = arch::percpu::current_process();
-        self->wake_time_ms = timer::get_ticks() + ms_per_frame;
-        scheduler::yield_blocked(self, process::WaitReason::SLEEP);
+        scheduler::yield_sleep(ms_per_frame);
     }
 }
 

@@ -436,9 +436,7 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
             console::redraw();
         }
 
-        auto* process = arch::percpu::current_process();
-
-        scheduler::yield_blocked(process, process::WaitReason::KEYBOARD);
+        scheduler::yield_blocked(process::WaitReason::KEYBOARD);
     }
 }
 
