@@ -6,6 +6,7 @@
 #include <cstdint>
 
 namespace fmt {
+
 template <typename T>
 struct hex {
     T value;
@@ -14,6 +15,7 @@ template <typename T>
 struct bin {
     T value;
 };
+
 template <typename T>
 struct oct {
     T value;
@@ -21,8 +23,10 @@ struct oct {
 
 template <typename T>
 hex(T) -> hex<T>;
+
 template <typename T>
 bin(T) -> bin<T>;
+
 template <typename T>
 oct(T) -> oct<T>;
 
@@ -41,7 +45,7 @@ enum class NumberFormat : std::uint32_t {
     OCT = 4
 };
 
-static char buffer[128] = {'\0'};
+// static char buffer[128] = {'\0'};
 
 static std::size_t index = 0;
 
@@ -71,7 +75,7 @@ inline int number_format_divisor(NumberFormat format)
     }
 }
 
-inline void insert(std::size_t pos, std::size_t num, char pad)
+inline void insert(char (&buffer)[32], std::size_t pos, std::size_t num, char pad)
 {
     if (pos >= index) {
         return;
@@ -112,7 +116,7 @@ inline char number_format_char(int i, NumberFormat format)
     }
 }
 
-inline const char* to_string(std::uintmax_t unum, NumberFormat format = NumberFormat::DEC)
+inline const char* to_string(std::uintmax_t unum, char (&buffer)[32], NumberFormat format = NumberFormat::DEC)
 {
     index = 0;
 
@@ -154,7 +158,7 @@ inline const char* to_string(std::uintmax_t unum, NumberFormat format = NumberFo
         std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
-        insert(2, zeros, '0');
+        insert(buffer, 2, zeros, '0');
     }
 
     buffer[index] = '\0';
@@ -162,7 +166,7 @@ inline const char* to_string(std::uintmax_t unum, NumberFormat format = NumberFo
     return buffer;
 }
 
-inline const char* to_string(std::intmax_t num, NumberFormat format = NumberFormat::DEC)
+inline const char* to_string(std::intmax_t num, char (&buffer)[32], NumberFormat format = NumberFormat::DEC)
 {
     index = 0;
     std::uintmax_t unum;
@@ -212,7 +216,7 @@ inline const char* to_string(std::intmax_t num, NumberFormat format = NumberForm
         std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
-        insert(2, zeros, '0');
+        insert(buffer, 2, zeros, '0');
     }
 
     buffer[index] = '\0';
@@ -220,46 +224,46 @@ inline const char* to_string(std::intmax_t num, NumberFormat format = NumberForm
     return buffer;
 }
 
-inline const char* to_string(std::signed_integral auto num, NumberFormat format = NumberFormat::DEC)
+inline const char* to_string(std::signed_integral auto num, char (&buffer)[32], NumberFormat format = NumberFormat::DEC)
 {
-    return to_string(static_cast<std::intmax_t>(num), format);
+    return to_string(static_cast<std::intmax_t>(num), buffer, format);
 }
 
-inline const char* to_string(std::unsigned_integral auto num, NumberFormat format = NumberFormat::DEC)
+inline const char* to_string(std::unsigned_integral auto num, char (&buffer)[32], NumberFormat format = NumberFormat::DEC)
 {
-    return to_string(static_cast<std::uintmax_t>(num), format);
+    return to_string(static_cast<std::uintmax_t>(num), buffer, format);
 }
 
 template <std::integral T>
-inline const char* to_string(hex<T> h)
+inline const char* to_string(hex<T> h, char (&buffer)[32])
 {
-    return to_string(h.value, NumberFormat::HEX);
+    return to_string(h.value, buffer, NumberFormat::HEX);
 }
 
 template <ptr_type T>
-inline const char* to_string(hex<T> h)
+inline const char* to_string(hex<T> h, char (&buffer)[32])
 {
-    return to_string(reinterpret_cast<std::uintptr_t>(h.value), NumberFormat::HEX);
+    return to_string(reinterpret_cast<std::uintptr_t>(h.value), buffer, NumberFormat::HEX);
 }
 
 template <std::integral T>
-inline const char* to_string(bin<T> h)
+inline const char* to_string(bin<T> h, char (&buffer)[32])
 {
-    return to_string(h.value, NumberFormat::BIN);
+    return to_string(h.value, buffer, NumberFormat::BIN);
 }
 
 template <std::integral T>
-inline const char* to_string(oct<T> h)
+inline const char* to_string(oct<T> h, char (&buffer)[32])
 {
-    return to_string(h.value, NumberFormat::OCT);
+    return to_string(h.value, buffer, NumberFormat::OCT);
 }
 
-inline const char* to_string(ptr_type auto ptr)
+inline const char* to_string(ptr_type auto ptr, char (&buffer)[32])
 {
-    return to_string(reinterpret_cast<std::uintptr_t>(ptr), NumberFormat::HEX);
+    return to_string(reinterpret_cast<std::uintptr_t>(ptr), buffer, NumberFormat::HEX);
 }
 
-inline const char* to_string(const kstring& str)
+inline const char* to_string(const kstring& str, char (&)[32])
 {
     return str.c_str();
 }
@@ -286,4 +290,5 @@ inline int parse_int(char c)
 {
     return c - '0';
 }
+
 }

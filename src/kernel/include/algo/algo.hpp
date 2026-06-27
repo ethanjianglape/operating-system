@@ -55,8 +55,9 @@ kstring join(const klist<T>& list, char delim = ' ')
 
     for (std::size_t i = 0; i < list.size(); i++) {
         const T& item = list[i];
+        char buffer[32];
 
-        result += fmt::to_string(item);
+        result += fmt::to_string(item, buffer);
         result.push_back(delim);
     }
 
@@ -66,4 +67,5 @@ kstring join(const klist<T>& list, char delim = ' ')
 
     return result;
 }
+
 }

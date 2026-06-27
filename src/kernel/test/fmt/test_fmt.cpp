@@ -49,108 +49,124 @@ void test_is_alpha_non_alpha()
 
 void test_to_string_decimal_zero()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0));
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), buf);
     test::assert_true(strcmp(result, "0") == 0, "to_string(0) returns \"0\"");
 }
 
 void test_to_string_decimal_positive()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(12345));
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(12345), buf);
     test::assert_true(strcmp(result, "12345") == 0, "to_string(12345) returns \"12345\"");
 }
 
 void test_to_string_decimal_large()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(4294967295));
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(4294967295), buf);
     test::assert_true(strcmp(result, "4294967295") == 0, "to_string(UINT32_MAX) correct");
 }
 
 void test_to_string_signed_positive()
 {
-    const char* result = fmt::to_string(static_cast<std::intmax_t>(42));
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::intmax_t>(42), buf);
     test::assert_true(strcmp(result, "42") == 0, "to_string(42) returns \"42\"");
 }
 
 void test_to_string_signed_negative()
 {
-    const char* result = fmt::to_string(static_cast<std::intmax_t>(-123));
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::intmax_t>(-123), buf);
     test::assert_true(strcmp(result, "-123") == 0, "to_string(-123) returns \"-123\"");
 }
 
 void test_to_string_hex_zero()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), fmt::NumberFormat::HEX);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), buf, fmt::NumberFormat::HEX);
     test::assert_true(strcmp(result, "0") == 0, "to_string(0, HEX) returns \"0\"");
 }
 
 void test_to_string_hex_value()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(255), fmt::NumberFormat::HEX);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(255), buf, fmt::NumberFormat::HEX);
     test::assert_true(strcmp(result, "0x000000FF") == 0, "to_string(255, HEX) returns \"0x000000FF\"");
 }
 
 void test_to_string_hex_large()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0xDEADBEEF), fmt::NumberFormat::HEX);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0xDEADBEEF), buf, fmt::NumberFormat::HEX);
     test::assert_true(strcmp(result, "0xDEADBEEF") == 0, "to_string(0xDEADBEEF, HEX) correct");
 }
 
 void test_to_string_hex_wrapper()
 {
-    const char* result = fmt::to_string(fmt::hex{0xABCD});
+    char buf[32];
+    const char* result = fmt::to_string(fmt::hex{0xABCD}, buf);
     test::assert_true(strcmp(result, "0x0000ABCD") == 0, "to_string(hex{0xABCD}) correct");
 }
 
 void test_to_string_bin_zero()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), fmt::NumberFormat::BIN);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), buf, fmt::NumberFormat::BIN);
     test::assert_true(strcmp(result, "0") == 0, "to_string(0, BIN) returns \"0\"");
 }
 
 void test_to_string_bin_value()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(5), fmt::NumberFormat::BIN);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(5), buf, fmt::NumberFormat::BIN);
     test::assert_true(strcmp(result, "0b00000101") == 0, "to_string(5, BIN) returns \"0b00000101\"");
 }
 
 void test_to_string_bin_wrapper()
 {
-    const char* result = fmt::to_string(fmt::bin{0b11110000});
+    char buf[32];
+    const char* result = fmt::to_string(fmt::bin{0b11110000}, buf);
     test::assert_true(strcmp(result, "0b11110000") == 0, "to_string(bin{0b11110000}) correct");
 }
 
 void test_to_string_oct_zero()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), fmt::NumberFormat::OCT);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(0), buf, fmt::NumberFormat::OCT);
     test::assert_true(strcmp(result, "0") == 0, "to_string(0, OCT) returns \"0\"");
 }
 
 void test_to_string_oct_value()
 {
-    const char* result = fmt::to_string(static_cast<std::uintmax_t>(64), fmt::NumberFormat::OCT);
+    char buf[32];
+    const char* result = fmt::to_string(static_cast<std::uintmax_t>(64), buf, fmt::NumberFormat::OCT);
     test::assert_true(strcmp(result, "0100") == 0, "to_string(64, OCT) returns \"0100\"");
 }
 
 void test_to_string_oct_wrapper()
 {
-    const char* result = fmt::to_string(fmt::oct{511});
+    char buf[32];
+    const char* result = fmt::to_string(fmt::oct{511}, buf);
     test::assert_true(strcmp(result, "0777") == 0, "to_string(oct{511}) returns \"0777\"");
 }
 
 void test_to_string_pointer()
 {
+    char buf[32];
     int x = 42;
     int* ptr = &x;
-    const char* result = fmt::to_string(ptr);
-    // Should start with "0x" and be a hex address
+    const char* result = fmt::to_string(ptr, buf);
     test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(ptr) has hex prefix");
 }
 
 void test_to_string_hex_pointer_wrapper()
 {
+    char buf[32];
     int x = 42;
     int* ptr = &x;
-    const char* result = fmt::to_string(fmt::hex{ptr});
+    const char* result = fmt::to_string(fmt::hex{ptr}, buf);
     test::assert_true(result[0] == '0' && result[1] == 'x', "to_string(hex{ptr}) has hex prefix");
 }
 
@@ -170,13 +186,6 @@ void test_parse_uint_zero()
 {
     std::uintmax_t result = fmt::parse_uint("0", 1);
     test::assert_eq(result, static_cast<std::uintmax_t>(0), "parse_uint(\"0\") returns 0");
-}
-
-void test_parse_uint_kstring()
-{
-    kstring s("9876");
-    std::uintmax_t result = fmt::parse_uint(s);
-    test::assert_eq(result, static_cast<std::uintmax_t>(9876), "parse_uint(kstring) works");
 }
 
 void test_parse_int_char()
@@ -223,7 +232,6 @@ void run()
     test_parse_uint_decimal();
     test_parse_uint_decimal_partial();
     test_parse_uint_zero();
-    test_parse_uint_kstring();
     test_parse_int_char();
     test_number_format_divisor();
 }

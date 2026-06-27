@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+
 namespace acpi {
 struct [[gnu::packed]] XSDP {
     char signature[8];

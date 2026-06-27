@@ -57,6 +57,7 @@
  *   Chunks:  (4096 - 40) / 32 = 126 chunks per slab
  */
 
+#include "kassert/kassert.hpp"
 #include <arch.hpp>
 #include <log/log.hpp>
 #include <memory/slab.hpp>
@@ -96,6 +97,7 @@ Slab* try_get_slab(void* addr)
     }
 
     static constexpr std::uintptr_t PAGE_ALIGN_MASK = ~0xFFF;
+
     auto* page = (void*)((std::uintptr_t)addr & PAGE_ALIGN_MASK); // page align
     auto* slab = reinterpret_cast<Slab*>(page);
 
@@ -156,23 +158,38 @@ SizeClass* get_size_class(std::size_t bytes)
  */
 Slab* create_slab(SizeClass* sc)
 {
+    kassert_not_null(sc);
+
     void* page = arch::vmm::alloc_kpage();
     Slab* slab = reinterpret_cast<Slab*>(page);
 
     // instead of storing slab metadata externally, we will just
-    // store it directly in the page we just allocated
+    // store it directly at the beginning of the page we just allocated,
+    // which means the first data chuck will be sizeof(Slab) bytes from 0
     auto* first_chunk = static_cast<std::uint8_t*>(page) + sizeof(Slab);
-    std::uint8_t num_chunks = sc->chunks_per_slab;
 
-    for (std::uint8_t i = 0; i < num_chunks - 1; i++) {
-        std::uint8_t* this_chunk = first_chunk + (i * sc->size);
-        std::uint8_t* next_chunk = this_chunk + sc->size;
+    const std::uint8_t num_chunks = sc->chunks_per_slab;
+    const std::size_t chunk_size = sc->size;
 
-        *(void**)this_chunk = next_chunk;
+    for (std::uint8_t chunk_idx = 0; chunk_idx < num_chunks - 1; chunk_idx++) {
+        std::uint8_t* this_chunk = first_chunk + (chunk_idx * chunk_size);
+        std::uint8_t* next_chunk = this_chunk + chunk_size;
+
+        kassert_not_null(this_chunk);
+        kassert_not_null(next_chunk);
+
+        // this_chunk is uint8_t*, so dereferencing it gives a 1-byte lvalue, which is too
+        // small to store a pointer. casting to void** doesn't change the address,
+        // it only changes how the compiler interprets the dereference: *(void**)
+        // yields a void* lvalue at that address, which is pointer-sized (8 bytes),
+        // so the full 64-bit address of next_chunk gets written correctly.
+        void** chunk_ptr = reinterpret_cast<void**>(this_chunk);
+        *chunk_ptr = next_chunk;
     }
 
-    std::uint8_t* last_chunk = first_chunk + ((num_chunks - 1) * sc->size);
-    *(void**)last_chunk = nullptr;
+    // we repeat the same void** trick for the last chunk
+    void** last_chunk = reinterpret_cast<void**>(first_chunk + ((num_chunks - 1) * chunk_size));
+    *last_chunk = nullptr;
 
     slab->magic = SLAB_MAGIC;
     slab->size_class_index = sc->index;
@@ -256,6 +273,8 @@ void* alloc(std::size_t size)
     if (slab == nullptr) {
         slab = create_slab(sc);
     }
+
+    kassert_not_null(slab);
 
     void* chunk = slab->free_head;
 

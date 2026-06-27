@@ -1,8 +1,9 @@
 #pragma once
 
 #include <arch.hpp>
-#include <cstdint>
 #include <exclusive/katomic.hpp>
+
+#include <cstdint>
 
 class kspinlock_irqsave final {
 private:

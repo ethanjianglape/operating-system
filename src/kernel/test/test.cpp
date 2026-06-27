@@ -32,10 +32,16 @@ void run();
 namespace test_katomic {
 void run();
 }
+namespace test_kspinlock {
+void run();
+}
 namespace test_kspinlock_irqsave {
 void run();
 }
 namespace test_kstring {
+void run();
+}
+namespace test_kstring_view {
 void run();
 }
 namespace test_klist {
@@ -92,8 +98,10 @@ void run_all()
     test_kunique_ptr::run();
     test_kshared_ptr::run();
     test_katomic::run();
+    test_kspinlock::run();
     test_kspinlock_irqsave::run();
     test_kstring::run();
+    test_kstring_view::run();
     test_klist::run();
     test_fmt::run();
     test_fs::run();

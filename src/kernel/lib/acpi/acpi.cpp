@@ -24,7 +24,6 @@
  * parsers (e.g., madt.cpp) based on the 4-byte signature.
  */
 
-#include "arch/x64/memory/vmm.hpp"
 #include <acpi/acpi.hpp>
 #include <acpi/madt.hpp>
 #include <arch.hpp>
@@ -96,7 +95,7 @@ static void validate_xsdp(const XSDP* xsdp)
  */
 static void validate_acpi_header(const ACPIHeader* header)
 {
-    kstring sig{header->signature, 4};
+    kstring_view sig{header->signature, 4};
     std::uint8_t sum = compute_checksum(header, header->length);
 
     if (sum != 0) {
@@ -108,8 +107,8 @@ static void validate_acpi_header(const ACPIHeader* header)
 
 static void log_xsdp(const XSDP* xsdp)
 {
-    kstring signature{xsdp->signature, 8};
-    kstring oem_id{xsdp->oem_id, 6};
+    kstring_view signature{xsdp->signature, 8};
+    kstring_view oem_id{xsdp->oem_id, 6};
 
     log::info("XSDP:");
     log::info("  signature    = \"", signature, "\"");
@@ -125,9 +124,9 @@ static void log_xsdp(const XSDP* xsdp)
 
 static void log_acpi_header(const ACPIHeader* header)
 {
-    kstring signature{header->signature, 4};
-    kstring oem_id{header->oem_id, 6};
-    kstring oem_table_id{header->oem_table_id, 8};
+    kstring_view signature{header->signature, 4};
+    kstring_view oem_id{header->oem_id, 6};
+    kstring_view oem_table_id{header->oem_table_id, 8};
 
     log::info("ACPIHeader:");
     log::info("  signature        = \"", signature, "\"");
@@ -184,7 +183,7 @@ static void parse_xsdt(const XSDT* xsdt)
 
     for (int i = 0; i < entries; i++) {
         ACPIHeader* header = get_acpi_header(xsdt->other_headers[i]);
-        kstring sig{header->signature, 4};
+        kstring_view sig{header->signature, 4};
 
         log_acpi_header(header);
         validate_acpi_header(header);

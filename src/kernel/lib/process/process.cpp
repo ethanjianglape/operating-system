@@ -1,3 +1,4 @@
+#include "kassert/kassert.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
 #include <exclusive/katomic.hpp>
@@ -36,6 +37,8 @@ static void kthread_entry_trampoline()
 
     auto* proc = arch::percpu::current_process();
     auto* entry_func = reinterpret_cast<void (*)()>(proc->entry);
+
+    kassert_not_null(entry_func);
 
     entry_func();
 

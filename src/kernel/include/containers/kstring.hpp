@@ -1,5 +1,6 @@
 #pragma once
 
+#include "containers/kstring_view.hpp"
 #include <crt/crt.h>
 #include <cstdint>
 #include <memory/memory.hpp>
@@ -297,6 +298,11 @@ public:
 
     // Destructor
     ~kstring() { kfree(_data); }
+
+    operator kstring_view() const
+    {
+        return kstring_view{_data, _length};
+    }
 
     // Capacity
     void reserve(std::size_t capacity) { ensure_capacity(capacity); }

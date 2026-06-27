@@ -11,7 +11,6 @@
 
 template <typename T>
 concept klist_storable = requires {
-    requires sizeof(T) > 0;
     requires sizeof(T) <= 4096;
     requires std::destructible<T>;
     requires std::move_constructible<T> || std::copy_constructible<T>;

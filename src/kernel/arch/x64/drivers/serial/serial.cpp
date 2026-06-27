@@ -90,13 +90,13 @@ int putchar(char c)
     return 1;
 }
 
-int puts(const kstring& str)
+int puts(kstring_view sv)
 {
-    for (char c : str) {
-        putchar(c);
+    for (std::size_t i = 0; i < sv.length(); i++) {
+        putchar(sv[i]);
     }
 
-    return str.size();
+    return sv.length();
 }
 
 int puts(const char* str)

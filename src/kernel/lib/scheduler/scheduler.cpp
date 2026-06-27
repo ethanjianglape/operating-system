@@ -1,6 +1,6 @@
-#include "arch/x64/percpu/percpu.hpp"
 #include <arch.hpp>
 #include <exclusive/kspinlock_irqsave.hpp>
+#include <kassert/kassert.hpp>
 #include <kpanic/kpanic.hpp>
 #include <log/log.hpp>
 #include <process/process.hpp>
@@ -11,17 +11,33 @@
 
 namespace scheduler {
 
+/// global list of all processes in the scheduler
 static klist<process::Process*> g_processes;
+
+/// global spinlock used for safety critical segments of the scheduler
 static kspinlock_irqsave g_processes_lock;
 
+/// @brief switch execution from one process to another
+///
+/// @param old_rsp_ptr pointer to the rsp of the previous process
+/// @param new_rsp the rsp of the new process
+///
+/// @note this function is defined in context_switch.s
+///
 extern "C" void context_switch(std::uint64_t* old_rsp_ptr, std::uint64_t new_rsp);
 
+/// @brief wakes the first processes that is blocked for wait_reason
+///
+/// @param wait_reason the reason to wake the process
+///
 void wake_single(process::WaitReason wait_reason)
 {
     g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         process::Process* p = g_processes[i];
+
+        kassert_not_null(p);
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
             p->state = process::ProcessState::READY;
@@ -35,12 +51,18 @@ cleanup:
     g_processes_lock.unlock();
 }
 
+/// @brief wakes every process that is blocked for wait_reason
+///
+/// @param wait_reason the reason to wake the processes
+///
 void wake_all(process::WaitReason wait_reason)
 {
     g_processes_lock.lock();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         process::Process* p = g_processes[i];
+
+        kassert_not_null(p);
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
             p->state = process::ProcessState::READY;
@@ -52,14 +74,16 @@ void wake_all(process::WaitReason wait_reason)
     g_processes_lock.unlock();
 }
 
-/// @brief wakes any process that is marked as BLOCKED and has a wake time
-/// that is now in the past
+/// @brief wake all sleeping processes that have a wake_time_ms in the past
+///
 static void wake_sleeping_processes()
 {
     const std::uintmax_t ticks = timer::get_ticks();
 
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         process::Process* p = g_processes[i];
+
+        kassert_not_null(p);
 
         if (p->state == process::ProcessState::BLOCKED && p->wait_reason == process::WaitReason::SLEEP && p->wake_time_ms > 0 && ticks > p->wake_time_ms) {
             p->state = process::ProcessState::READY;
@@ -69,16 +93,23 @@ static void wake_sleeping_processes()
     }
 }
 
-/// @brief Wakes all sleeping processes then
-/// returns the first process that is marked as READY or NEW
+/// @brief finds the next ready process to schedule
+///
+/// 1. wakes all sleeping processes
+/// 2. attempts to find a process that is READY or NEW
+/// 3. if found, rotates the queue of processes
+/// 4. defaults to the idle process if no process found
+///
+/// @return pointer to the next ready process
+///
 static process::Process* select_next_ready_process()
 {
     wake_sleeping_processes();
 
-    auto* cpu = arch::percpu::get();
-
     for (std::size_t i = 0; i < g_processes.size(); i++) {
         process::Process* p = g_processes[i];
+
+        kassert_not_null(p);
 
         if (p->state == process::ProcessState::READY || p->state == process::ProcessState::NEW) {
             g_processes.rotate_next();
@@ -86,12 +117,19 @@ static process::Process* select_next_ready_process()
         }
     }
 
-    return cpu->idle_process;
+    return arch::percpu::idle_process();
 };
 
+/// @brief activate a process on the current cpu
+///
+/// @param p the process to activate
+///
 static void activate_process(process::Process* p)
 {
     auto* cpu = arch::percpu::get();
+
+    kassert_not_null(cpu);
+    kassert_not_null(p);
 
     p->state = process::ProcessState::RUNNING;
 
@@ -105,23 +143,36 @@ static void activate_process(process::Process* p)
 
 constexpr std::uint64_t REAP_INTERVAL_MS = 50;
 
+/// @brief Periodically terminate DEAD processes
+///
+/// @return this function should never return
+///
+[[noreturn]]
 static void reaper_kthread()
 {
-    process::Process* self = arch::percpu::current_process();
-
     while (true) {
         g_processes_lock.lock();
 
-        for (std::size_t i = 0; i < g_processes.size(); i++) {
-            process::Process* proc = g_processes[i];
+        process::Process* self = arch::percpu::current_process();
 
-            if (proc->state != process::ProcessState::DEAD || proc->pid == self->pid) {
+        for (std::size_t i = 0; i < g_processes.size(); i++) {
+            process::Process* p = g_processes[i];
+
+            kassert_not_null(p);
+
+            // the reaper_kthread should never attempt to terminate itself,
+            // even if it gets marked DEAD for some reason
+            if (p == self) {
                 continue;
             }
 
-            process::terminate_process(proc);
+            if (p->state != process::ProcessState::DEAD) {
+                continue;
+            }
 
-            g_processes.erase(i);
+            process::terminate_process(p);
+
+            g_processes.erase(i--);
         }
 
         g_processes_lock.unlock();
@@ -129,9 +180,14 @@ static void reaper_kthread()
         yield_sleep(REAP_INTERVAL_MS);
     }
 
+    // The reaper kthread should never finish, its responsible for terminating DEAD
+    // processes, so if it stopped running, DEAD processes would continue to
+    // accumulate, wasting resources
     kpanic("reaper kthread terminated");
 }
 
+/// @brief interrupt the current process to schedule a new one
+///
 void preempt()
 {
     // Certain sensitive kernel actions, including this preempt() function itself,
@@ -155,9 +211,7 @@ void preempt()
 
     g_processes_lock.lock();
 
-    auto* cpu = arch::percpu::get();
-    auto* current = cpu->process;
-
+    process::Process* current = arch::percpu::current_process();
     process::Process* p = select_next_ready_process();
 
     // We never want a process to context switch to itself, so we can
@@ -181,18 +235,22 @@ void preempt()
     context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
 }
 
+/// @brief mark the current process as DEAD and schedule a new one
+///
+/// @return this function should never return
+///
 [[noreturn]]
 void yield_dead()
 {
     arch::cpu::cli();
     g_processes_lock.lock();
 
-    auto* cpu = arch::percpu::get();
-    auto* current = cpu->process;
-
+    process::Process* current = arch::percpu::current_process();
     current->state = process::ProcessState::DEAD;
 
     process::Process* p = select_next_ready_process();
+
+    kassert(current != p);
 
     activate_process(p);
 
@@ -200,21 +258,33 @@ void yield_dead()
 
     context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
 
+    // A DEAD process should never be the target of a context_switch from another
+    // process, because now that this process is marked as DEAD, the reaper_kthread
+    // will pick it and terminate it completely, freeing all of the memory it used,
+    // so there would be nothing to context_switch back to anyway
     kpanic("Context switch back to dead process");
 }
 
+/// @brief put the current process to sleep
+///
+/// @param sleep_time_ms time in ms to sleep for
+///
 void yield_sleep(std::uint64_t sleep_time_ms)
 {
-    arch::percpu::current_process()->wake_time_ms = timer::get_ticks() + sleep_time_ms;
+    process::Process* current = arch::percpu::current_process();
+    current->wake_time_ms = timer::get_ticks() + sleep_time_ms;
     yield_blocked(process::WaitReason::SLEEP);
 }
 
+/// @brief block the current process and schedule a new one
+///
+/// @param wait_reason the reason the process is blocked
+///
 void yield_blocked(process::WaitReason wait_reason)
 {
     g_processes_lock.lock();
 
-    auto* cpu = arch::percpu::get();
-    auto* current = cpu->process;
+    process::Process* current = arch::percpu::current_process();
 
     current->state = process::ProcessState::BLOCKED;
     current->wait_reason = wait_reason;
@@ -238,8 +308,14 @@ void yield_blocked(process::WaitReason wait_reason)
     context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
 }
 
+/// @brief add a new process to the scheduler
+///
+/// @param p the process
+///
 void add_process(process::Process* p)
 {
+    kassert_not_null(p);
+
     g_processes_lock.lock();
     g_processes.push_back(p);
     g_processes_lock.unlock();

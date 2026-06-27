@@ -62,6 +62,8 @@
  */
 
 #include "percpu.hpp"
+#include "kassert/kassert.hpp"
+#include "kpanic/kpanic.hpp"
 
 #include <arch/x64/cpu/cpu.hpp>
 #include <cstdint>
@@ -94,12 +96,15 @@ void early_init()
     cpu::wrmsr(MSR_KERNEL_GS_BASE, 0);
 }
 
+[[noreturn]]
 static void idle_process_kthread()
 {
     while (true) {
         cpu::sti();
         cpu::hlt();
     }
+
+    kpanic("kernel idle thread finished");
 }
 
 void init()
@@ -141,6 +146,8 @@ PerCPU* get()
     // Read the self pointer from offset 0 of GS-relative memory
     asm volatile("mov %%gs:%c1, %0" : "=r"(ptr) : "i"(PER_CPU_SELF_OFFSET) : "memory");
 
+    kassert_not_null(ptr);
+
     return ptr;
 }
 
@@ -148,34 +155,41 @@ bool preemption_enabled()
 {
     PerCPU* percpu = get();
 
-    if (percpu) {
-        return percpu->preemption_enabled;
-    }
-
-    return false;
+    return percpu->preemption_enabled;
 }
 
 void disable_preemption()
 {
     PerCPU* percpu = get();
 
-    if (percpu) {
-        percpu->preemption_enabled = false;
-    }
+    percpu->preemption_enabled = false;
 }
 
 void enable_preemption()
 {
     PerCPU* percpu = get();
 
-    if (percpu) {
-        percpu->preemption_enabled = true;
-    }
+    percpu->preemption_enabled = true;
+}
+
+process::Process* idle_process()
+{
+    auto* cpu = get();
+    auto* p = cpu->idle_process;
+
+    kassert_not_null(p);
+
+    return p;
 }
 
 process::Process* current_process()
 {
-    return get()->process;
+    auto* cpu = get();
+    auto* p = cpu->process;
+
+    kassert_not_null(p);
+
+    return p;
 }
 
 }

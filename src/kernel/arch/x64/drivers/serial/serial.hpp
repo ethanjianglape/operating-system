@@ -1,7 +1,7 @@
 #pragma once
 
 #include <console/console.hpp>
-#include <containers/kstring.hpp>
+#include <containers/kstring_view.hpp>
 
 #include <cstdint>
 
@@ -22,7 +22,7 @@ constexpr std::uint8_t LSR_TRANSMIT_EMPTY = 0x20;
 void init();
 
 int putchar(char c);
-int puts(const kstring& str);
+int puts(kstring_view sv);
 int puts(const char* str);
 int puts(const unsigned char* str);
 }

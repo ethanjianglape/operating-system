@@ -1,8 +1,13 @@
 #pragma once
 
+#include <containers/kstring.hpp>
+#include <containers/kstring_view.hpp>
 #include <kprint/kprint.hpp>
 
+#include <utility>
+
 namespace log {
+
 template <typename... Ts>
 void info(Ts... args)
 {
@@ -33,6 +38,14 @@ void error(Ts... args)
     kprintln("[ERROR] ", args...);
 }
 
+template <typename T, typename... Rest>
+void errorf(kstring_view format, T&& first, Rest&&... rest)
+{
+    kprint("[ERROR] ");
+    kprintf(format, first, std::forward<Rest>(rest)...);
+    kprintln();
+}
+
 template <typename... Ts>
 void success(Ts... args)
 {
@@ -46,10 +59,11 @@ void debug(Ts... args)
 }
 
 template <typename T, typename... Rest>
-void debugf(const kstring& format, T first, Rest... rest)
+void debugf(kstring_view format, T first, Rest... rest)
 {
     kprint("[DEBUG] ");
     kprintf(format, first, rest...);
     kprintln();
 }
+
 }
