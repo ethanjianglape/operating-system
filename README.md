@@ -77,34 +77,59 @@ os/
 │   │   ├── kernel.cpp              # Kernel entry point
 │   │   ├── include/                # Kernel headers
 │   │   │   ├── arch.hpp            # Architecture abstraction
-│   │   │   ├── fs/                 # Filesystem (VFS, initramfs, devfs)
-│   │   │   ├── memory/             # PMM, VMM, Slab, kmalloc
+│   │   │   ├── acpi/               # ACPI table parsing
+│   │   │   ├── boot/               # Boot info structures
+│   │   │   ├── console/            # Console/TTY interface
+│   │   │   ├── containers/         # kstring, kstring_view, kvector, klist
+│   │   │   ├── exclusive/          # kspinlock, kspinlock_irqsave, katomic
+│   │   │   ├── fmt/                # Kernel string formatting
+│   │   │   ├── framebuffer/        # Framebuffer compositor
+│   │   │   ├── fs/                 # VFS, initramfs, devfs, tmpfs
+│   │   │   ├── kassert/            # Kernel assertions
+│   │   │   ├── kpanic/             # Kernel panic
+│   │   │   ├── kprint/             # Low-level kernel printing
+│   │   │   ├── log/                # Kernel logging
+│   │   │   ├── memory/             # PMM, VMM, slab, kmalloc
 │   │   │   ├── process/            # Process management
 │   │   │   ├── scheduler/          # Process scheduler
 │   │   │   ├── syscall/            # Syscall declarations
-│   │   │   ├── containers/         # kstring, kvector
-│   │   │   ├── exclusive/          # kspinlock, kspinlock_irqsave, katomic
-│   │   │   └── ...
+│   │   │   ├── timer/              # Timer interface
+│   │   │   └── linux/              # Linux uapi headers (ioctl, etc.)
 │   │   ├── lib/                    # Implementations
-│   │   │   ├── fs/                 # VFS, initramfs, devfs, dev_tty, dev_null
-│   │   │   ├── memory/
+│   │   │   ├── acpi/               # ACPI parsing
+│   │   │   ├── algo/               # Algorithms
+│   │   │   ├── boot/               # Boot initialization
+│   │   │   ├── console/            # Console implementation
+│   │   │   ├── crt/                # C runtime support
+│   │   │   ├── framebuffer/        # Framebuffer compositor
+│   │   │   ├── fs/                 # VFS, initramfs, devfs, tmpfs
+│   │   │   ├── kpanic/             # Panic handler
+│   │   │   ├── memory/             # PMM, VMM, slab, kmalloc
 │   │   │   ├── process/            # ELF loader, process creation
-│   │   │   ├── scheduler/
+│   │   │   ├── scheduler/          # Scheduler implementation
 │   │   │   ├── syscall/            # Syscall implementations
-│   │   │   └── ...
-│   │   ├── arch/x86_64/            # x86_64-specific code
-│   │   │   ├── boot/               # Limine entry
+│   │   │   └── timer/              # Timer implementation
+│   │   ├── arch/x64/               # x86-64-specific code
+│   │   │   ├── boot/               # Limine entry point
+│   │   │   ├── context/            # Context switching
+│   │   │   ├── cpu/                # CPU utilities (rflags, pause, etc.)
+│   │   │   ├── crt/                # Arch-level C runtime (ctors, etc.)
 │   │   │   ├── gdt/                # Global Descriptor Table
 │   │   │   ├── interrupts/         # IDT, IRQ handling
-│   │   │   ├── entry/              # Syscall entry (LSTAR/SYSRET)
-│   │   │   ├── context/            # Context switching
 │   │   │   ├── memory/             # VMM implementation
-│   │   │   ├── drivers/            # APIC, keyboard, serial, etc.
-│   │   │   └── ...
+│   │   │   ├── percpu/             # Per-CPU state
+│   │   │   ├── tls/                # Thread-local storage
+│   │   │   ├── trap/               # Syscall entry (LSTAR/SYSRET)
+│   │   │   └── drivers/            # APIC, PIC, PIT, TSC, keyboard, serial
 │   │   ├── test/                   # Unit tests
+│   │   │   ├── algo/
+│   │   │   ├── containers/         # kstring, kstring_view, kvector, klist
+│   │   │   ├── exclusive/          # kspinlock, kspinlock_irqsave, katomic
+│   │   │   ├── fmt/
+│   │   │   ├── fs/
+│   │   │   └── memory/             # PMM, VMM, slab, kmalloc
 │   │   └── CONVENTIONS.md          # Code style guide
-│   └── user/                       # Userspace programs
-│       └── ...                     # ELF binaries for initramfs
+│   └── user/                       # Userspace programs (ELF binaries)
 ├── firmware/                       # Bundled OVMF firmware for QEMU
 ├── initramfs/                      # Files packaged into initramfs
 │   └── bin/                        # Userspace binaries
