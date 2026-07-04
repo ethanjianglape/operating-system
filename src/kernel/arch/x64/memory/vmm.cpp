@@ -684,11 +684,6 @@ PML4E* get_kernel_pml4() { return kernel_pml4; }
 
 void switch_kernel_pml4() { switch_pml4(kernel_pml4); }
 
-static constexpr std::uint64_t CR4_PGE = (1ULL << 7);
-static constexpr std::uint64_t CR4_UMIP = (1ULL << 11);
-static constexpr std::uint64_t CR4_SMEP = (1ULL << 20);
-static constexpr std::uint64_t CR4_SMAP = (1ULL << 21);
-
 constexpr std::uintptr_t user_max_addr = 0x0000800000000000ULL;
 
 bool is_user_addr(void* addr)
@@ -708,10 +703,30 @@ bool is_user_addr(std::uintptr_t addr, std::size_t size)
 
 static void init_cr4()
 {
+    /// Page Global Enable: enables global pages which are not flushed from the TLB
+    /// during a context switch (when cr3 is updated)
+    constexpr std::uint64_t CR4_PGE = (1ULL << 7);
+
+    /// User Mode Instruction Protection: prevents usage of certain cpu instruction
+    /// whle in user mode
+    constexpr std::uint64_t CR4_UMIP = (1ULL << 11);
+
+    /// Supervisor Mode Execution Prevention: kernel cannot execute code from
+    /// userspace mapped pages
+    constexpr std::uint64_t CR4_SMEP = (1ULL << 20);
+
+    /// Supervisor Mode Access Prevention: kernel cannot read/write data from
+    /// userspace mapped pages unless explicitly allowed (stac + clac)
+    constexpr std::uint64_t CR4_SMAP = (1ULL << 21);
+
     std::uint64_t cr4;
+
     asm volatile("mov %%cr4, %0" : "=r"(cr4));
     cr4 |= CR4_PGE | CR4_UMIP | CR4_SMEP | CR4_SMAP;
     asm volatile("mov %0, %%cr4" : : "r"(cr4) : "memory");
+
+    // we are already in kernel mode, but reload the kernel pml4 to
+    // flush the TLB
     switch_kernel_pml4();
 }
 
