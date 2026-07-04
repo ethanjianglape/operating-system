@@ -36,6 +36,11 @@ set(ARCH_DRIVER_KERNEL_SOURCES
   ${ARCH_DRIVERS_DIR}/tsc/tsc.cpp
 )
 
+# C runtime sources
+set(CRT_SOURCES
+  ${LIB_DIR}/crt/crt.c
+)
+
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/boot/limine-boot.cpp
@@ -52,7 +57,6 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/framebuffer/framebuffer.cpp
   ${LIB_DIR}/acpi/acpi.cpp
   ${LIB_DIR}/acpi/madt.cpp
-  ${LIB_DIR}/crt/crt.c
   ${LIB_DIR}/algo/algo.cpp
   ${LIB_DIR}/fs/fs.cpp
   ${LIB_DIR}/fs/initramfs/initramfs.cpp
@@ -104,6 +108,7 @@ add_library(crtn_obj OBJECT ${ARCH_DIR}/crt/crtn.s)
 # Create kernel object library
 add_library(kernel_objs OBJECT
   ${KERNEL_SOURCES}
+  ${CRT_SOURCES}
   ${ARCH_DRIVER_KERNEL_SOURCES}
   ${ARCH_KERNEL_SOURCES}
   ${LIB_KERNEL_SOURCES}
