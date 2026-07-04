@@ -24,6 +24,7 @@
  * parsers (e.g., madt.cpp) based on the 4-byte signature.
  */
 
+#include "arch/x64/memory/vmm.hpp"
 #include <acpi/acpi.hpp>
 #include <acpi/madt.hpp>
 #include <arch.hpp>
@@ -160,7 +161,7 @@ static void log_xsdt(const XSDT* xsdt)
 static ACPIHeader* get_acpi_header(std::uint64_t phys_addr)
 {
     std::uintptr_t header_phys = static_cast<std::uintptr_t>(phys_addr);
-    std::uintptr_t header_virt = arch::vmm::map_hddm_page(header_phys, arch::vmm::PAGE_WRITE | arch::vmm::PAGE_CACHE_DISABLE);
+    std::uintptr_t header_virt = arch::vmm::map_phys(header_phys, arch::vmm::PAGE_CACHE_DISABLE | arch::vmm::PAGE_WRITE);
 
     return reinterpret_cast<ACPIHeader*>(header_virt);
 }
@@ -182,6 +183,12 @@ static void parse_xsdt(const XSDT* xsdt)
     int entries = (xsdt->header.length - sizeof(ACPIHeader)) / sizeof(std::uint64_t);
 
     for (int i = 0; i < entries; i++) {
+        log::debugf("xsdt header[{}] addr = {}", i, fmt::hex{xsdt->other_headers[i]});
+    }
+
+    for (int i = 0; i < entries; i++) {
+        log::debugf("xsdt header[{}] addr = {}", i, fmt::hex{xsdt->other_headers[i]});
+
         ACPIHeader* header = get_acpi_header(xsdt->other_headers[i]);
         kstring_view sig{header->signature, 4};
 
@@ -213,7 +220,7 @@ static XSDT* get_xsdt(void* rsdp_addr)
     validate_xsdp(xsdp);
 
     std::uintptr_t xsdt_phys = static_cast<std::uintptr_t>(xsdp->xsdt_addr);
-    std::uintptr_t xsdt_virt = arch::vmm::map_hddm_page(xsdt_phys, arch::vmm::PAGE_WRITE | arch::vmm::PAGE_CACHE_DISABLE);
+    std::uintptr_t xsdt_virt = arch::vmm::map_phys(xsdt_phys, arch::vmm::PAGE_WRITE | arch::vmm::PAGE_CACHE_DISABLE);
 
     return reinterpret_cast<XSDT*>(xsdt_virt);
 }

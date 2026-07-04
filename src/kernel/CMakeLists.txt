@@ -39,6 +39,8 @@ set(ARCH_DRIVER_KERNEL_SOURCES
 # General purpose kernel library sources (not arch specific)
 set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/boot/limine-boot.cpp
+  ${LIB_DIR}/containers/kstring.cpp
+  ${LIB_DIR}/containers/kstring_view.cpp
   ${LIB_DIR}/timer/timer.cpp
   ${LIB_DIR}/kpanic/kpanic.cpp
   ${LIB_DIR}/memory/memory.cpp

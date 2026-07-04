@@ -29,9 +29,10 @@
  */
 
 #include "vmm.hpp"
-#include "kpanic/kpanic.hpp"
 
+#include <exclusive/kspinlock_irqsave.hpp>
 #include <fmt/fmt.hpp>
+#include <kassert/kassert.hpp>
 #include <log/log.hpp>
 #include <memory/memory.hpp>
 #include <memory/pmm.hpp>
@@ -40,17 +41,104 @@
 #include <cstdint>
 
 namespace x64::vmm {
-static PageTableEntry* kernel_pml4;
+
+static PML4E* kernel_pml4;
 
 static std::uintptr_t hhdm_offset;
 
-std::uintptr_t get_hhdm_offset() { return hhdm_offset; }
+static Heap kheap{};
+
+static kspinlock_irqsave vmm_lock{};
+
+template <typename T>
+static T hhdm_ptov(std::uintptr_t phys) { return reinterpret_cast<T>(phys + hhdm_offset); }
+
+template <typename T>
+static std::uintptr_t hhdm_vtop(T virt) { return reinterpret_cast<std::uintptr_t>(virt) - hhdm_offset; }
 
 static std::size_t get_kernel_pml4_index() { return (hhdm_offset >> 39) & 0x1FF; }
 
-static PageTableEntry* get_table_from_pte(const PageTableEntry& pte)
+static PDPTE* get_pdpt(const PML4E& pml4e)
 {
-    return phys_to_virt<PageTableEntry*>(pte.addr << 12);
+    return hhdm_ptov<PDPTE*>(pml4e.addr << 12);
+}
+
+static PDE* get_pd(const PDPTE& pdpte)
+{
+    return hhdm_ptov<PDE*>(pdpte.addr << 12);
+}
+
+static PTE* get_pt(const PDE& pde)
+{
+    return hhdm_ptov<PTE*>(pde.addr << 12);
+}
+
+static std::uintptr_t get_pte_phys_frame(const PTE& pte)
+{
+    return pte.addr << 12;
+}
+
+static bool is_page_aligned(std::uintptr_t addr)
+{
+    return (addr & PAGE_MASK) == 0;
+}
+
+static std::uintptr_t page_align(std::uintptr_t addr)
+{
+    return addr & ~PAGE_MASK;
+}
+
+static std::uintptr_t page_align(void* virt_addr)
+{
+    return page_align(reinterpret_cast<std::uintptr_t>(virt_addr));
+}
+
+static std::uintptr_t get_next_heap_virt_page(Heap* heap)
+{
+    std::uintptr_t virt_page = 0;
+
+    virt_page |= ((heap->pml4_idx & 0x1FF) << 39);
+    virt_page |= ((heap->pdpt_idx & 0x1FF) << 30);
+    virt_page |= ((heap->pd_idx & 0x1FF) << 21);
+    virt_page |= ((heap->pt_idx & 0x1FF) << 12);
+
+    const std::uintptr_t bit_47 = virt_page & (1ULL << 47);
+
+    if (bit_47) {
+        virt_page |= (0xFFFFUL << 48);
+    }
+
+    kassert(is_page_aligned(virt_page));
+
+    return virt_page;
+}
+
+/// @brief advances the heap pml4 indexes to the next available one
+///
+static void advance_heap(Heap* heap)
+{
+    heap->pt_idx++;
+
+    if (heap->pt_idx < NUM_PT_ENTRIES) {
+        return;
+    }
+
+    heap->pt_idx = 0;
+    heap->pd_idx++;
+
+    if (heap->pd_idx < NUM_PT_ENTRIES) {
+        return;
+    }
+
+    heap->pd_idx = 0;
+    heap->pdpt_idx++;
+
+    if (heap->pdpt_idx < NUM_PT_ENTRIES) {
+        return;
+    }
+
+    heap->pdpt_idx = 0;
+    heap->pml4_idx++;
 }
 
 /**
@@ -59,30 +147,30 @@ static PageTableEntry* get_table_from_pte(const PageTableEntry& pte)
  * @param virt The virtual address to look up.
  * @return Pointer to the page table entry, or nullptr if not mapped.
  */
-static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt)
+static PTE* find_pte(PML4E* pml4, std::uintptr_t virt)
 {
-    const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
-    const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
-    const std::uintptr_t pd_idx = (virt >> 21) & 0x1FF;
-    const std::uintptr_t pt_idx = (virt >> 12) & 0x1FF;
+    const std::size_t pml4_idx = (virt >> 39) & 0x1FF;
+    const std::size_t pdpt_idx = (virt >> 30) & 0x1FF;
+    const std::size_t pd_idx = (virt >> 21) & 0x1FF;
+    const std::size_t pt_idx = (virt >> 12) & 0x1FF;
 
     if (!pml4[pml4_idx].p) {
         return nullptr;
     }
 
-    PageTableEntry* pdpt = get_table_from_pte(pml4[pml4_idx]);
+    PDPTE* pdpt = get_pdpt(pml4[pml4_idx]);
 
     if (!pdpt[pdpt_idx].p) {
         return nullptr;
     }
 
-    PageTableEntry* pd = get_table_from_pte(pdpt[pdpt_idx]);
+    PDE* pd = get_pd(pdpt[pdpt_idx]);
 
     if (!pd[pd_idx].p) {
         return nullptr;
     }
 
-    PageTableEntry* pt = get_table_from_pte(pd[pd_idx]);
+    PTE* pt = get_pt(pd[pd_idx]);
 
     if (!pt[pt_idx].p) {
         return nullptr;
@@ -91,63 +179,141 @@ static PageTableEntry* get_pte(PageTableEntry* pml4, std::uintptr_t virt)
     return &pt[pt_idx];
 }
 
-/**
- * @brief Populates a page table entry with a physical address and flags.
- * @param pte Pointer to the page table entry to modify.
- * @param phys Physical address to map (must be page-aligned).
- * @param flags Page flags (PAGE_PRESENT, PAGE_WRITE, PAGE_USER, etc.).
- */
-void make_pte(PageTableEntry* pte, std::uintptr_t phys, std::uint64_t flags)
+static void populate_pml4e(PML4E& pml4e, std::uint64_t phys_frame, int flags)
 {
-    pte->p = (flags & PAGE_PRESENT) ? 1 : 0;
-    pte->rw = (flags & PAGE_WRITE) ? 1 : 0;
-    pte->us = (flags & PAGE_USER) ? 1 : 0;
-    pte->pcd = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
-    pte->addr = phys >> 12; // the bottom 12 bits of the physical address are not stored
+    kassert(is_page_aligned(phys_frame));
+    pml4e.p = 1;
+    pml4e.rw = 1;
+    pml4e.us = (flags & PAGE_USER) ? 1 : 0;
+    pml4e.pwt = 0;
+    pml4e.pcd = 0;
+    pml4e.a = 0;
+    pml4e.addr = phys_frame >> 12;
 }
 
-void zero_page(std::uintptr_t* virt)
+static void populate_pdpte(PDPTE& pdpte, std::uint64_t phys_frame, int flags)
 {
+    kassert(is_page_aligned(phys_frame));
+    pdpte.p = 1;
+    pdpte.rw = 1;
+    pdpte.us = (flags & PAGE_USER) ? 1 : 0;
+    pdpte.pwt = 0;
+    pdpte.pcd = 0;
+    pdpte.a = 0;
+    pdpte.ps = 0;
+    pdpte.addr = phys_frame >> 12;
+}
+
+static void populate_pde(PDE& pde, std::uint64_t phys_frame, int flags)
+{
+    kassert(is_page_aligned(phys_frame));
+    pde.p = 1;
+    pde.rw = 1;
+    pde.us = (flags & PAGE_USER) ? 1 : 0;
+    pde.pwt = 0;
+    pde.pcd = 0;
+    pde.a = 0;
+    pde.ps = 0;
+    pde.addr = phys_frame >> 12;
+}
+
+static void populate_pte(PTE& pte, std::uint64_t phys_frame, int flags)
+{
+    kassert(is_page_aligned(phys_frame));
+    pte.p = 1;
+    pte.rw = (flags & PAGE_WRITE) ? 1 : 0;
+    pte.us = (flags & PAGE_USER) ? 1 : 0;
+    pte.pwt = 0;
+    pte.pcd = (flags & PAGE_CACHE_DISABLE) ? 1 : 0;
+    pte.a = 0;
+    pte.d = 0;
+    pte.pat = 0;
+    pte.g = (flags & PAGE_GLOBAL) ? 1 : 0;
+    pte.addr = phys_frame >> 12;
+    pte.nx = (flags & PAGE_NX) ? 1 : 0;
+}
+
+static void zero_page(std::uintptr_t* virt)
+{
+    kassert_not_null(virt);
+
     for (std::size_t i = 0; i < NUM_PT_ENTRIES; i++) {
-        virt[i] = 0x0;
+        virt[i] = 0;
     }
 }
 
-std::uintptr_t map_hddm_page(std::uintptr_t phys, std::uint32_t flags)
+static PDPTE* ensure_pdpte_present(PML4E& pml4e, int flags)
 {
-    std::uintptr_t virt = get_hhdm_offset() + phys;
-
-    map_kpage(virt, phys, flags);
-
-    return virt;
-}
-
-/**
- * @brief Ensures a page table entry points to a valid next-level table.
- *
- * If the entry is not present, allocates a new physical frame, zeros it,
- * and populates the entry. Used during page table walks to lazily create
- * intermediate tables (PDPT, PD, PT) as needed.
- *
- * @param pte Pointer to the page table entry to check/populate.
- * @param flags Flags to set on the entry if newly allocated.
- */
-void ensure_table_present(PageTableEntry* pte, std::uint32_t flags)
-{
-    if (!pte->p) {
-        // Allocate a new 4KiB physical frame for this entry
-        auto page_phys = pmm::alloc_frame<std::uintptr_t>();
-
-        // Create the missing pte entry at this index
-        make_pte(pte, page_phys, flags);
-
-        // Zero out the page in the next layer of the page table
-        zero_page(phys_to_virt<std::uintptr_t*>(page_phys));
+    if (!pml4e.p) {
+        std::uintptr_t phys_frame = pmm::alloc_frame();
+        populate_pml4e(pml4e, phys_frame, flags);
+        zero_page(hhdm_ptov<std::uintptr_t*>(phys_frame));
     }
+
+    return hhdm_ptov<PDPTE*>(pml4e.addr << 12);
+}
+
+static PDE* ensure_pde_present(PDPTE& pdpte, int flags)
+{
+    if (!pdpte.p) {
+        std::uintptr_t phys_frame = pmm::alloc_frame();
+        populate_pdpte(pdpte, phys_frame, flags);
+        zero_page(hhdm_ptov<std::uintptr_t*>(phys_frame));
+    }
+
+    return hhdm_ptov<PDE*>(pdpte.addr << 12);
+}
+
+static PTE* ensure_pt_present(PDE& pde, int flags)
+{
+    if (!pde.p) {
+        std::uintptr_t phys_frame = pmm::alloc_frame();
+        populate_pde(pde, phys_frame, flags);
+        zero_page(hhdm_ptov<std::uintptr_t*>(phys_frame));
+    }
+
+    return hhdm_ptov<PTE*>(pde.addr << 12);
+}
+
+static std::uintptr_t map_heap_page(PML4E* pml4, Heap* heap, std::uintptr_t phys_addr, int flags)
+{
+    kassert_not_null(pml4);
+    kassert_not_null(heap);
+
+    std::uintptr_t phys_frame = page_align(phys_addr);
+    std::uintptr_t phys_offset = phys_addr & PAGE_MASK;
+    std::uintptr_t virt_page = get_next_heap_virt_page(heap);
+
+    std::size_t pml4_idx = heap->pml4_idx;
+    std::size_t pdpt_idx = heap->pdpt_idx;
+    std::size_t pd_idx = heap->pd_idx;
+    std::size_t pt_idx = heap->pt_idx;
+
+    PDPTE* pdpt = ensure_pdpte_present(pml4[pml4_idx], flags);
+    PDE* pd = ensure_pde_present(pdpt[pdpt_idx], flags);
+    PTE* pt = ensure_pt_present(pd[pd_idx], flags);
+
+    populate_pte(pt[pt_idx], phys_frame, flags);
+    advance_heap(heap);
+
+    asm volatile("invlpg (%0)" : : "r"(virt_page) : "memory");
+
+    return virt_page + phys_offset;
+}
+
+/// @brief Maps a physical memory address to a single page in the kernel heap
+///
+/// @param phys_addr the physical address
+///
+/// @return the mapped virtual address (page aligned)
+///
+std::uintptr_t map_phys(std::uintptr_t phys_addr, int flags)
+{
+    return map_heap_page(kernel_pml4, &kheap, phys_addr, flags | PAGE_WRITE | PAGE_GLOBAL);
 }
 
 /**
- * @brief Maps a virtual address to a physical address in the given page table.
+ * @brief Maps a virtual page to a physical frame in the given page table.
  *
  * Walks the 4-level page table, creating intermediate tables as needed,
  * then creates the final mapping. Invalidates the TLB entry for this address.
@@ -157,82 +323,157 @@ void ensure_table_present(PageTableEntry* pte, std::uint32_t flags)
  * @param phys Physical address to map to (must be page-aligned).
  * @param flags Page flags (PAGE_PRESENT, PAGE_WRITE, PAGE_USER, etc.).
  */
-void map_page(PageTableEntry* pml4, std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags)
+static void map_page_to_frame(PML4E* pml4, std::uintptr_t virt_page, std::uintptr_t phys_frame, int flags)
 {
-    const std::uintptr_t pml4_idx = (virt >> 39) & 0x1FF;
-    const std::uintptr_t pdpt_idx = (virt >> 30) & 0x1FF;
-    const std::uintptr_t pd_idx = (virt >> 21) & 0x1FF;
-    const std::uintptr_t pt_idx = (virt >> 12) & 0x1FF;
+    kassert_not_null(pml4);
+    kassert(is_page_aligned(virt_page));
+    kassert(is_page_aligned(phys_frame));
 
-    ensure_table_present(&pml4[pml4_idx], flags | PAGE_PRESENT | PAGE_WRITE);
-    auto* pdpt = phys_to_virt<PageTableEntry*>(pml4[pml4_idx].addr << 12);
+    const std::size_t pml4_idx = (virt_page >> 39) & 0x1FF;
+    const std::size_t pdpt_idx = (virt_page >> 30) & 0x1FF;
+    const std::size_t pd_idx = (virt_page >> 21) & 0x1FF;
+    const std::size_t pt_idx = (virt_page >> 12) & 0x1FF;
 
-    ensure_table_present(&pdpt[pdpt_idx], flags | PAGE_PRESENT | PAGE_WRITE);
-    auto* pd = phys_to_virt<PageTableEntry*>(pdpt[pdpt_idx].addr << 12);
+    PDPTE* pdpt = ensure_pdpte_present(pml4[pml4_idx], flags);
+    PDE* pd = ensure_pde_present(pdpt[pdpt_idx], flags);
+    PTE* pt = ensure_pt_present(pd[pd_idx], flags);
 
-    ensure_table_present(&pd[pd_idx], flags | PAGE_PRESENT | PAGE_WRITE);
-    auto* pt = phys_to_virt<PageTableEntry*>(pd[pd_idx].addr << 12);
+    populate_pte(pt[pt_idx], phys_frame, flags);
 
-    make_pte(&pt[pt_idx], phys, flags | PAGE_PRESENT | PAGE_WRITE);
-
-    asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
+    asm volatile("invlpg (%0)" : : "r"(virt_page) : "memory");
 }
 
-void map_kpage(std::uintptr_t virt, std::uintptr_t phys, std::uint32_t flags)
+/**
+ * @brief Maps pages at a specific virtual address, allocating physical frames.
+ *
+ *
+ * @param pml4 Page table to modify.
+ * @param virt Starting virtual address (may be unaligned; page-aligns down).
+ * @param bytes Number of bytes to map.
+ * @param flags Page flags (PAGE_USER, PAGE_WRITE, etc.).
+ * @return Number of pages mapped (needed for unmap_mem_at).
+ */
+std::size_t map_pages(PML4E* pml4, std::uintptr_t virt_addr, std::size_t bytes, int flags)
 {
-    map_page(kernel_pml4, virt, phys, flags);
+    kassert_not_null(pml4);
+    kassert(bytes > 0);
+
+    vmm_lock.lock();
+
+    std::uintptr_t page_start = virt_addr & ~(PAGE_SIZE - 1);
+    std::uintptr_t page_end = (virt_addr + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    std::size_t num_pages = (page_end - page_start) / PAGE_SIZE;
+
+    kassert(is_page_aligned(page_start));
+    kassert(is_page_aligned(page_end));
+    kassert(page_start < page_end);
+    kassert(num_pages > 0);
+
+    for (std::size_t page = 0; page < num_pages; page++) {
+        std::uintptr_t phys_frame = pmm::alloc_frame();
+
+        map_page_to_frame(pml4, page_start + (page * PAGE_SIZE), phys_frame, flags);
+    }
+
+    vmm_lock.unlock();
+
+    return num_pages;
 }
 
 /**
  * @brief Unmaps a virtual address and frees its physical frame.
+ *  
  * @param pml4 The page table to modify.
  * @param virt Virtual address to unmap.
  */
-void unmap_page(PageTableEntry* pml4, std::uintptr_t virt)
+static void unmap_page(PML4E* pml4, std::uintptr_t virt_page)
 {
-    PageTableEntry* pte = get_pte(pml4, virt);
+    kassert_not_null(pml4);
+    kassert(is_page_aligned(virt_page));
+
+    PTE* pte = find_pte(pml4, virt_page);
 
     if (pte == nullptr) {
-        log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex{virt});
+        log::warn("Attempt to unmap virt addr that is not mapped: ", fmt::hex{virt_page});
         return;
     }
 
-    auto phys = pte->addr << 12;
-
+    pmm::free_frame(get_pte_phys_frame(*pte));
     *pte = {};
-
-    asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
-
-    pmm::free_frame(phys);
+    asm volatile("invlpg (%0)" : : "r"(virt_page) : "memory");
 }
 
 /**
  * @brief Allocates a single raw 4KB page.
  *
  * Returns a page with no header or metadata — the caller gets the full 4KB.
- * Use free_kpage() to release. For allocations that need automatic size
- * tracking, use alloc_contiguous_kmem() instead.
+ * Use free_kernel_page() to release. For allocations that need automatic size
+ * tracking, use alloc_kernel() instead.
  */
-void* alloc_kpage()
+void* alloc_kernel_page()
 {
-    auto phys = pmm::alloc_frame<std::uintptr_t>();
-    return phys_to_virt<void*>(phys);
+    vmm_lock.lock();
+
+    std::uintptr_t phys_frame = pmm::alloc_frame();
+    std::uintptr_t virt_page = map_phys(phys_frame);
+
+    void* addr = reinterpret_cast<void*>(virt_page);
+
+    vmm_lock.unlock();
+
+    return addr;
 }
 
-void free_kpage(void* virt)
+void free_kernel_page(void* virt_addr)
 {
-    if (virt == nullptr) {
+    if (virt_addr == nullptr) {
         return;
     }
 
-    pmm::free_frame(hhdm_virt_to_phys(virt));
+    vmm_lock.lock();
+
+    std::uintptr_t virt_page = page_align(virt_addr);
+    unmap_page(kernel_pml4, virt_page);
+
+    vmm_lock.unlock();
+}
+
+void* map_heap_pages(PML4E* pml4, Heap* heap, std::size_t bytes, int flags)
+{
+    kassert_not_null(pml4);
+    kassert_not_null(heap);
+
+    vmm_lock.lock();
+    arch::cpu::stac();
+
+    std::size_t total = bytes + sizeof(std::size_t);
+    std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
+    std::size_t* first_page = nullptr;
+
+    for (std::size_t page = 0; page < num_pages; page++) {
+        std::uintptr_t phys_frame = pmm::alloc_frame();
+        std::uintptr_t virt_page = map_heap_page(pml4, heap, phys_frame, flags);
+
+        if (first_page == nullptr) {
+            first_page = reinterpret_cast<std::size_t*>(virt_page);
+        }
+    }
+
+    kassert_not_null(first_page);
+
+    *first_page = num_pages;
+
+    arch::cpu::clac();
+    vmm_lock.unlock();
+
+    return first_page + 1;
 }
 
 /**
  * @brief Allocates contiguous kernel memory with embedded size tracking.
  *
- * Unlike alloc_kpage() which returns raw pages, this function stores the
- * allocation size in a hidden header so free_contiguous_kmem() can free
+ * Unlike alloc_kernel_page() which returns raw pages, this function stores the
+ * allocation size in a hidden header so free_kernel() can free
  * the correct number of pages without the caller tracking it.
  *
  * Memory layout:
@@ -246,103 +487,37 @@ void free_kpage(void* virt)
  * @param bytes Number of bytes to allocate.
  * @return Pointer to usable memory (after the hidden header).
  */
-void* alloc_contiguous_kmem(std::size_t bytes)
+void* alloc_kernel(std::size_t bytes)
 {
-    std::size_t total = bytes + sizeof(std::size_t);
-    std::size_t num_pages = (total + PAGE_SIZE - 1) / PAGE_SIZE;
-
-    auto phys = pmm::alloc_contiguous_frames<std::uintptr_t>(num_pages);
-    void* block = phys_to_virt<void*>(phys);
-
-    *static_cast<std::size_t*>(block) = num_pages;
-
-    return static_cast<std::uint8_t*>(block) + sizeof(std::size_t);
+    return map_heap_pages(kernel_pml4, &kheap, bytes, PAGE_WRITE | PAGE_GLOBAL);
 }
 
 /**
- * @brief Frees memory allocated by alloc_contiguous_kmem().
+ * @brief Frees memory allocated by alloc_kernel().
  *
  * Reads the page count from the hidden header before the pointer, then
- * frees that many contiguous frames. Only use with alloc_contiguous_kmem().
+ * frees that many contiguous frames.
  */
-void free_contiguous_kmem(void* virt)
+void free_kernel(void* virt_addr)
 {
-    if (virt == nullptr) {
+    if (virt_addr == nullptr) {
         return;
     }
 
-    void* block = static_cast<std::uint8_t*>(virt) - sizeof(std::size_t);
-    auto num_pages = *static_cast<std::size_t*>(block);
+    std::uintptr_t virt_page = page_align(virt_addr);
+    auto num_pages = *reinterpret_cast<std::size_t*>(virt_page);
 
-    pmm::free_contiguous_frames(hhdm_virt_to_phys(block), num_pages);
-}
-
-std::uintptr_t find_contiguous_unmapped_space(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t num_pages)
-{
-    std::uintptr_t virt = virt_hint;
-
-    while (virt + (num_pages * PAGE_SIZE) < hhdm_offset) {
-        bool found = true;
-
-        for (std::size_t page = 0; page < num_pages; page++) {
-            PageTableEntry* pte = get_pte(pml4, virt + (page * PAGE_SIZE));
-
-            if (pte != nullptr && pte->p == 1) {
-                virt += num_pages * PAGE_SIZE;
-                found = false;
-                break;
-            }
-        }
-
-        if (found) {
-            return virt;
-        }
+    if (num_pages == 0) {
+        return;
     }
 
-    kpanic("VMM failed to find unmapped space");
-}
-
-MemoryAllocation try_map_mem_at(PageTableEntry* pml4, std::uintptr_t virt_hint, std::size_t bytes,
-    std::uint32_t flags)
-{
-    std::size_t num_pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
-    std::uintptr_t virt = find_contiguous_unmapped_space(pml4, virt_hint, num_pages);
+    vmm_lock.lock();
 
     for (std::size_t page = 0; page < num_pages; page++) {
-        auto phys = pmm::alloc_frame<std::uintptr_t>();
-
-        map_page(pml4, virt + (page * PAGE_SIZE), phys, flags);
+        unmap_page(kernel_pml4, virt_page + (page * PAGE_SIZE));
     }
 
-    return MemoryAllocation{.virt_addr = virt, .num_pages = num_pages};
-}
-
-/**
- * @brief Maps memory at a specific virtual address, allocating physical frames.
- *
- * Allocates individual physical frames (not necessarily contiguous) and maps
- * them to contiguous virtual addresses. Used for user process memory where
- * physical contiguity doesn't matter but virtual contiguity does.
- *
- * @param pml4 Page table to modify.
- * @param virt Starting virtual address (may be unaligned; page-aligns down).
- * @param bytes Number of bytes to map.
- * @param flags Page flags (PAGE_USER, PAGE_WRITE, etc.).
- * @return Number of pages mapped (needed for unmap_mem_at).
- */
-std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t bytes, std::uint32_t flags)
-{
-    std::uintptr_t page_start = virt & ~(PAGE_SIZE - 1);
-    std::uintptr_t page_end = (virt + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    std::size_t num_pages = (page_end - page_start) / PAGE_SIZE;
-
-    for (std::size_t page = 0; page < num_pages; page++) {
-        auto phys = pmm::alloc_frame<std::uintptr_t>();
-
-        map_page(pml4, page_start + (page * PAGE_SIZE), phys, flags);
-    }
-
-    return num_pages;
+    vmm_lock.unlock();
 }
 
 /**
@@ -351,11 +526,17 @@ std::size_t map_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t by
  * @param virt Starting virtual address.
  * @param num_pages Number of pages to unmap (from map_mem_at return value).
  */
-void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pages)
+void unmap_mem_at(PML4E* pml4, std::uintptr_t virt_page, std::size_t num_pages)
 {
+    kassert_not_null(pml4);
+
+    vmm_lock.lock();
+
     for (std::size_t page = 0; page < num_pages; page++) {
-        unmap_page(pml4, virt + (page * PAGE_SIZE));
+        unmap_page(pml4, virt_page + (page * PAGE_SIZE));
     }
+
+    vmm_lock.unlock();
 }
 
 /**
@@ -368,7 +549,7 @@ void unmap_mem_at(PageTableEntry* pml4, std::uintptr_t virt, std::size_t num_pag
  * @pre Leaf physical frames should already be freed via unmap_mem_at().
  * @param pml4 The top-level page table to free.
  */
-void free_page_tables(PageTableEntry* pml4)
+void free_page_tables(PML4E* pml4)
 {
     std::size_t kernel_pml4_idx = get_kernel_pml4_index();
 
@@ -377,14 +558,14 @@ void free_page_tables(PageTableEntry* pml4)
             continue;
         }
 
-        PageTableEntry* pdpt = get_table_from_pte(pml4[pml4_idx]);
+        PDPTE* pdpt = get_pdpt(pml4[pml4_idx]);
 
         for (std::size_t pdpt_idx = 0; pdpt_idx < NUM_PT_ENTRIES; pdpt_idx++) {
             if (!pdpt[pdpt_idx].p) {
                 continue;
             }
 
-            PageTableEntry* pd = get_table_from_pte(pdpt[pdpt_idx]);
+            PDE* pd = get_pd(pdpt[pdpt_idx]);
 
             for (std::size_t pd_idx = 0; pd_idx < NUM_PT_ENTRIES; pd_idx++) {
                 if (!pd[pd_idx].p) {
@@ -400,21 +581,50 @@ void free_page_tables(PageTableEntry* pml4)
         pmm::free_frame(pml4[pml4_idx].addr << 12);
     }
 
-    pmm::free_frame(hhdm_virt_to_phys(pml4));
+    pmm::free_frame(hhdm_vtop(pml4));
 }
 
 // Set our local pml4 to point to the pml4 created by Limine which
 // is stored in cr3 as a physical address
-void init_pml4()
+static void init_pml4()
 {
     std::uint64_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
 
-    // The bottom 12 bits of the pml4 physical address should be ignored
-    constexpr std::uint64_t bottom_12_mask = ~0xFFF;
-    kernel_pml4 = phys_to_virt<PageTableEntry*>(cr3 & bottom_12_mask);
+    kernel_pml4 = hhdm_ptov<PML4E*>(page_align(cr3));
 
     log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
+}
+
+static void init_kheap()
+{
+    const std::size_t kernel_pml4_idx = get_kernel_pml4_index();
+
+    kheap.pml4_idx = kernel_pml4_idx + 1;
+    kheap.pdpt_idx = 0;
+    kheap.pd_idx = 0;
+    kheap.pt_idx = 0;
+
+    PDPTE* pdpt = ensure_pdpte_present(kernel_pml4[kheap.pml4_idx], 0);
+    PDE* pd = ensure_pde_present(pdpt[kheap.pdpt_idx], 0);
+    PTE* pt = ensure_pt_present(pd[kheap.pd_idx], 0);
+
+    kassert_not_null(pt);
+
+    std::uintptr_t virt_page = 0;
+
+    virt_page |= ((kheap.pml4_idx & 0x1FF) << 39);
+    virt_page |= ((kheap.pdpt_idx & 0x1FF) << 30);
+    virt_page |= ((kheap.pd_idx & 0x1FF) << 21);
+    virt_page |= ((kheap.pt_idx & 0x1FF) << 12);
+
+    const std::uintptr_t bit_47 = virt_page & (1ULL << 47);
+
+    if (bit_47) {
+        virt_page |= (0xFFFFUL << 48);
+    }
+
+    log::info("VMM heap addr = ", fmt::hex{virt_page});
 }
 
 /**
@@ -426,12 +636,13 @@ void init_pml4()
  *
  * @return Pointer to the new PML4 (virtual address).
  */
-PageTableEntry* create_user_pml4()
+PML4E* create_user_pml4()
 {
-    auto phys = pmm::alloc_frame<std::uintptr_t>();
-    auto* virt = phys_to_virt<std::uintptr_t*>(phys);
-    auto* new_pml4 = reinterpret_cast<PageTableEntry*>(virt);
+    std::uintptr_t phys = pmm::alloc_frame();
+    auto* virt = hhdm_ptov<std::uintptr_t*>(phys);
+    auto* new_pml4 = reinterpret_cast<PML4E*>(virt);
 
+    kassert_not_null(new_pml4);
     zero_page(virt);
 
     std::size_t kernel_start = get_kernel_pml4_index();
@@ -443,11 +654,66 @@ PageTableEntry* create_user_pml4()
     return new_pml4;
 }
 
-void switch_pml4(PageTableEntry* pml4) { asm volatile("mov %0, %%cr3" : : "r"(hhdm_virt_to_phys(pml4)) : "memory"); }
+Heap create_user_heap(PML4E* pml4)
+{
+    Heap heap;
 
-PageTableEntry* get_kernel_pml4() { return kernel_pml4; }
+    heap.pml4_idx = 1;
+    heap.pdpt_idx = 0;
+    heap.pd_idx = 0;
+    heap.pt_idx = 0;
+
+    PDPTE* pdpt = ensure_pdpte_present(pml4[heap.pml4_idx], PAGE_USER);
+    PDE* pd = ensure_pde_present(pdpt[heap.pdpt_idx], PAGE_USER);
+    PTE* pt = ensure_pt_present(pd[heap.pd_idx], PAGE_USER);
+
+    kassert_not_null(pt);
+
+    return heap;
+}
+
+void switch_pml4(PML4E* pml4)
+{
+    kassert_not_null(pml4);
+
+    // the value in cr3 must be a physical address
+    asm volatile("mov %0, %%cr3" : : "r"(hhdm_vtop(pml4)) : "memory");
+}
+
+PML4E* get_kernel_pml4() { return kernel_pml4; }
 
 void switch_kernel_pml4() { switch_pml4(kernel_pml4); }
+
+static constexpr std::uint64_t CR4_PGE = (1ULL << 7);
+static constexpr std::uint64_t CR4_UMIP = (1ULL << 11);
+static constexpr std::uint64_t CR4_SMEP = (1ULL << 20);
+static constexpr std::uint64_t CR4_SMAP = (1ULL << 21);
+
+constexpr std::uintptr_t user_max_addr = 0x0000800000000000ULL;
+
+bool is_user_addr(void* addr)
+{
+    return reinterpret_cast<std::uintptr_t>(addr) < user_max_addr;
+}
+
+bool is_user_addr(const void* addr)
+{
+    return reinterpret_cast<std::uintptr_t>(addr) < user_max_addr;
+}
+
+bool is_user_addr(std::uintptr_t addr, std::size_t size)
+{
+    return addr < user_max_addr && size <= user_max_addr - addr;
+}
+
+static void init_cr4()
+{
+    std::uint64_t cr4;
+    asm volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= CR4_PGE | CR4_UMIP | CR4_SMEP | CR4_SMAP;
+    asm volatile("mov %0, %%cr4" : : "r"(cr4) : "memory");
+    switch_kernel_pml4();
+}
 
 /**
  * @brief Initializes the Virtual Memory Manager.
@@ -462,7 +728,10 @@ void init(std::uintptr_t offset)
     log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
 
     init_pml4();
+    init_kheap();
+    init_cr4();
 
     log::init_end("VMM");
 }
+
 } // namespace x64::vmm

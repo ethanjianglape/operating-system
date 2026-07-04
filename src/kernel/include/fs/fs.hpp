@@ -135,7 +135,7 @@ public:
 
 kstring getcwd(const Inode* inode);
 void register_mount(const char* path, MountPoint* mp);
-FileDescriptor* open(const char* path, int flags);
+FileDescriptor* open(kstring_view path, int flags);
 void mount(const char* path, FileSystem* fs, const char* source);
 
 int stat(const kstring& path, Stat* out);

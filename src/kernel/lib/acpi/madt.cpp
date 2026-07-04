@@ -71,7 +71,7 @@ static void parse_ioapic(const IOApic* ioapic)
     log::info("  gsi_base    = ", fmt::hex{ioapic->gsi_base});
 
     std::uintptr_t phys = ioapic->ioapic_addr;
-    std::uintptr_t virt = arch::vmm::map_hddm_page(phys, arch::vmm::PAGE_WRITE | arch::vmm::PAGE_CACHE_DISABLE);
+    std::uintptr_t virt = arch::vmm::map_phys(phys, arch::vmm::PAGE_WRITE | arch::vmm::PAGE_CACHE_DISABLE);
 
     ioapics.push_back(ioapic);
     mapped_ioapics.push_back(MappedIOApic{

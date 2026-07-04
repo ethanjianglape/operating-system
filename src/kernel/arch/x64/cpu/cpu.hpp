@@ -123,6 +123,18 @@ inline void cli()
 }
 
 [[gnu::always_inline]]
+inline void stac()
+{
+    asm volatile("stac" : : : "memory");
+}
+
+[[gnu::always_inline]]
+inline void clac()
+{
+    asm volatile("clac" : : : "memory");
+}
+
+[[gnu::always_inline]]
 inline std::uint64_t read_rflags()
 {
     std::uint64_t rflags;

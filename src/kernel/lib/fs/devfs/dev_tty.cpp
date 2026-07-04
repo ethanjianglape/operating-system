@@ -1,4 +1,7 @@
+#include "arch/x64/cpu/cpu.hpp"
+#include "containers/kstring_view.hpp"
 #include "linux/ioctl.hpp"
+#include "memory/memory.hpp"
 #include "timer/timer.hpp"
 #include <arch.hpp>
 #include <cerrno>
@@ -414,7 +417,7 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
                 add_buffer_history();
 
                 std::size_t len = buffer.size();
-                memcpy(buff, buffer.c_str(), len > count ? count : len);
+                kcopy_to_user(buff, buffer.c_str(), len > count ? count : len);
                 console::newline();
 
                 return len;
@@ -443,8 +446,10 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
 
 int DevTtyInode::write(FileDescriptor*, const void* buffer, std::size_t count)
 {
-    const auto* cbuffer = reinterpret_cast<const char*>(buffer);
-    kstring str(cbuffer, count);
+    char* str_buffer = new char[count];
+    kcopy_from_user(str_buffer, buffer, count);
+
+    kstring_view str(str_buffer, count);
 
     console::put(str);
     console::redraw();
@@ -474,11 +479,14 @@ int DevTtyInode::stat(Stat* stat)
 int DevTtyInode::ioctl(unsigned long request, void* arg)
 {
     if (request == linux::TIOCGWINSZ) {
-        auto* ws = reinterpret_cast<linux::winsize*>(arg);
-        ws->ws_row = console::get_screen_rows();
-        ws->ws_col = console::get_screen_cols();
-        ws->ws_xpixel = 0;
-        ws->ws_ypixel = 0;
+        linux::winsize ws{};
+
+        ws.ws_row = console::get_screen_rows();
+        ws.ws_col = console::get_screen_cols();
+        ws.ws_xpixel = 0;
+        ws.ws_ypixel = 0;
+
+        kcopy_to_user(arg, &ws, sizeof(linux::winsize));
 
         return 0;
     }

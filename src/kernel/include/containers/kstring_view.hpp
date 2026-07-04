@@ -1,7 +1,9 @@
 #pragma once
 
 #include <crt/crt.h>
+
 #include <cstddef>
+#include <cstdint>
 
 class kstring_view final {
 private:
@@ -10,6 +12,76 @@ private:
     std::size_t _length;
 
 public:
+    class const_iterator {
+    private:
+        const char* _ptr;
+
+    public:
+        const_iterator(const char* ptr)
+            : _ptr{ptr}
+        {
+        }
+        const char& operator*() const { return *_ptr; }
+        const char* operator->() const { return _ptr; }
+        const_iterator operator+(int n)
+        {
+            auto result = *this;
+            result._ptr += n;
+            return result;
+        }
+        const_iterator operator-(int n)
+        {
+            auto result = *this;
+            result._ptr -= n;
+            return result;
+        }
+        std::ptrdiff_t operator-(const const_iterator& other)
+        {
+            auto a = reinterpret_cast<std::uintptr_t>(this->_ptr);
+            auto b = reinterpret_cast<std::uintptr_t>(other._ptr);
+
+            return a - b;
+        }
+        const_iterator& operator++()
+        {
+            _ptr++;
+            return *this;
+        }
+        const_iterator operator++(int)
+        {
+            const auto val = *this;
+            _ptr++;
+            return val;
+        }
+        const_iterator& operator--()
+        {
+            _ptr--;
+            return *this;
+        }
+        const_iterator operator--(int)
+        {
+            const auto val = *this;
+            _ptr--;
+            return val;
+        }
+        const_iterator& operator+=(std::size_t n)
+        {
+            _ptr += n;
+            return *this;
+        }
+        const_iterator& operator-=(std::size_t n)
+        {
+            _ptr -= n;
+            return *this;
+        }
+        bool operator==(const const_iterator& other) const { return _ptr == other._ptr; }
+        bool operator!=(const const_iterator& other) const { return _ptr != other._ptr; }
+        bool operator<(const const_iterator& other) const { return _ptr < other._ptr; }
+        bool operator>(const const_iterator& other) const { return _ptr > other._ptr; }
+        bool operator<=(const const_iterator& other) const { return _ptr <= other._ptr; }
+        bool operator>=(const const_iterator& other) const { return _ptr >= other._ptr; }
+    };
+
     static constexpr std::size_t npos = -1;
 
     kstring_view(const char* str)
@@ -32,6 +104,9 @@ public:
     std::size_t length() const { return _length; }
     std::size_t size() const { return _length; }
     bool empty() const { return _length == 0; }
+
+    const_iterator begin() const { return const_iterator{_data}; }
+    const_iterator end() const { return const_iterator{_data + _length}; }
 
     // Element access
     const char& front() const { return _data[0]; }
@@ -84,6 +159,8 @@ public:
 
         return kstring_view{_data + pos, len};
     }
+
+    static kstring_view from_userspace(const char* chars);
 
     friend bool operator==(const kstring_view& lhs, const kstring_view& rhs)
     {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "arch/x64/context/context.hpp"
+#include "arch/x64/memory/vmm.hpp"
 #include <arch.hpp>
 #include <containers/kvector.hpp>
 #include <fs/fs.hpp>
@@ -28,6 +28,12 @@ enum class WaitReason : std::uint8_t {
 struct ProcessAllocation {
     std::uintptr_t virt_addr;
     std::size_t num_pages;
+
+    ProcessAllocation(std::uintptr_t addr, std::size_t pages)
+        : virt_addr{addr}
+        , num_pages{pages}
+    {
+    }
 };
 
 struct Process {
@@ -40,9 +46,11 @@ struct Process {
     fs::Inode* cwd_inode;
 
     // Address space
-    arch::vmm::PageTableEntry* pml4;
+    arch::vmm::PML4E* pml4;
     std::uintptr_t heap_break;
     std::uintptr_t mmap_min_addr;
+
+    arch::vmm::Heap uheap;
 
     std::uint8_t* kernel_stack;      // Base of kernel stack
     std::uintptr_t kernel_rsp;       // Top of stack (initially)
@@ -54,6 +62,8 @@ struct Process {
 
     // VMM page info
     kvector<ProcessAllocation> allocations;
+
+    kvector<void*> uheap_allocations;
 
     // File Descriptors
     kvector<fs::FileDescriptor*> fd_table;

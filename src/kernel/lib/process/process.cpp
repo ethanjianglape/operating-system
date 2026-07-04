@@ -1,10 +1,12 @@
-#include "kassert/kassert.hpp"
+#include "arch/x64/memory/vmm.hpp"
+#include "memory/memory.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
 #include <exclusive/katomic.hpp>
 #include <fmt/fmt.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/fs.hpp>
+#include <kassert/kassert.hpp>
 #include <log/log.hpp>
 #include <memory/pmm.hpp>
 #include <memory/slab.hpp>
@@ -22,6 +24,9 @@ constexpr std::uintptr_t USER_STACK_SIZE = 16 * 1024;   // 16KiB
 constexpr std::uintptr_t USER_STACK_TOP = USER_STACK_BASE + USER_STACK_SIZE;
 
 constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024; // 16KiB
+
+/// based on /proc/sys/vm/mmap_min_addr in Linux
+constexpr std::uintptr_t DEFAULT_MMAP_MIN_ADDR = 65536;
 
 static katomic<std::uint64_t> g_pid{1};
 
@@ -49,8 +54,6 @@ Process* create_kthread(void (*entry)())
 {
     auto* p = new Process{};
 
-    log::debugf("create kthread addr={}", fmt::hex{reinterpret_cast<std::uintptr_t>(entry)});
-
     p->pid = g_pid++;
     p->state = ProcessState::NEW;
     p->wait_reason = WaitReason::NONE;
@@ -58,10 +61,10 @@ Process* create_kthread(void (*entry)())
     p->heap_break = 0;
     p->pml4 = arch::vmm::get_kernel_pml4();
     p->fd_table = {};
-    p->kernel_stack = kalloc<std::uint8_t>(KERNEL_STACK_SIZE); // new std::uint8_t[KERNEL_STACK_SIZE];
+    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
     p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
     p->wake_time_ms = 0;
-    p->mmap_min_addr = 65536;                                  // based on /proc/sys/vm/mmap_min_addr in Linux
+    p->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
     p->fs_base = 0;
     p->tidptr = 0;
     p->cwd_inode = nullptr;
@@ -75,6 +78,7 @@ Process* create_kthread(void (*entry)())
     p->context_frame->rbp = 0x77777777;
     p->context_frame->rbx = 0x12345678;
     p->context_frame->rip = reinterpret_cast<std::uintptr_t>(kthread_entry_trampoline);
+
     p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
 
     return p;
@@ -88,8 +92,10 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
         return nullptr;
     }
 
-    arch::vmm::PageTableEntry* pml4 = arch::vmm::create_user_pml4();
+    arch::vmm::PML4E* pml4 = arch::vmm::create_user_pml4();
     arch::vmm::switch_pml4(pml4);
+
+    arch::cpu::stac();
 
     auto* p = new Process{};
 
@@ -103,10 +109,11 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
     p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
     p->wake_time_ms = 0;
-    p->mmap_min_addr = 65536; // based on /proc/sys/vm/mmap_min_addr in Linux
+    p->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
     p->fs_base = 0;
     p->tidptr = 0;
     p->cwd_inode = nullptr;
+    p->uheap = arch::vmm::create_user_heap(pml4);
 
     for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
         auto virt = header.p_vaddr;
@@ -114,13 +121,11 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
         auto mem_size = header.p_memsz;
         auto offset = header.p_offset;
 
-        std::size_t code_pages = arch::vmm::map_mem_at(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+        log::debugf("mapping user mem at {} len = {}", fmt::hex{virt}, mem_size);
 
-        log::debug("mapping user mem at ", fmt::hex{virt}, " len = ", mem_size);
+        std::size_t code_pages = arch::vmm::map_pages(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
-        p->allocations.push_back(ProcessAllocation{
-            .virt_addr = virt & ~0xFFFUL,
-            .num_pages = code_pages});
+        p->allocations.emplace_back(virt & ~0xFFFUL, code_pages);
 
         memcpy(reinterpret_cast<void*>(virt),
             reinterpret_cast<void*>(buffer + offset),
@@ -137,11 +142,9 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
         }
     }
 
-    std::size_t stack_pages = arch::vmm::map_mem_at(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+    std::size_t stack_pages = arch::vmm::map_pages(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
-    p->allocations.push_back(ProcessAllocation{
-        .virt_addr = USER_STACK_BASE,
-        .num_pages = stack_pages});
+    p->allocations.emplace_back(USER_STACK_BASE, stack_pages);
 
     // Set up initial stack for Linux ABI compatibility
     // musl libc expects: argc, argv[], NULL, envp[], NULL, auxv[], AT_NULL
@@ -169,19 +172,19 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     fs::FileDescriptor* stdout = fs::open("/dev/tty1", fs::O_WRONLY);
     fs::FileDescriptor* stderr = fs::open("/dev/tty1", fs::O_WRONLY);
 
-    log::debugf("stdin={}, stdout={}, stderr={}", stdin, stdout, stderr);
-
     p->fd_table.push_back(stdin);
     p->fd_table.push_back(stdout);
     p->fd_table.push_back(stderr);
 
     arch::vmm::switch_kernel_pml4();
 
-    log::debug("Created process ", p->pid);
-    log::debug("  kernel_stack @ ", fmt::hex{p->kernel_stack});
-    log::debug("  kernel_rsp = ", fmt::hex{p->kernel_rsp});
-    log::debug("  context_frame @ ", fmt::hex{p->context_frame});
-    log::debug("  context_frame->r15 = ", fmt::hex{p->context_frame->r15});
+    log::debugf("Created user process pid={}", p->pid);
+    log::debugf("  kernel_stack @ {}", fmt::hex{p->kernel_stack});
+    log::debugf("  kernel_rsp = {}", fmt::hex{p->kernel_rsp});
+    log::debugf("  context_frame @ {}", fmt::hex{p->context_frame});
+    log::debugf("  context_frame->r15 = {}", fmt::hex{p->context_frame->r15});
+
+    arch::cpu::clac();
 
     return p;
 }

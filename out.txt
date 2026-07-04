@@ -1,0 +1,88 @@
+[2J[001;001H[=3h[2J[001;001H[2J[001;001H[8;056;240t[2J[001;001H[2J[001;001H[=3h[2J[001;001H[2J[001;001H[8;042;160t[2J[001;001HBdsDxe: loading Boot0002 "UEFI QEMU DVD-ROM QM00003 " from PciRoot(0x0)/Pci(0x1,0x1)/Ata(Secondary,Master,0x0)
+BdsDxe: starting Boot0002 "UEFI QEMU DVD-ROM QM00003 " from PciRoot(0x0)/Pci(0x1,0x1)/Ata(Secondary,Master,0x0)
+[001;001H[001;001H[INFO] MyOS Booted into kernel_main() using Limine.
+[INFO] Serial ouput on COM1 initialized
+[INITIALIZE] Limine Boot
+[INFO] All required Limine responses present
+[INFO] Memory map has 37 entries:
+[INFO]   [0] 0 - 0x00087000 (0x00087000) Usable
+[INFO]   [1] 0x00087000 - 0x00088000 (0x00001000) Bootloader Reclaimable
+[INFO]   [2] 0x00088000 - 0x000A0000 (0x00018000) Usable
+[INFO]   [3] 0x00100000 - 0x00800000 (0x00700000) Usable
+[INFO]   [4] 0x00800000 - 0x00808000 (0x00008000) ACPI NVS
+[INFO]   [5] 0x00808000 - 0x0080B000 (0x00003000) Usable
+[INFO]   [6] 0x0080B000 - 0x0080C000 (0x00001000) ACPI NVS
+[INFO]   [7] 0x0080C000 - 0x00812000 (0x00006000) Usable
+[INFO]   [8] 0x00812000 - 0x00813000 (0x00001000) Reserved
+[INFO]   [9] 0x00813000 - 0x00814000 (0x00001000) Usable
+[INFO]   [10] 0x00814000 - 0x00900000 (0x000EC000) ACPI NVS
+[INFO]   [11] 0x00900000 - 0x01780000 (0x00E80000) Bootloader Reclaimable
+[INFO]   [12] 0x01780000 - 0x19E15000 (0x18695000) Usable
+[INFO]   [13] 0x19E15000 - 0x19E29000 (0x00014000) Kernel and Modules
+[INFO]   [14] 0x19E29000 - 0x19E2C000 (0x00003000) Usable
+[INFO]   [15] 0x19E2C000 - 0x19E32000 (0x00006000) Bootloader Reclaimable
+[INFO]   [16] 0x19E32000 - 0x19E96000 (0x00064000) Kernel and Modules
+[INFO]   [17] 0x19E96000 - 0x1A16A000 (0x002D4000) Bootloader Reclaimable
+[INFO]   [18] 0x1A16A000 - 0x1A1A2000 (0x00038000) Usable
+[INFO]   [19] 0x1A1A2000 - 0x1A1EE000 (0x0004C000) Bootloader Reclaimable
+[INFO]   [20] 0x1A1EE000 - 0x1BEEE000 (0x01D00000) Usable
+[INFO]   [21] 0x1BEEE000 - 0x1BF19000 (0x0002B000) Bootloader Reclaimable
+[INFO]   [22] 0x1BF19000 - 0x1E203000 (0x022EA000) Usable
+[INFO]   [23] 0x1E203000 - 0x1EB3F000 (0x0093C000) Bootloader Reclaimable
+[INFO]   [24] 0x1EB3F000 - 0x1EC00000 (0x000C1000) Reserved
+[INFO]   [25] 0x1EC00000 - 0x1F8ED000 (0x00CED000) Bootloader Reclaimable
+[INFO]   [26] 0x1F8ED000 - 0x1F9ED000 (0x00100000) Reserved
+[INFO]   [27] 0x1F9ED000 - 0x1FAED000 (0x00100000) Reserved
+[INFO]   [28] 0x1FAED000 - 0x1FB6D000 (0x00080000) Reserved
+[INFO]   [29] 0x1FB6D000 - 0x1FB7F000 (0x00012000) ACPI Reclaimable
+[INFO]   [30] 0x1FB7F000 - 0x1FBFF000 (0x00080000) ACPI NVS
+[INFO]   [31] 0x1FBFF000 - 0x1FEF4000 (0x002F5000) Bootloader Reclaimable
+[INFO]   [32] 0x1FEF4000 - 0x1FF78000 (0x00084000) Reserved
+[INFO]   [33] 0x1FF78000 - 0x20000000 (0x00088000) ACPI NVS
+[INFO]   [34] 0x80000000 - 0x803E8000 (0x003E8000) Framebuffer
+[INFO]   [35] 0xFEFFC000 - 0xFF000000 (0x00004000) Reserved
+[INFO]   [36] 0x000000FD00000000 - 0x0000010000000000 (0x0000000300000000) Reserved
+[INFO] Total usable memory: 462 MiB
+[INITIALIZE] VMM
+[INFO] VMM HHDM addr = 0xFFFF800000000000
+[INFO] VMM pml4 addr = 0xFFFF80001A1BB000
+[INFO] VMM heap addr = 0xFFFF808000000000
+[INITIALIZED] VMM
+[INITIALIZE] ACPI
+[INFO] RSDP address: 0xFFFF80001FB7E014
+[INFO] XSDP:
+[INFO]   signature    = "RSD PTR "
+[INFO]   checksum     = 54
+[INFO]   oem_id       = BOCHS 
+[INFO]   revision     = 2
+[INFO]   rsdt_addr    = 0x1FB7D074
+[INFO]   length       = 36
+[INFO]   xsdt_addr    = 0x1FB7D0E8
+[INFO]   ext_checksum = 78
+[INFO]   reserved     = [0, 0, 0]
+[SUCCESS] XSDP legacy checksum valid
+[SUCCESS] XSDP extended checksum valid
+[DEBUG] mapping heap page: pml4 = 0xFFFF80001A1BB000, phys = 0x1FB7D000, virt = 0xFFFF808000000000
+[DEBUG] log xsdt
+[INFO] ACPIHeader:
+[INFO]   signature        = "RSDT"
+[INFO]   length           = 56
+[INFO]   revision         = 1
+[INFO]   checksum         = 91
+[INFO]   oem_id           = BOCHS 
+[INFO]   oem_table_id     = BXPC    
+[INFO]   oem_revision     = 1
+[INFO]   creator_id       = 0x20202020
+[INFO]   creator_revision = 16777235
+[DEBUG] log xsdt
+[INFO] XSDT entries = 2
+[SUCCESS] ACPI table checksum valid: RSDT
+[DEBUG] xsdt header[0] addr = 0x1FB780001FB79000
+[DEBUG] xsdt header[1] addr = 0x1FB760001FB77000
+[DEBUG] xsdt header[0] addr = 0x1FB780001FB79000
+[DEBUG] acpi header physical address = 0x1FB780001FB79000
+[DEBUG] mapping page to frame: page = 0x1FB700001FB79000, frame = 0x1FB780001FB79000 pml4 idx: 0,0,253,377
+[DEBUG] header phys = 0x1FB780001FB79000 virt = 0x1FB700001FB79000
+[2J[001;001H[=3h[2J[001;001H[2J[001;001H[8;056;240t[2J[001;001H[2J[001;001H[=3h[2J[001;001H[2J[001;001H[8;042;160t[2J[001;001HBdsDxe: loading Boot0002 "UEFI QEMU DVD-ROM QM00003 " from PciRoot(0x0)/Pci(0x1,0x1)/Ata(Secondary,Master,0x0)
+BdsDxe: starting Boot0002 "UEFI QEMU DVD-ROM QM00003 " from PciRoot(0x0)/Pci(0x1,0x1)/Ata(Secondary,Master,0x0)
+[001;001H[001;001H

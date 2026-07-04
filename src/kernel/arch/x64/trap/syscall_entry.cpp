@@ -128,6 +128,7 @@ extern "C" void syscall_entry();
  */
 extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
 {
+
     const std::uint64_t syscall_num = frame->rax;
     const std::uint64_t arg1 = frame->rdi;
     const std::uint64_t arg2 = frame->rsi;
@@ -135,6 +136,8 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
     const std::uint64_t arg4 = frame->r10;
     const std::uint64_t arg5 = frame->r8;
     const std::uint64_t arg6 = frame->r9;
+
+    log::debugf("syscall {}", syscall_num);
 
     switch (syscall_num) {
     case linux::SYS_READ:

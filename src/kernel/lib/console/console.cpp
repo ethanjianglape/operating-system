@@ -1,7 +1,6 @@
 #include <console/ansi.hpp>
 #include <console/console.hpp>
 #include <console/font8x16.hpp>
-#include <containers/kstring.hpp>
 #include <containers/kvector.hpp>
 #include <framebuffer/framebuffer.hpp>
 #include <log/log.hpp>
@@ -244,6 +243,15 @@ int put(char c)
     move_cursor(1, 0);
 
     return 1;
+}
+
+int put(kstring_view sv)
+{
+    for (std::size_t i = 0; i < sv.length(); i++) {
+        put(sv[i]);
+    }
+
+    return 0;
 }
 
 int put(const kstring& str)

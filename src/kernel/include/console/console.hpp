@@ -1,6 +1,7 @@
 #pragma once
 
 #include <containers/kstring.hpp>
+#include <containers/kstring_view.hpp>
 #include <cstdint>
 
 namespace console {
@@ -76,5 +77,6 @@ void draw_character_buffer();
 void backspace();
 
 int put(char c);
+int put(kstring_view sv);
 int put(const kstring& str);
 }

@@ -1,5 +1,6 @@
 #include "arch/x64/percpu/percpu.hpp"
 #include "fs/fs.hpp"
+#include "kassert/kassert.hpp"
 #include <boot/boot.hpp>
 #include <boot/limine.h>
 
@@ -103,21 +104,10 @@ const char* memmap_type_to_string(std::uint64_t type)
 
 void validate_limine_responses()
 {
-    if (framebuffer_request.response == nullptr) {
-        kpanic("Limine framebuffer response is null");
-    }
-
-    if (memmap_request.response == nullptr) {
-        kpanic("Limine memory map response is null");
-    }
-
-    if (hhdm_request.response == nullptr) {
-        kpanic("Limine HHDM response is null");
-    }
-
-    if (rsdp_request.response == nullptr) {
-        kpanic("Limine RSDP response is null");
-    }
+    kassert_not_null(framebuffer_request.response);
+    kassert_not_null(memmap_request.response);
+    kassert_not_null(hhdm_request.response);
+    kassert_not_null(rsdp_request.response);
 
     log::info("All required Limine responses present");
 }

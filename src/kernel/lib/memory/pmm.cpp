@@ -183,11 +183,11 @@ void free_contiguous_frames(std::uintptr_t phys, std::size_t count)
  * @return Physical address of the allocated frame.
  * @throws Panics if no free frames are available.
  */
-void* alloc_frame()
+std::uintptr_t alloc_frame()
 {
     g_pmm_spinlock.lock();
 
-    std::size_t frame = frame_bitmap_start;
+    std::uintptr_t frame = frame_bitmap_start;
 
     while (frame < frame_bitmap_end) {
         if (is_frame_free(frame)) {
@@ -196,7 +196,7 @@ void* alloc_frame()
 
             g_pmm_spinlock.unlock();
 
-            return (void*)(frame * FRAME_SIZE);
+            return frame * FRAME_SIZE;
         }
 
         frame++;

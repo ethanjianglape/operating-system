@@ -4,6 +4,7 @@
 #include <fs/fs.hpp>
 #include <linux/dirent.hpp>
 #include <log/log.hpp>
+#include <memory/memory.hpp>
 #include <process/process.hpp>
 #include <syscall/sys_fd.hpp>
 
@@ -35,10 +36,14 @@ static fs::FileDescriptor* get_fd(int fd)
     return process->fd_table[fd];
 }
 
-int sys_open(const char* path, int flags)
+int sys_open(const char* __user path, int flags)
 {
+    kstring path_str = kstring::from_userspace(path);
+
+    log::debugf("sys open dir = {}", path_str);
+
     process::Process* process = arch::percpu::current_process();
-    fs::FileDescriptor* desc = fs::open(path, flags);
+    fs::FileDescriptor* desc = fs::open(path_str, flags);
 
     if (!desc) {
         return -ENOENT;
@@ -56,6 +61,8 @@ int sys_read(int fd, void* buffer, std::size_t count)
     if (!desc) {
         return -EBADF;
     }
+
+    log::debugf("sys_read inode = {}", desc->inode->name);
 
     int read = desc->inode->read(desc, buffer, count);
 
@@ -123,11 +130,15 @@ int sys_writev(int fd, const linux::iovec* iov, int iovcnt)
     int total = 0;
 
     for (int i = 0; i < iovcnt; i++) {
-        if (iov[i].iov_len == 0) {
+        linux::iovec iovec;
+
+        kcopy_from_user(&iovec, iov + i, sizeof(linux::iovec));
+
+        if (iovec.iov_len == 0) {
             continue;
         }
 
-        int written = desc->inode->write(desc, iov[i].iov_base, iov[i].iov_len);
+        int written = desc->inode->write(desc, iovec.iov_base, iovec.iov_len);
 
         if (written < 0) {
             return total > 0 ? total : written;
@@ -191,7 +202,7 @@ int sys_lseek(int fd, std::size_t offset, int whence)
     return desc->inode->lseek(desc, offset, whence);
 }
 
-long sys_getcwd(char* buffer, std::size_t size)
+long sys_getcwd(char* __user buffer, std::size_t size)
 {
     process::Process* proc = arch::percpu::current_process();
     kstring cwd = fs::getcwd(proc->cwd_inode);
@@ -200,16 +211,17 @@ long sys_getcwd(char* buffer, std::size_t size)
         return -ERANGE;
     }
 
-    memcpy(buffer, cwd.c_str(), cwd.size());
-    buffer[cwd.size()] = '\0';
+    kcopy_to_user(buffer, cwd.c_str(), cwd.size() + 1);
 
     return reinterpret_cast<long>(buffer);
 }
 
-int sys_chdir(const char* path)
+int sys_chdir(const char* __user path)
 {
+    kstring path_str = kstring::from_userspace(path);
+
     auto* proc = arch::percpu::current_process();
-    auto* fd = fs::open(path, fs::O_RDONLY);
+    auto* fd = fs::open(path_str, fs::O_RDONLY);
 
     if (fd == nullptr) {
         return -EBADF;
@@ -244,7 +256,9 @@ int sys_fchdir(int fd)
 
 int sys_mkdir(const char* path, int mode)
 {
-    return fs::mkdir(path, mode);
+    kstring path_str = kstring::from_userspace(path);
+
+    return fs::mkdir(path_str, mode);
 }
 
 int sys_fcntl(int, unsigned int, unsigned long)
@@ -269,29 +283,33 @@ int sys_getdents64(int fd, void* buffer, unsigned int count)
         return 0;
     }
 
-    const int max_entries = count / sizeof(linux::linux_dirent64);
+    const std::size_t max_entries = count / sizeof(linux::linux_dirent64);
 
     int inode = 1;
-    int entries_returned = 0;
 
-    auto* dirent = reinterpret_cast<linux::linux_dirent64*>(buffer);
+    kvector<linux::linux_dirent64> dirents{};
 
-    while (desc->offset < entries.size() && entries_returned < max_entries) {
+    while (desc->offset < entries.size() && dirents.size() < max_entries) {
         const auto& entry = entries[desc->offset];
+        linux::linux_dirent64 dirent{};
 
-        dirent->d_ino = inode++;
-        dirent->d_off = 0;
-        dirent->d_reclen = sizeof(linux::linux_dirent64);
-        dirent->d_type = static_cast<std::uint8_t>(entry.type);
+        dirent.d_ino = inode++;
+        dirent.d_off = 0;
+        dirent.d_reclen = sizeof(linux::linux_dirent64);
+        dirent.d_type = static_cast<std::uint8_t>(entry.type);
 
-        strncpy(dirent->d_name, entry.name.c_str(), sizeof(dirent->d_name));
+        strncpy(dirent.d_name, entry.name.c_str(), sizeof(dirent.d_name));
 
-        dirent++;
-        entries_returned++;
+        dirents.push_back(std::move(dirent));
+
         desc->offset++;
     }
 
-    return sizeof(linux::linux_dirent64) * entries_returned;
+    const std::size_t buffer_len = dirents.size() * sizeof(linux::linux_dirent64);
+
+    kcopy_to_user(buffer, dirents.data(), buffer_len);
+
+    return buffer_len;
 }
 
 }

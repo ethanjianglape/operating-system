@@ -1,4 +1,6 @@
 #include "algo/algo.hpp"
+#include "arch/x64/memory/vmm.hpp"
+#include "containers/kstring_view.hpp"
 #include "containers/kvector.hpp"
 #include "tar.hpp"
 
@@ -70,7 +72,14 @@ int InitramfsFileInode::open(FileDescriptor*, int) { return 0; }
 
 int InitramfsFileInode::read(FileDescriptor*, void* buf, std::size_t count)
 {
-    memcpy(buf, tar_data, count);
+    log::debugf("initramfs read is user = {}", arch::vmm::is_user_addr(buf));
+
+    if (arch::vmm::is_user_addr(buf)) {
+        kcopy_to_user(buf, tar_data, count);
+    } else {
+        memcpy(buf, tar_data, count);
+    }
+
     return count;
 }
 
@@ -91,7 +100,7 @@ void InitramfsMountPoint::insert_inode(const char* path, Inode* inode)
 {
     auto* current = static_cast<InitramfsDirectoryInode*>(root_inode);
 
-    kvector<kstring> tokens = algo::split(path, '/');
+    kvector<kstring> tokens = algo::split(kstring_view{path}, '/');
 
     for (std::size_t i = 0; i < tokens.size() - 1; i++) {
         kstring& token = tokens[i];

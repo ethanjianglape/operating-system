@@ -79,11 +79,12 @@ Elf64_File parse_file(std::uint8_t* buffer, [[maybe_unused]] std::size_t size)
         file.program_headers.push_back(*phdr);
     }
 
-    for (const auto& segment : file.program_headers) {
-        log::debug("segment flags = ", fmt::bin{segment.p_flags},
-            " vaddr = ", fmt::hex{segment.p_vaddr},
-            " file sz = ", segment.p_filesz,
-            " mem sz = ", segment.p_memsz);
+    for (const auto& header : file.program_headers) {
+        log::debugf("ELF program header: flags = {} vaddr = {} file sz = {} mem sz = {}",
+            fmt::bin{header.p_flags},
+            fmt::hex{header.p_vaddr},
+            fmt::hex{header.p_filesz},
+            fmt::hex{header.p_memsz});
     }
 
     log::success("Valid ELF File found!");

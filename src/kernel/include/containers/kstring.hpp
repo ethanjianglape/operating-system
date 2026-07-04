@@ -1,11 +1,11 @@
 #pragma once
 
-#include "containers/kstring_view.hpp"
+#include <containers/kstring_view.hpp>
 #include <crt/crt.h>
-#include <cstdint>
 #include <memory/memory.hpp>
 
 #include <cstddef>
+#include <cstdint>
 
 class kstring final {
 private:
@@ -218,6 +218,15 @@ public:
         _data[_length] = '\0';
     }
 
+    kstring(kstring_view sv)
+        : kstring{}
+    {
+        ensure_capacity(sv.length() + 1);
+        memcpy(_data, sv.c_str(), sv.length() + 1);
+        _length = sv.length();
+        _data[_length] = '\0';
+    }
+
     // Move constructor
     kstring(kstring&& other) noexcept
         : _data{other._data}
@@ -293,6 +302,18 @@ public:
             memcpy(_data, s, len + 1);
             _length = len;
         }
+        return *this;
+    }
+
+    kstring& operator=(kstring_view sv)
+    {
+        kfree(_data);
+
+        std::size_t len = sv.length();
+        ensure_capacity(len + 1);
+        memcpy(_data, sv.c_str(), len + 1);
+        _length = len;
+
         return *this;
     }
 
@@ -570,6 +591,8 @@ public:
     }
 
     bool ends_with(char c) const { return _length > 0 && back() == c; }
+
+    static kstring from_userspace(const char* chars);
 };
 
 inline kstring operator+(const char* lhs, const kstring& rhs)

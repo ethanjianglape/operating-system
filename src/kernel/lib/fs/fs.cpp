@@ -53,7 +53,7 @@ MountPoint* find_mount_at(Inode* inode)
     return nullptr;
 }
 
-Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
+Inode* resolve_path(kstring_view path, const kvector<kstring>& tokens)
 {
     if (!g_root_mountpoint) {
         kpanic("!! VFS: Root is NULL !!");
@@ -102,7 +102,7 @@ Inode* resolve_path(const kstring& path, const kvector<kstring>& tokens)
     return current;
 }
 
-Inode* resolve_path(const kstring& path)
+Inode* resolve_path(kstring_view path)
 {
     kvector<kstring> tokens = algo::split(path, '/');
 
@@ -131,7 +131,7 @@ void mount(const char* path, FileSystem* fs, const char* source)
     register_mount(path, mp);
 }
 
-FileDescriptor* open(const char* path, int flags)
+FileDescriptor* open(kstring_view path, int flags)
 {
     Inode* inode = resolve_path(path);
 

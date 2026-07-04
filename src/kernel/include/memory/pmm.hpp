@@ -27,7 +27,7 @@ std::size_t get_free_frames();
 void free_frame(std::uintptr_t phys);
 void free_contiguous_frames(std::uintptr_t phys, std::size_t count);
 
-void* alloc_frame();
+std::uintptr_t alloc_frame();
 void* alloc_contiguous_frames(std::size_t num_frames);
 
 template <std::unsigned_integral T>
@@ -36,6 +36,7 @@ T alloc_contiguous_frames(std::size_t num_frames)
     return reinterpret_cast<T>(alloc_contiguous_frames(num_frames));
 }
 
-template <typename T>
-T alloc_frame() { return reinterpret_cast<T>(alloc_frame()); }
+// template <typename T>
+// T alloc_frame() { return reinterpret_cast<T>(alloc_frame()); }
+
 }

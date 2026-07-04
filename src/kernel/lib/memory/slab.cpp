@@ -160,7 +160,7 @@ Slab* create_slab(SizeClass* sc)
 {
     kassert_not_null(sc);
 
-    void* page = arch::vmm::alloc_kpage();
+    void* page = arch::vmm::alloc_kernel_page();
     Slab* slab = reinterpret_cast<Slab*>(page);
 
     // instead of storing slab metadata externally, we will just
@@ -249,7 +249,7 @@ void destroy_slab(SizeClass* sc, Slab* slab)
 
     sc->num_slabs -= 1;
 
-    arch::vmm::free_kpage(slab);
+    arch::vmm::free_kernel_page(slab);
 }
 
 /**

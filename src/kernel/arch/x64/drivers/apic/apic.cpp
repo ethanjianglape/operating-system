@@ -135,7 +135,7 @@ void set_lapic_addr()
 {
     std::uint64_t phys_addr = ::acpi::madt::get_lapic_addr();
 
-    lapic_virt_base = reinterpret_cast<volatile std::uint8_t*>(vmm::map_hddm_page(phys_addr, vmm::PAGE_CACHE_DISABLE | vmm::PAGE_WRITE));
+    lapic_virt_base = reinterpret_cast<volatile std::uint8_t*>(vmm::map_phys(phys_addr, vmm::PAGE_WRITE | vmm::PAGE_CACHE_DISABLE));
 }
 
 // Helper to get the register offset for a redirection table entry

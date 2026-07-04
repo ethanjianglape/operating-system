@@ -1,11 +1,10 @@
-#include "arch/x64/memory/vmm.hpp"
-#include "kpanic/kpanic.hpp"
 #include "log/log.hpp"
 #include <arch.hpp>
 #include <process/process.hpp>
 #include <syscall/sys_mem.hpp>
 
 namespace syscall {
+
 std::uintptr_t sys_brk(void* addr)
 {
     auto* proc = arch::percpu::current_process();
@@ -22,50 +21,38 @@ std::uintptr_t sys_brk(void* addr)
     }
 
     std::uintptr_t size = hb_end - hb_start;
-    std::size_t pages = arch::vmm::map_mem_at(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+    std::size_t pages = arch::vmm::map_pages(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
     proc->heap_break = hb_end;
-    proc->allocations.push_back(process::ProcessAllocation{
-        .virt_addr = hb_start,
-        .num_pages = pages,
-    });
+    proc->allocations.emplace_back(hb_start, pages);
 
     return hb_end;
 }
 
-std::uintptr_t sys_mmap(void* addr_ptr, std::size_t length, int prot, int flags, int fd, std::size_t offset)
+std::uintptr_t sys_mmap(void*, std::size_t length, int, int flags, int, std::size_t)
 {
-    (void)prot;
-    (void)fd;
-    (void)offset;
-
     if ((flags & linux::MAP_ANONYMOUS) == 0) {
         log::warn("Invalid call to sys_mmap with flags = ", flags, ", only MAP_ANONYMOUS supported for now.");
         return static_cast<std::uintptr_t>(-1);
     }
 
     auto* proc = arch::percpu::current_process();
-    auto addr = reinterpret_cast<std::uintptr_t>(addr_ptr);
 
-    if (addr_ptr == nullptr || addr < proc->mmap_min_addr) {
-        addr = proc->mmap_min_addr;
-    }
+    log::debug("sys mmap");
 
     int vmm_flags = arch::vmm::PAGE_WRITE | arch::vmm::PAGE_USER;
-    arch::vmm::MemoryAllocation allocation = arch::vmm::try_map_mem_at(proc->pml4, addr, length, vmm_flags);
+    void* virt_addr = arch::vmm::map_heap_pages(proc->pml4, &proc->uheap, length, vmm_flags);
 
-    proc->allocations.push_back(process::ProcessAllocation{
-        .virt_addr = allocation.virt_addr,
-        .num_pages = allocation.num_pages});
+    log::debugf("sys_mmap virt = {}", virt_addr);
 
-    return allocation.virt_addr;
+    proc->uheap_allocations.push_back(virt_addr);
+
+    return reinterpret_cast<std::uintptr_t>(virt_addr);
 }
 
-int sys_munmap(void* addr, std::size_t length)
+int sys_munmap(void*, std::size_t)
 {
-    (void)addr;
-    (void)length;
-
     return 0;
 }
+
 }
