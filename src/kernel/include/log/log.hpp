@@ -58,6 +58,13 @@ void debug(Ts... args)
     kprintln("[DEBUG] ", args...);
 }
 
+inline void debugf(kstring_view format)
+{
+    kprint("[DEBUG] ");
+    kprint(format);
+    kprintln();
+}
+
 template <typename T, typename... Rest>
 void debugf(kstring_view format, T first, Rest... rest)
 {

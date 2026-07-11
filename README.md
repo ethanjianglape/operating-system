@@ -24,10 +24,10 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 
 ### Memory Management
 - Physical memory manager (PMM) with bitmap allocator
-- Virtual memory manager (VMM) with 4-level paging
+- Virtual memory manager (VMM) with 4-level paging via explicit, bitfield-typed `PML4E`/`PDPTE`/`PDE`/`PTE` structs and spinlock-protected page table mutation
 - Higher-half kernel with HHDM (Higher Half Direct Map)
 - Slab allocator for efficient small object allocation (32-1024 bytes)
-- Per-process address spaces with user/kernel separation
+- Per-process address spaces with user/kernel separation, hardened via CR4 `SMEP`/`SMAP`/`UMIP` — kernel code can't execute or touch user pages without explicit `stac`/`clac`
 
 ### Filesystem
 - Unix-like VFS via a polymorphic `Inode` base class (`fd->inode->read()`, `write()`, etc. — virtual dispatch, no separate ops table)
@@ -41,15 +41,16 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 - ELF64 binary loading from initramfs
 - Ring 3 userspace execution
 - Kernel threads (`process::create_kthread`) for in-kernel background work (e.g. the framebuffer compositor), alongside full ELF user processes
-- Unified `context_switch()` used for all scheduling paths — both preemptive (APIC timer) and cooperative (`yield_blocked`/`yield_dead`)
-- Spinlock-protected context switches to ensure safe handoff between processes
-- Process states: RUNNING, READY, BLOCKED, DEAD
+- Unified, spinlock-protected `context_switch()` used for all scheduling paths — both preemptive (APIC timer) and cooperative (`yield_blocked`/`yield_dead`/`yield_zombie`)
+- Process states: NEW, RUNNING, READY, BLOCKED, SLEEPING, DEAD, ZOMBIE
 - Per-process page tables and file descriptor tables
+- `fork()` with true address-space cloning (PML4 + heap clone) — child resumes independently via a dedicated trampoline
+- `wait()`/`wait4()` (including `pid == -1` for "any child") with race-free zombie reaping: exiting processes persist as `ZOMBIE` until a parent collects `exit_status`, then a periodic reaper kthread frees fully-reaped (`DEAD`) processes
 
 ### Syscalls
 - File I/O: `sys_read`, `sys_write`, `sys_readv`, `sys_writev`, `sys_open`, `sys_close`, `sys_ioctl`
 - Filesystem/paths: `sys_stat`, `sys_fstat`, `sys_lseek`, `sys_getcwd`, `sys_chdir`, `sys_fchdir`, `sys_mkdir`, `sys_fcntl`, `sys_getdents64`
-- Process: `sys_getpid`, `sys_exit`/`sys_exit_group`, `sys_set_tid_address`, `sys_arch_prctl`
+- Process: `sys_getpid`, `sys_fork`, `sys_wait4`, `sys_exit`/`sys_exit_group`, `sys_set_tid_address`, `sys_arch_prctl`
 - Memory: `sys_brk`, `sys_mmap`, `sys_munmap`
 - Timing: `sys_sleep_ms` (via `SYS_NANOSLEEP`) for timed blocking
 
@@ -65,7 +66,7 @@ Use at your own risk. The author(s) are not responsible for any damage, data los
 ### Infrastructure
 - Dynamic containers (`kstring`, `kvector`, `klist`)
 - Spinlocks matched to context: `kspinlock` (preemption-only) for data only touched by threads/kthreads, `kspinlock_irqsave` (also masks interrupts) for data shared with IRQ handlers
-- In-kernel unit test framework (160+ tests)
+- In-kernel unit test framework (780+ assertions)
 - Modern C++23 with freestanding implementation
 
 ## Project Structure
@@ -78,9 +79,11 @@ os/
 │   │   ├── include/                # Kernel headers
 │   │   │   ├── arch.hpp            # Architecture abstraction
 │   │   │   ├── acpi/               # ACPI table parsing
+│   │   │   ├── algo/               # Algorithm headers
 │   │   │   ├── boot/               # Boot info structures
 │   │   │   ├── console/            # Console/TTY interface
 │   │   │   ├── containers/         # kstring, kstring_view, kvector, klist
+│   │   │   ├── crt/                # C runtime support
 │   │   │   ├── exclusive/          # kspinlock, kspinlock_irqsave, katomic
 │   │   │   ├── fmt/                # Kernel string formatting
 │   │   │   ├── framebuffer/        # Framebuffer compositor
@@ -133,10 +136,12 @@ os/
 ├── firmware/                       # Bundled OVMF firmware for QEMU
 ├── initramfs/                      # Files packaged into initramfs
 │   └── bin/                        # Userspace binaries
-└── build.sh                        # Build script
+├── build.sh                        # Build script
+├── run-qemu.sh                     # Run the built ISO in QEMU
+└── clang-format.sh                 # Run clang-format across the tree
 ```
 
-See `src/kernel/CONVENTIONS.md` for namespace and code style conventions.
+See `src/kernel/CONVENTIONS.md` for namespace and code style conventions, and `DOCUMENTATION.md` for comment/doc conventions.
 
 ## Building
 
@@ -184,7 +189,7 @@ See `src/kernel/CONVENTIONS.md` for namespace and code style conventions.
 
 ## Architecture
 
-**Boot Sequence:**
+### Boot Sequence
 1. Limine loads kernel, initramfs, and provides framebuffer, memory map, RSDP
 2. Early init sets up GDT, IDT, PMM, VMM with HHDM
 3. Parse ACPI tables (MADT) for APIC configuration
@@ -194,7 +199,7 @@ See `src/kernel/CONVENTIONS.md` for namespace and code style conventions.
 7. Load and run userspace programs from `/bin/`
 8. Scheduler manages processes with preemptive multitasking
 
-**VFS Architecture:**
+### VFS Architecture
 ```
 sys_read(fd, buf, count)
   → fd->inode->read(fd, buf, count)    // virtual dispatch on Inode
@@ -206,17 +211,20 @@ sys_read(fd, buf, count)
              └─ keyboard input / console output
 ```
 
-**Key Design Decisions:**
+### Key Design Decisions
 - **Higher-half kernel**: Kernel mapped at high addresses via HHDM
 - **Architecture abstraction**: `lib/` code uses `arch::` namespace, not `x64::` directly
-- **Single dispatch VFS**: `fd->inode->ops->read()` - no double indirection
+- **Single dispatch VFS**: `fd->inode->read()` — direct virtual dispatch on `Inode`, no separate ops table
+- **No huge pages**: page table walks always descend PML4→PDPT→PD→PT to a 4KB `PTE` (the `ps` bit is never set) — one code path, no special-casing 2MB/1GB mappings
+- **Unified process resume path**: every suspension — preemptive (timer) or cooperative (`yield_blocked`/`yield_dead`/`yield_zombie`) — resumes through the same `context_switch()`/`kernel_rsp_saved`, not separate bookkeeping per suspension kind
 - **Flat namespaces**: No `kernel::` prefix; subsystems use `fs::`, `pmm::`, `log::`, etc.
 - **k-prefixed utilities**: Global types like `kstring`, `kvector`, `kprint()`
 - **Modern C++**: C++23 with freestanding implementation, concepts, fold expressions
 
 ## License
 
-GNU General Public License v3.0
+GNU General Public License v3.0 — see `COPYING` for the full text. 
+Vendored third-party code carries its own license; see `THIRD_PARTY_LICENSES`.
 
 ## Acknowledgments
 

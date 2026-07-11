@@ -48,7 +48,7 @@ static std::uintptr_t hhdm_offset;
 
 static Heap kheap{};
 
-static kspinlock_irqsave vmm_lock{};
+static kspinlock_irqsave g_vmm_lock{};
 
 template <typename T>
 static T hhdm_ptov(std::uintptr_t phys) { return reinterpret_cast<T>(phys + hhdm_offset); }
@@ -264,7 +264,7 @@ static PDE* ensure_pde_present(PDPTE& pdpte, int flags)
     return hhdm_ptov<PDE*>(pdpte.addr << 12);
 }
 
-static PTE* ensure_pt_present(PDE& pde, int flags)
+static PTE* ensure_pte_present(PDE& pde, int flags)
 {
     if (!pde.p) {
         std::uintptr_t phys_frame = pmm::alloc_frame();
@@ -291,7 +291,7 @@ static std::uintptr_t map_heap_page(PML4E* pml4, Heap* heap, std::uintptr_t phys
 
     PDPTE* pdpt = ensure_pdpte_present(pml4[pml4_idx], flags);
     PDE* pd = ensure_pde_present(pdpt[pdpt_idx], flags);
-    PTE* pt = ensure_pt_present(pd[pd_idx], flags);
+    PTE* pt = ensure_pte_present(pd[pd_idx], flags);
 
     populate_pte(pt[pt_idx], phys_frame, flags);
     advance_heap(heap);
@@ -336,7 +336,7 @@ static void map_page_to_frame(PML4E* pml4, std::uintptr_t virt_page, std::uintpt
 
     PDPTE* pdpt = ensure_pdpte_present(pml4[pml4_idx], flags);
     PDE* pd = ensure_pde_present(pdpt[pdpt_idx], flags);
-    PTE* pt = ensure_pt_present(pd[pd_idx], flags);
+    PTE* pt = ensure_pte_present(pd[pd_idx], flags);
 
     populate_pte(pt[pt_idx], phys_frame, flags);
 
@@ -358,7 +358,7 @@ std::size_t map_pages(PML4E* pml4, std::uintptr_t virt_addr, std::size_t bytes, 
     kassert_not_null(pml4);
     kassert(bytes > 0);
 
-    vmm_lock.lock();
+    g_vmm_lock.lock();
 
     std::uintptr_t page_start = virt_addr & ~(PAGE_SIZE - 1);
     std::uintptr_t page_end = (virt_addr + bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
@@ -375,7 +375,7 @@ std::size_t map_pages(PML4E* pml4, std::uintptr_t virt_addr, std::size_t bytes, 
         map_page_to_frame(pml4, page_start + (page * PAGE_SIZE), phys_frame, flags);
     }
 
-    vmm_lock.unlock();
+    g_vmm_lock.unlock();
 
     return num_pages;
 }
@@ -412,14 +412,14 @@ static void unmap_page(PML4E* pml4, std::uintptr_t virt_page)
  */
 void* alloc_kernel_page()
 {
-    vmm_lock.lock();
+    g_vmm_lock.lock();
 
     std::uintptr_t phys_frame = pmm::alloc_frame();
     std::uintptr_t virt_page = map_phys(phys_frame);
 
     void* addr = reinterpret_cast<void*>(virt_page);
 
-    vmm_lock.unlock();
+    g_vmm_lock.unlock();
 
     return addr;
 }
@@ -430,12 +430,12 @@ void free_kernel_page(void* virt_addr)
         return;
     }
 
-    vmm_lock.lock();
+    g_vmm_lock.lock();
 
     std::uintptr_t virt_page = page_align(virt_addr);
     unmap_page(kernel_pml4, virt_page);
 
-    vmm_lock.unlock();
+    g_vmm_lock.unlock();
 }
 
 void* map_heap_pages(PML4E* pml4, Heap* heap, std::size_t bytes, int flags)
@@ -443,7 +443,7 @@ void* map_heap_pages(PML4E* pml4, Heap* heap, std::size_t bytes, int flags)
     kassert_not_null(pml4);
     kassert_not_null(heap);
 
-    vmm_lock.lock();
+    g_vmm_lock.lock();
     arch::cpu::stac();
 
     std::size_t total = bytes + sizeof(std::size_t);
@@ -464,7 +464,7 @@ void* map_heap_pages(PML4E* pml4, Heap* heap, std::size_t bytes, int flags)
     *first_page = num_pages;
 
     arch::cpu::clac();
-    vmm_lock.unlock();
+    g_vmm_lock.unlock();
 
     return first_page + 1;
 }
@@ -511,13 +511,13 @@ void free_kernel(void* virt_addr)
         return;
     }
 
-    vmm_lock.lock();
+    g_vmm_lock.lock();
 
     for (std::size_t page = 0; page < num_pages; page++) {
         unmap_page(kernel_pml4, virt_page + (page * PAGE_SIZE));
     }
 
-    vmm_lock.unlock();
+    g_vmm_lock.unlock();
 }
 
 /**
@@ -530,13 +530,13 @@ void unmap_mem_at(PML4E* pml4, std::uintptr_t virt_page, std::size_t num_pages)
 {
     kassert_not_null(pml4);
 
-    vmm_lock.lock();
+    g_vmm_lock.lock();
 
     for (std::size_t page = 0; page < num_pages; page++) {
         unmap_page(pml4, virt_page + (page * PAGE_SIZE));
     }
 
-    vmm_lock.unlock();
+    g_vmm_lock.unlock();
 }
 
 /**
@@ -607,7 +607,7 @@ static void init_kheap()
 
     PDPTE* pdpt = ensure_pdpte_present(kernel_pml4[kheap.pml4_idx], 0);
     PDE* pd = ensure_pde_present(pdpt[kheap.pdpt_idx], 0);
-    PTE* pt = ensure_pt_present(pd[kheap.pd_idx], 0);
+    PTE* pt = ensure_pte_present(pd[kheap.pd_idx], 0);
 
     kassert_not_null(pt);
 
@@ -654,6 +654,72 @@ PML4E* create_user_pml4()
     return new_pml4;
 }
 
+PML4E* clone_user_pml4(PML4E* pml4)
+{
+    g_vmm_lock.lock();
+
+    std::uintptr_t phys = pmm::alloc_frame();
+    auto* new_pml4 = hhdm_ptov<PML4E*>(phys);
+
+    kassert_not_null(new_pml4);
+    zero_page(reinterpret_cast<std::uintptr_t*>(new_pml4));
+
+    std::size_t kernel_start = get_kernel_pml4_index();
+
+    for (std::size_t i = kernel_start; i < NUM_PT_ENTRIES; i++) {
+        new_pml4[i] = pml4[i];
+    }
+
+    for (std::size_t pml4_idx = 0; pml4_idx < kernel_start; pml4_idx++) {
+        if (!pml4[pml4_idx].p) {
+            continue;
+        }
+
+        PDPTE* new_pdpt = ensure_pdpte_present(new_pml4[pml4_idx], PAGE_USER);
+        PDPTE* pdpt = get_pdpt(pml4[pml4_idx]);
+
+        for (std::size_t pdpt_idx = 0; pdpt_idx < NUM_PT_ENTRIES; pdpt_idx++) {
+            if (!pdpt[pdpt_idx].p) {
+                continue;
+            }
+
+            PDE* new_pd = ensure_pde_present(new_pdpt[pdpt_idx], PAGE_USER);
+            PDE* pd = get_pd(pdpt[pdpt_idx]);
+
+            for (std::size_t pd_idx = 0; pd_idx < NUM_PT_ENTRIES; pd_idx++) {
+                if (!pd[pd_idx].p) {
+                    continue;
+                }
+
+                PTE* new_pt = ensure_pte_present(new_pd[pd_idx], PAGE_USER);
+                PTE* pt = get_pt(pd[pd_idx]);
+
+                for (std::size_t pt_idx = 0; pt_idx < NUM_PT_ENTRIES; pt_idx++) {
+                    if (!pt[pt_idx].p) {
+                        continue;
+                    }
+
+                    log::debugf("found mapped user page at pml4={}, pdpt={}, pd={}, pt={}", pml4_idx, pdpt_idx, pd_idx, pt_idx);
+
+                    std::uintptr_t phys_frame = pmm::alloc_frame();
+
+                    new_pt[pt_idx] = pt[pt_idx];
+                    new_pt[pt_idx].addr = phys_frame >> 12;
+
+                    auto* from = hhdm_ptov<std::uint8_t*>(pt[pt_idx].addr << 12);
+                    auto* to = hhdm_ptov<std::uint8_t*>(new_pt[pt_idx].addr << 12);
+
+                    memcpy(to, from, PAGE_SIZE);
+                }
+            }
+        }
+    }
+
+    g_vmm_lock.unlock();
+
+    return new_pml4;
+}
+
 Heap create_user_heap(PML4E* pml4)
 {
     Heap heap;
@@ -665,7 +731,25 @@ Heap create_user_heap(PML4E* pml4)
 
     PDPTE* pdpt = ensure_pdpte_present(pml4[heap.pml4_idx], PAGE_USER);
     PDE* pd = ensure_pde_present(pdpt[heap.pdpt_idx], PAGE_USER);
-    PTE* pt = ensure_pt_present(pd[heap.pd_idx], PAGE_USER);
+    PTE* pt = ensure_pte_present(pd[heap.pd_idx], PAGE_USER);
+
+    kassert_not_null(pt);
+
+    return heap;
+}
+
+Heap clone_user_heap(Heap* existing, PML4E* pml4)
+{
+    Heap heap;
+
+    heap.pml4_idx = existing->pml4_idx;
+    heap.pdpt_idx = existing->pdpt_idx;
+    heap.pd_idx = existing->pd_idx;
+    heap.pt_idx = existing->pt_idx;
+
+    PDPTE* pdpt = ensure_pdpte_present(pml4[heap.pml4_idx], PAGE_USER);
+    PDE* pd = ensure_pde_present(pdpt[heap.pdpt_idx], PAGE_USER);
+    PTE* pt = ensure_pte_present(pd[heap.pd_idx], PAGE_USER);
 
     kassert_not_null(pt);
 

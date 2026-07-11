@@ -141,9 +141,11 @@ std::uintptr_t map_phys(std::uintptr_t phys, int flags = 0);
 
 // Create a new user-space page table, copying in the kernel mappings.
 PML4E* create_user_pml4();
+PML4E* clone_user_pml4(PML4E* pml4);
 
 // Initialize a heap cursor for a user address space.
 Heap create_user_heap(PML4E* pml4);
+Heap clone_user_heap(Heap* existing, PML4E* pml4);
 
 // Map bytes into the next available slot in a heap, allocating physical frames.
 void* map_heap_pages(PML4E* pml4, Heap* heap, std::size_t bytes, int flags);

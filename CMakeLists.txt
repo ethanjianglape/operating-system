@@ -24,7 +24,7 @@ set(CMAKE_ASM_COMPILE_OBJECT "<CMAKE_ASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT
 # Kernel compile flags
 add_compile_options(
   $<$<COMPILE_LANGUAGE:C,CXX>:-m64>
-  $<$<COMPILE_LANGUAGE:C,CXX>:-march=x86-64>
+  $<$<COMPILE_LANGUAGE:C,CXX>:-march=native>
   $<$<COMPILE_LANGUAGE:C,CXX>:-mcmodel=kernel>
   $<$<COMPILE_LANGUAGE:C,CXX>:-mabi=sysv>
   $<$<COMPILE_LANGUAGE:C,CXX>:-mno-red-zone>
@@ -157,8 +157,3 @@ add_custom_command(
 )
 add_custom_target(iso ALL DEPENDS ${CMAKE_SOURCE_DIR}/myos.iso)
 
-# Print build information
-message(STATUS "Building kernel for x86_64 (64-bit) architecture using standard gcc")
-message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
-message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
-message(STATUS "ASM Assembler: ${CMAKE_ASM_COMPILER}")

@@ -3,7 +3,7 @@ set(USER_BIN_DIR "${CMAKE_SOURCE_DIR}/initramfs/bin")
 
 find_program(MUSL_GCC musl-gcc REQUIRED)
 
-set(MUSL_GCC_FLAGS -static)
+set(MUSL_GCC_FLAGS -static -march=native -mabi=sysv)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fno-link-libatomic HAS_NO_LINK_LIBATOMIC)
@@ -18,7 +18,6 @@ function(add_musl_program name source)
         OUTPUT ${USER_BIN_DIR}/${name}
         COMMAND ${MUSL_GCC} ${MUSL_GCC_FLAGS} -o ${USER_BIN_DIR}/${name} ${CMAKE_CURRENT_SOURCE_DIR}/${source}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${source}
-        COMMENT "Building musl program: ${name}"
     )
     add_custom_target(${name} ALL DEPENDS ${USER_BIN_DIR}/${name})
 endfunction()

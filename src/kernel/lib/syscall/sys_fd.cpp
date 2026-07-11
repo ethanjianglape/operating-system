@@ -62,8 +62,6 @@ int sys_read(int fd, void* buffer, std::size_t count)
         return -EBADF;
     }
 
-    log::debugf("sys_read inode = {}", desc->inode->name);
-
     int read = desc->inode->read(desc, buffer, count);
 
     return read;

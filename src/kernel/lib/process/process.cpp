@@ -1,4 +1,6 @@
+#include "arch/x64/cpu/cpu.hpp"
 #include "arch/x64/memory/vmm.hpp"
+#include "arch/x64/trap/syscall_entry.hpp"
 #include "memory/memory.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
@@ -28,9 +30,11 @@ constexpr std::uintptr_t KERNEL_STACK_SIZE = 16 * 1024; // 16KiB
 /// based on /proc/sys/vm/mmap_min_addr in Linux
 constexpr std::uintptr_t DEFAULT_MMAP_MIN_ADDR = 65536;
 
-static katomic<std::uint64_t> g_pid{1};
+static katomic<int> g_pid{1};
 
 extern "C" void userspace_entry_trampoline();
+
+extern "C" void forked_entry_trampoline();
 
 static void kthread_entry_trampoline()
 {
@@ -50,11 +54,38 @@ static void kthread_entry_trampoline()
     scheduler::yield_dead();
 }
 
+// [[noreturn]]
+// static void forked_entry_trampoline()
+// {
+// std::uint64_t rsp;
+
+// asm volatile("mov %%rsp, %0" : "=m"(rsp));
+
+// log::debugf("forked entry rsp = {}", fmt::hex{rsp});
+
+// asm volatile("mov $0, %%rax; jmp syscall_exit" :::);
+
+// scheduler::yield_dead();
+// }
+
+static void log_user_process(Process* p)
+{
+    log::debugf("**** User process ****");
+    log::debugf("* pid = {}", p->pid);
+    log::debugf("* kernel_stack  @ {}", fmt::hex{p->kernel_stack});
+    log::debugf("* kernel_rsp    @ {}", fmt::hex{p->kernel_rsp});
+    log::debugf("* syscall_frame @ {}", fmt::hex{p->syscall_frame});
+    log::debugf("* context_frame @ {}", fmt::hex{p->context_frame});
+    log::debugf("* k rsp saved   @ {}", fmt::hex{p->kernel_rsp_saved});
+    // log::debugf("* context_frame->r15 = {}", fmt::hex{p->context_frame->r15});
+}
+
 Process* create_kthread(void (*entry)())
 {
     auto* p = new Process{};
 
     p->pid = g_pid++;
+    p->parent = nullptr;
     p->state = ProcessState::NEW;
     p->wait_reason = WaitReason::NONE;
     p->exit_status = 0;
@@ -71,10 +102,10 @@ Process* create_kthread(void (*entry)())
     p->entry = reinterpret_cast<std::uintptr_t>(entry);
 
     p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
-    p->context_frame->r15 = 0xABC12300; // Magic numbers to help with debugging
-    p->context_frame->r14 = 0x67676767;
-    p->context_frame->r13 = 0xDEADBEEF;
-    p->context_frame->r12 = 0xABABABAB;
+    p->context_frame->r15 = 0x15151515; // Magic numbers to help with debugging
+    p->context_frame->r14 = 0x14141414;
+    p->context_frame->r13 = 0x13131313;
+    p->context_frame->r12 = 0x12121212;
     p->context_frame->rbp = 0x77777777;
     p->context_frame->rbx = 0x12345678;
     p->context_frame->rip = reinterpret_cast<std::uintptr_t>(kthread_entry_trampoline);
@@ -94,7 +125,6 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
     arch::vmm::PML4E* pml4 = arch::vmm::create_user_pml4();
     arch::vmm::switch_pml4(pml4);
-
     arch::cpu::stac();
 
     auto* p = new Process{};
@@ -176,14 +206,9 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     p->fd_table.push_back(stdout);
     p->fd_table.push_back(stderr);
 
+    log_user_process(p);
+
     arch::vmm::switch_kernel_pml4();
-
-    log::debugf("Created user process pid={}", p->pid);
-    log::debugf("  kernel_stack @ {}", fmt::hex{p->kernel_stack});
-    log::debugf("  kernel_rsp = {}", fmt::hex{p->kernel_rsp});
-    log::debugf("  context_frame @ {}", fmt::hex{p->context_frame});
-    log::debugf("  context_frame->r15 = {}", fmt::hex{p->context_frame->r15});
-
     arch::cpu::clac();
 
     return p;
@@ -199,6 +224,103 @@ Process* create_process(std::uint8_t* buffer, std::size_t size)
     Process* elf = load_elf(buffer, size);
 
     return elf;
+}
+
+void log_syscall_frame(arch::trap::SyscallFrame* frame)
+{
+    log::debugf("**** SYSCALL FRAME ****");
+    log::debugf("* r15 = {}", fmt::hex{frame->r15});
+    log::debugf("* r14 = {}", fmt::hex{frame->r14});
+    log::debugf("* r13 = {}", fmt::hex{frame->r13});
+    log::debugf("* r12 = {}", fmt::hex{frame->r12});
+    log::debugf("* r11 = {}", fmt::hex{frame->r11});
+    log::debugf("* r10 = {}", fmt::hex{frame->r10});
+    log::debugf("* r9  = {}", fmt::hex{frame->r9});
+    log::debugf("* r8  = {}", fmt::hex{frame->r8});
+    log::debugf("* rpb = {}", fmt::hex{frame->rbp});
+    log::debugf("* rdi = {}", fmt::hex{frame->rdi});
+    log::debugf("* rsi = {}", fmt::hex{frame->rsi});
+    log::debugf("* rdx = {}", fmt::hex{frame->rdx});
+    log::debugf("* rcx = {}", fmt::hex{frame->rcx});
+    log::debugf("* rbx = {}", fmt::hex{frame->rbx});
+    log::debugf("* rax = {}", fmt::hex{frame->rax});
+    log::debugf("* rsp = {}", fmt::hex{frame->rsp});
+    log::debugf("***********************");
+}
+
+Process* fork_process(Process* current, arch::trap::SyscallFrame* syscall_frame)
+{
+    kassert_not_null(current);
+
+    arch::vmm::PML4E* pml4 = arch::vmm::clone_user_pml4(current->pml4);
+    arch::vmm::switch_pml4(pml4);
+    arch::cpu::stac();
+
+    auto* p = new Process{};
+
+    p->pid = g_pid++;
+    p->parent = current;
+    p->state = process::ProcessState::NEW;
+    p->wait_reason = current->wait_reason;
+    p->exit_status = current->exit_status;
+    p->heap_break = current->heap_break;
+    p->pml4 = pml4;
+    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+    p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
+    p->wake_time_ms = current->wake_time_ms;
+    p->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
+    p->fs_base = current->fs_base;
+    p->tidptr = current->tidptr;
+    p->cwd_inode = current->cwd_inode;
+    p->uheap = arch::vmm::clone_user_heap(&current->uheap, pml4);
+
+    p->syscall_frame = reinterpret_cast<arch::trap::SyscallFrame*>(p->kernel_rsp - sizeof(arch::trap::SyscallFrame));
+
+    p->syscall_frame->r15 = syscall_frame->r15;
+    p->syscall_frame->r14 = syscall_frame->r14;
+    p->syscall_frame->r13 = syscall_frame->r13;
+    p->syscall_frame->r12 = syscall_frame->r12;
+    p->syscall_frame->r11 = syscall_frame->r11;
+    p->syscall_frame->r10 = syscall_frame->r10;
+    p->syscall_frame->r9 = syscall_frame->r9;
+    p->syscall_frame->r8 = syscall_frame->r8;
+
+    p->syscall_frame->rbp = syscall_frame->rbp;
+    p->syscall_frame->rdi = syscall_frame->rdi;
+    p->syscall_frame->rsi = syscall_frame->rsi;
+    p->syscall_frame->rdx = syscall_frame->rdx;
+    p->syscall_frame->rcx = syscall_frame->rcx;
+    p->syscall_frame->rbx = syscall_frame->rbx;
+    p->syscall_frame->rax = syscall_frame->rax;
+    p->syscall_frame->rsp = syscall_frame->rsp;
+
+    log_syscall_frame(p->syscall_frame);
+
+    p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(
+        p->kernel_rsp - sizeof(arch::trap::SyscallFrame) - sizeof(arch::context::ContextFrame));
+    p->context_frame->r15 = 0x15151515; // Magic numbers to help with debugging
+    p->context_frame->r14 = 0x14141414;
+    p->context_frame->r13 = 0x13131313;
+    p->context_frame->r12 = 0x12121212;
+    p->context_frame->rbp = 0xA000000A;
+    p->context_frame->rbx = 0xB000000B;
+    p->context_frame->rip = reinterpret_cast<std::uintptr_t>(forked_entry_trampoline);
+    p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+
+    fs::FileDescriptor* stdin = fs::open("/dev/tty1", fs::O_RDONLY);
+    fs::FileDescriptor* stdout = fs::open("/dev/tty1", fs::O_WRONLY);
+    fs::FileDescriptor* stderr = fs::open("/dev/tty1", fs::O_WRONLY);
+
+    p->fd_table.push_back(stdin);
+    p->fd_table.push_back(stdout);
+    p->fd_table.push_back(stderr);
+
+    log_user_process(p);
+
+    arch::vmm::switch_pml4(current->pml4);
+    arch::cpu::clac();
+
+    return p;
 }
 
 void terminate_process(Process* proc)
@@ -230,4 +352,5 @@ void terminate_process(Process* proc)
     log::info("Slabs: ", slabs_before, " -> ", slabs_after);
     log::info("========================================");
 }
+
 }

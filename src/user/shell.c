@@ -12,6 +12,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 // ============================================================================
@@ -29,6 +31,7 @@ void cmd_help(void)
     puts("  pid      - Show process ID");
     puts("  mmap     - Test mmap syscall");
     puts("  mkdir    - Test mkdir syscall");
+    puts("  fork     - Test forking this shell");
     puts("  exit     - Exit shell");
 }
 
@@ -80,6 +83,22 @@ void cmd_cat(const char* path)
 void cmd_pid(void)
 {
     printf("PID: %d\n", getpid());
+}
+
+void cmd_fork(void)
+{
+    int pid = fork();
+
+    if (pid == 0) {
+        puts("hello from the child!");
+    } else {
+        puts("hello from the parent! waiting on child...");
+        int status;
+        wait(&status);
+        puts("returning to parent");
+    }
+
+    puts("");
 }
 
 void cmd_mmap(void)
@@ -174,6 +193,8 @@ void process_command(char* cmd)
         cmd_mmap();
     } else if (strcmp(cmd, "exit") == 0) {
         exit(0);
+    } else if (strcmp(cmd, "fork") == 0) {
+        cmd_fork();
     } else if (strcmp(cmd, "ls") == 0) {
         if (*arg) {
             cmd_ls(arg);

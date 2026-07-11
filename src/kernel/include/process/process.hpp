@@ -9,6 +9,7 @@
 #include <cstdint>
 
 namespace process {
+
 enum class ProcessState : std::uint8_t {
     NEW = 0,
     RUNNING = 1,
@@ -16,13 +17,15 @@ enum class ProcessState : std::uint8_t {
     BLOCKED = 3,
     SLEEPING = 4,
     DEAD = 5,
+    ZOMBIE = 6
 };
 
 enum class WaitReason : std::uint8_t {
     NONE = 0,
     KEYBOARD = 1,
     SLEEP = 2,
-    FRAMEBUFFER = 3
+    FRAMEBUFFER = 3,
+    CHILD_PROCESS = 4
 };
 
 struct ProcessAllocation {
@@ -38,9 +41,13 @@ struct ProcessAllocation {
 
 struct Process {
     // Process meta info
-    std::size_t pid;
+    int pid;
+
+    Process* parent;
+
     ProcessState state;
     WaitReason wait_reason;
+    int wait_pid;
     int exit_status;
 
     fs::Inode* cwd_inode;
@@ -60,6 +67,8 @@ struct Process {
                                      // context_switch() against this.
     arch::context::ContextFrame* context_frame;
 
+    arch::trap::SyscallFrame* syscall_frame;
+
     // VMM page info
     kvector<ProcessAllocation> allocations;
 
@@ -78,8 +87,10 @@ struct Process {
 };
 
 Process* create_process(std::uint8_t* buffer, std::size_t size);
+Process* fork_process(Process* p, arch::trap::SyscallFrame* syscall_frame);
 
 Process* create_kthread(void (*entry)());
 
 void terminate_process(Process* process);
+
 }

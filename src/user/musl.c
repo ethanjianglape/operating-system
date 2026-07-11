@@ -1,13 +1,24 @@
-#include <dirent.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 int main(void)
 {
-    puts("Hello from musl userspace!");
-    puts("line 2");
-    puts("line 3");
-    puts("line 4");
+    int pid = fork();
+
+    printf("pid = %d\n", pid);
+
+    if (pid == 0) {
+        puts("hello from child");
+        exit(0);
+    } else {
+        puts("parent waiting for child...");
+
+        int status;
+
+        wait4(pid, &status, 0, NULL);
+    }
 
     return 0;
 

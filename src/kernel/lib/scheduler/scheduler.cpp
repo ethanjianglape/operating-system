@@ -1,4 +1,7 @@
+#include "arch/x64/percpu/percpu.hpp"
+#include "fmt/fmt.hpp"
 #include <arch.hpp>
+#include <cerrno>
 #include <exclusive/kspinlock_irqsave.hpp>
 #include <kassert/kassert.hpp>
 #include <kpanic/kpanic.hpp>
@@ -74,6 +77,31 @@ void wake_all(process::WaitReason wait_reason)
     g_processes_lock.unlock();
 }
 
+static void wake_all_parents(int pid)
+{
+    for (std::size_t i = 0; i < g_processes.size(); i++) {
+        process::Process* p = g_processes[i];
+
+        kassert_not_null(p);
+
+        if (p->state != process::ProcessState::BLOCKED) {
+            continue;
+        }
+
+        if (p->wait_reason != process::WaitReason::CHILD_PROCESS) {
+            continue;
+        }
+
+        if (p->wait_pid != pid && p->wait_pid != -1) {
+            continue;
+        }
+
+        p->state = process::ProcessState::READY;
+        p->wait_reason = process::WaitReason::NONE;
+        p->wait_pid = -1;
+    }
+}
+
 /// @brief wake all sleeping processes that have a wake_time_ms in the past
 ///
 static void wake_sleeping_processes()
@@ -119,6 +147,33 @@ static process::Process* select_next_ready_process()
 
     return arch::percpu::idle_process();
 };
+
+static process::Process* find_child(process::Process* parent, int pid)
+{
+    process::Process* first_match = nullptr;
+
+    for (std::size_t i = 0; i < g_processes.size(); i++) {
+        process::Process* p = g_processes[i];
+
+        if (pid != -1 && p->pid != pid) {
+            continue;
+        }
+
+        if (p->parent == nullptr || p->parent->pid != parent->pid) {
+            continue;
+        }
+
+        if (p->state == process::ProcessState::ZOMBIE) {
+            return p;
+        }
+
+        if (first_match == nullptr) {
+            first_match = p;
+        }
+    }
+
+    return first_match;
+}
 
 /// @brief activate a process on the current cpu
 ///
@@ -251,11 +306,8 @@ void yield_dead()
     process::Process* p = select_next_ready_process();
 
     kassert(current != p);
-
     activate_process(p);
-
     g_processes_lock.unlock();
-
     context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
 
     // A DEAD process should never be the target of a context_switch from another
@@ -263,6 +315,67 @@ void yield_dead()
     // will pick it and terminate it completely, freeing all of the memory it used,
     // so there would be nothing to context_switch back to anyway
     kpanic("Context switch back to dead process");
+}
+
+/// mark the current process as ZOMBIE, wake all parents that are
+/// waiting on this pid, and schedule a new process
+///
+/// @return this function should never return
+///
+[[noreturn]]
+void yield_zombie()
+{
+    arch::cpu::cli();
+    g_processes_lock.lock();
+
+    process::Process* current = arch::percpu::current_process();
+    current->state = process::ProcessState::ZOMBIE;
+
+    wake_all_parents(current->pid);
+
+    process::Process* p = select_next_ready_process();
+
+    kassert(current != p);
+    activate_process(p);
+    g_processes_lock.unlock();
+    context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
+
+    // A ZOMBIE process should never be the target of context_switch
+    kpanic("Context switch back to zombie process");
+}
+
+int yield_to_child(int pid)
+{
+    while (true) {
+        g_processes_lock.lock();
+
+        process::Process* parent = arch::percpu::current_process();
+        process::Process* child = find_child(parent, pid);
+
+        if (child == nullptr) {
+            log::warn("yield_to_child() found no children");
+            g_processes_lock.unlock();
+            return -ECHILD;
+        }
+
+        if (child->state == process::ProcessState::ZOMBIE) {
+            child->state = process::ProcessState::DEAD;
+            parent->wait_reason = process::WaitReason::NONE;
+            parent->wait_pid = -1;
+            g_processes_lock.unlock();
+            return child->exit_status;
+        }
+
+        parent->state = process::ProcessState::BLOCKED;
+        parent->wait_reason = process::WaitReason::CHILD_PROCESS;
+        parent->wait_pid = pid;
+
+        process::Process* p = select_next_ready_process();
+
+        activate_process(p);
+        g_processes_lock.unlock();
+        context_switch(&parent->kernel_rsp_saved, p->kernel_rsp_saved);
+    }
 }
 
 /// @brief put the current process to sleep
@@ -302,9 +415,7 @@ void yield_blocked(process::WaitReason wait_reason)
     }
 
     activate_process(p);
-
     g_processes_lock.unlock();
-
     context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
 }
 

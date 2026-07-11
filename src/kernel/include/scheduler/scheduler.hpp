@@ -17,9 +17,14 @@ void wake_all(process::WaitReason wait_reason);
 [[noreturn]]
 void yield_dead();
 
+[[noreturn]]
+void yield_zombie();
+
 void yield_sleep(std::uint64_t sleep_time_ms);
 
 void yield_blocked(process::WaitReason wait_reason);
+
+int yield_to_child(int pid);
 
 void add_process(process::Process* p);
 }

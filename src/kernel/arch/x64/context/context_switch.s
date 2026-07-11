@@ -153,3 +153,8 @@ userspace_entry_trampoline:
     push %r15               # RIP = user entry point (passed via ContextFrame)
 
     iretq                   # Pop all five values and jump to userspace
+
+.global forked_entry_trampoline
+forked_entry_trampoline:
+    mov $0, %rax
+    jmp syscall_exit

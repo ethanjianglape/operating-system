@@ -97,7 +97,6 @@
  */
 
 #include "syscall_entry.hpp"
-#include "linux/dirent.hpp"
 
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/percpu/percpu.hpp>
@@ -118,6 +117,70 @@
 
 extern "C" void syscall_entry();
 
+static const char* syscall_name(std::uint64_t syscall_num)
+{
+    switch (syscall_num) {
+    case linux::SYS_READ:
+        return "read";
+    case linux::SYS_WRITE:
+        return "write";
+    case linux::SYS_OPEN:
+        return "open";
+    case linux::SYS_CLOSE:
+        return "close";
+    case linux::SYS_STAT:
+        return "stat";
+    case linux::SYS_FSTAT:
+        return "fstat";
+    case linux::SYS_LSEEK:
+        return "lseek";
+    case linux::SYS_NANOSLEEP:
+        return "nanosleep";
+    case linux::SYS_GETPID:
+        return "getpid";
+    case linux::SYS_MMAP:
+        return "mmap";
+    case linux::SYS_MUNMAP:
+        return "munmap";
+    case linux::SYS_IOCTL:
+        return "ioctl";
+    case linux::SYS_READV:
+        return "readv";
+    case linux::SYS_WRITEV:
+        return "writev";
+    case linux::SYS_BRK:
+        return "brk";
+    case linux::SYS_EXIT:
+        return "exit";
+    case linux::SYS_EXIT_GROUP:
+        return "exit_group";
+    case linux::SYS_GETCWD:
+        return "getcwd";
+    case linux::SYS_CHDIR:
+        return "chdir";
+    case linux::SYS_MKDIR:
+        return "mkdir";
+    case linux::SYS_ARCH_PRCTL:
+        return "arch_prctl";
+    case linux::SYS_SET_TID_ADDR:
+        return "set_tid_addr";
+    case linux::SYS_FCHDIR:
+        return "fchdir";
+    case linux::SYS_FNCTL:
+        return "fnctl";
+    case linux::SYS_GETDENTS64:
+        return "getdents64";
+    case linux::SYS_FORK:
+        return "fork";
+    case linux::SYS_VFORK:
+        return "vfork";
+    case linux::SYS_WAIT4:
+        return "wait4";
+    default:
+        return "unknown syscall";
+    }
+}
+
 /**
  * @brief Routes syscalls to their implementations based on syscall number.
  * @param frame Pointer to saved registers on kernel stack (built by syscall_entry.s).
@@ -128,7 +191,6 @@ extern "C" void syscall_entry();
  */
 extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
 {
-
     const std::uint64_t syscall_num = frame->rax;
     const std::uint64_t arg1 = frame->rdi;
     const std::uint64_t arg2 = frame->rsi;
@@ -137,7 +199,14 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
     const std::uint64_t arg5 = frame->r8;
     const std::uint64_t arg6 = frame->r9;
 
-    log::debugf("syscall {}", syscall_num);
+    log::debugf("**** syscall entry ****");
+    log::debugf("* syscall  = {} ({})", syscall_name(syscall_num), syscall_num);
+    log::debugf("* arg1 = {}", fmt::hex{arg1});
+    log::debugf("* arg2 = {}", fmt::hex{arg2});
+    log::debugf("* arg3 = {}", fmt::hex{arg3});
+    log::debugf("* arg4 = {}", fmt::hex{arg4});
+    log::debugf("* arg5 = {}", fmt::hex{arg5});
+    log::debugf("* arg6 = {}", fmt::hex{arg6});
 
     switch (syscall_num) {
     case linux::SYS_READ:
@@ -189,6 +258,12 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
         return syscall::sys_fcntl(arg1, arg2, arg3);
     case linux::SYS_GETDENTS64:
         return syscall::sys_getdents64(arg1, reinterpret_cast<void*>(arg2), arg3);
+    case linux::SYS_FORK:
+        return syscall::sys_fork(frame);
+    case linux::SYS_VFORK:
+        return syscall::sys_vfork();
+    case linux::SYS_WAIT4:
+        return syscall::sys_wait4(arg1, reinterpret_cast<int*>(arg2), arg3, reinterpret_cast<void*>(arg4));
     default:
         log::error("Unsupported syscall: ", syscall_num);
         return -ENOSYS;

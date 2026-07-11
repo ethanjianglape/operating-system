@@ -80,6 +80,8 @@
 # =============================================================================
 
 .global syscall_entry
+.global syscall_exit
+
 syscall_entry:
     # CRITICAL: We're on the user stack with user GS. Fix both immediately.
     swapgs
@@ -88,6 +90,7 @@ syscall_entry:
 
     # Now safe to use the stack. Build SyscallFrame for syscall_dispatcher.
     # Push order must match SyscallFrame struct (reversed since stack grows down).
+    push %gs:PER_CPU_USER_RSP_OFFSET
     push %rax       # Syscall number (will be overwritten with return value)
     push %rbx
     push %rcx       # Contains user RIP (saved by SYSCALL hardware)
@@ -107,9 +110,8 @@ syscall_entry:
     # Call C++ dispatcher: syscall_dispatcher(SyscallFrame* frame)
     mov %rsp, %rdi  # First argument = pointer to SyscallFrame
     call syscall_dispatcher
-    # Return value is now in RAX
 
-    # Restore registers (skip ss/cs, they're not real saved state)
+syscall_exit:
     pop %r15
     pop %r14
     pop %r13
@@ -124,11 +126,8 @@ syscall_entry:
     pop %rdx
     pop %rcx
     pop %rbx
+    add $8, %rsp    # Skip popping RAX because it contains the syscall return value
+    pop %rsp        # Restore the users RSP
 
-    # Skip popping RAX — it contains the syscall return value from dispatcher
-    add $8, %rsp
-
-    # Restore user stack and GS, then return to userspace
-    mov %gs:PER_CPU_USER_RSP_OFFSET, %rsp
     swapgs
     sysretq

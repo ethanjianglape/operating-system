@@ -3,6 +3,7 @@
 #include <cstdint>
 
 namespace x64::trap {
+
 constexpr std::uint32_t MSR_EFER = 0xC0000080;
 constexpr std::uint32_t MSR_STAR = 0xC0000081;
 constexpr std::uint32_t MSR_LSTAR = 0xC0000082;
@@ -16,8 +17,9 @@ constexpr std::uint64_t SFMASK_TF = (1 << 8);  // Trap Flag (Disable single-step
 
 struct [[gnu::packed]] SyscallFrame {
     std::uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-    std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
+    std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax, rsp;
 };
 
 void init();
+
 }

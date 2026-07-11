@@ -12,6 +12,7 @@
  */
 
 #include <arch/x64/cpu/cpu.hpp>
+#include <kpanic/kpanic.hpp>
 
 extern void kernel_main();
 
@@ -38,8 +39,5 @@ void _start(void)
 
     kernel_main();
 
-    while (true) {
-        x64::cpu::cli();
-        x64::cpu::hlt();
-    }
+    kpanic("kernel_main returned to _start");
 }
