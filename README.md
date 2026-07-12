@@ -1,4 +1,4 @@
-# MyOS
+# *hlt*OS
 
 A hobby operating system for x86_64 architecture, written in C++23 and assembly.
 

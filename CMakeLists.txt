@@ -5,7 +5,7 @@ set(CMAKE_C_ABI_COMPILED 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 
 # Project definition
-project(MyOS ASM C CXX)
+project(hltos ASM C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -127,7 +127,7 @@ set(LIMINE_CONF ${CMAKE_SOURCE_DIR}/src/bootloader/limine/limine.conf)
 file(GLOB_RECURSE INITRAMFS_STATIC_FILES ${CMAKE_SOURCE_DIR}/initramfs/etc/*)
 
 add_custom_command(
-  OUTPUT ${CMAKE_SOURCE_DIR}/myos.iso
+  OUTPUT ${CMAKE_SOURCE_DIR}/hltos.iso
   COMMAND ${CMAKE_COMMAND} -E make_directory ${SYSROOT}/boot/limine
   COMMAND ${CMAKE_COMMAND} -E make_directory ${SYSROOT}/EFI/BOOT
   COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_SHARE}/limine-bios.sys    ${SYSROOT}/boot/limine/
@@ -136,14 +136,14 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_SHARE}/BOOTX64.EFI        ${SYSROOT}/EFI/BOOT/
   COMMAND ${CMAKE_COMMAND} -E copy ${LIMINE_CONF}                     ${SYSROOT}/limine.conf
   COMMAND tar -cf ${SYSROOT}/boot/initramfs.tar -C ${CMAKE_SOURCE_DIR}/initramfs .
-  COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/myos.iso
+  COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_SOURCE_DIR}/hltos.iso
   COMMAND ${XORRISO} -as mkisofs
   -R -r -J -b boot/limine/limine-bios-cd.bin
   -no-emul-boot -boot-load-size 4 -boot-info-table -hfsplus
   -apm-block-size 2048 --efi-boot boot/limine/limine-uefi-cd.bin
   -efi-boot-part --efi-boot-image --protective-msdos-label
-  -o ${CMAKE_SOURCE_DIR}/myos.iso ${SYSROOT}/
-  COMMAND ${LIMINE_CMD} bios-install ${CMAKE_SOURCE_DIR}/myos.iso
+  -o ${CMAKE_SOURCE_DIR}/hltos.iso ${SYSROOT}/
+  COMMAND ${LIMINE_CMD} bios-install ${CMAKE_SOURCE_DIR}/hltos.iso
   DEPENDS
   ${CMAKE_BINARY_DIR}/.kernel_stamp
   ${LIMINE_CONF}
@@ -155,5 +155,5 @@ add_custom_command(
   COMMENT "Creating bootable ISO"
   VERBATIM
 )
-add_custom_target(iso ALL DEPENDS ${CMAKE_SOURCE_DIR}/myos.iso)
+add_custom_target(iso ALL DEPENDS ${CMAKE_SOURCE_DIR}/hltos.iso)
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Simple build script for MyOS kernel
+# Simple build script for hltOS kernel
 
 set -e  # Exit on error
 
@@ -26,7 +26,7 @@ log() {
     echo -e "$1${NC}"
 }
 
-log_section "Building MyOS"
+log_section "Building hltOS"
 
 mkdir -p cmake_build sysroot initramfs/bin
 
@@ -44,4 +44,4 @@ fi
 
 log_success "Build successful!"
 log_success "Kernel: sysroot/boot/kernel.elf"
-log_success "ISO: myos.iso"
+log_success "ISO: hltos.iso"

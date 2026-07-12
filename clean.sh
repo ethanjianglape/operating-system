@@ -24,7 +24,7 @@ log() {
     echo -e "$1${NC}"
 }
 
-log_section "Cleaning MyOS build and output files"
+log_section "Cleaning hltOS build and output files"
 
 log "Deleting cmake_build/"
 rm -rf cmake_build/
@@ -36,7 +36,7 @@ rm -rf initramfs/bin
 log "Deleting sysroot/"
 rm -rf sysroot/
 
-log "Deleting myos.iso"
-rm -f myos.iso
+log "Deleting hltos.iso"
+rm -f hltos.iso
 
 log_success "Done!"
