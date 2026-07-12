@@ -1,7 +1,3 @@
-#include "arch/x64/cpu/cpu.hpp"
-#include "arch/x64/memory/vmm.hpp"
-#include "arch/x64/trap/syscall_entry.hpp"
-#include "memory/memory.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
 #include <exclusive/katomic.hpp>
@@ -53,20 +49,6 @@ static void kthread_entry_trampoline()
 
     scheduler::yield_dead();
 }
-
-// [[noreturn]]
-// static void forked_entry_trampoline()
-// {
-// std::uint64_t rsp;
-
-// asm volatile("mov %%rsp, %0" : "=m"(rsp));
-
-// log::debugf("forked entry rsp = {}", fmt::hex{rsp});
-
-// asm volatile("mov $0, %%rax; jmp syscall_exit" :::);
-
-// scheduler::yield_dead();
-// }
 
 static void log_user_process(Process* p)
 {
@@ -323,34 +305,120 @@ Process* fork_process(Process* current, arch::trap::SyscallFrame* syscall_frame)
     return p;
 }
 
-void terminate_process(Process* proc)
+bool Process::is_running() const
+{
+    return state == ProcessState::RUNNING;
+}
+
+bool Process::is_ready() const
+{
+    return state == ProcessState::READY || state == ProcessState::NEW;
+}
+
+bool Process::is_zombie() const
+{
+    return state == ProcessState::ZOMBIE;
+}
+
+bool Process::is_dead() const
+{
+    return state == ProcessState::DEAD;
+}
+
+bool Process::is_blocked() const
+{
+    return state == ProcessState::BLOCKED;
+}
+
+bool Process::is_waiting_for(WaitReason reason) const
+{
+    return wait_reason == reason;
+}
+
+bool Process::is_waiting_for_child(int pid) const
+{
+    return is_waiting_for(WaitReason::CHILD_PROCESS) && (wait_pid == pid || wait_pid == -1);
+}
+
+void Process::wake()
+{
+    state = ProcessState::READY;
+    wait_reason = WaitReason::NONE;
+    wait_pid = -1;
+    wake_time_ms = 0;
+}
+
+/// pauses the process if it is currently running
+void Process::pause()
+{
+    if (state == ProcessState::RUNNING) {
+        state = ProcessState::READY;
+    }
+}
+
+void Process::resume()
+{
+    state = ProcessState::RUNNING;
+    wait_reason = WaitReason::NONE;
+    wait_pid = -1;
+    wake_time_ms = 0;
+}
+
+void Process::kill()
+{
+    state = ProcessState::DEAD;
+}
+
+void Process::wait_for(WaitReason reason)
+{
+    state = ProcessState::BLOCKED;
+    wait_reason = reason;
+}
+
+void Process::wait_for_child(int child_pid)
+{
+    wait_for(WaitReason::CHILD_PROCESS);
+    wait_pid = child_pid;
+}
+
+void Process::sleep_until(std::uint64_t wake_time_ms)
+{
+    wait_for(WaitReason::SLEEP);
+    this->wake_time_ms = wake_time_ms;
+}
+
+void Process::terminate()
 {
     log::info("========================================");
-    log::info("Terminating process ", proc->pid);
+    log::info("Terminating process ", pid);
     log::info("========================================");
 
-    auto frames_before = pmm::get_free_frames();
-    auto slabs_before = slab::total_slabs();
+    const auto frames_before = pmm::get_free_frames();
+    const auto slabs_before = slab::total_slabs();
 
-    for (fs::FileDescriptor* fd : proc->fd_table) {
+    for (fs::FileDescriptor* fd : fd_table) {
         fd->inode->close(fd);
     }
 
-    for (auto& allocation : proc->allocations) {
-        arch::vmm::unmap_mem_at(proc->pml4, allocation.virt_addr, allocation.num_pages);
+    for (auto& allocation : allocations) {
+        arch::vmm::unmap_mem_at(pml4, allocation.virt_addr, allocation.num_pages);
     }
 
-    arch::vmm::free_page_tables(proc->pml4);
-    delete[] proc->kernel_stack;
-    delete proc;
+    arch::vmm::free_page_tables(pml4);
+    delete[] kernel_stack;
 
-    auto frames_after = pmm::get_free_frames();
-    auto slabs_after = slab::total_slabs();
+    const auto frames_after = pmm::get_free_frames();
+    const auto slabs_after = slab::total_slabs();
+    const auto frames_diff = frames_after - frames_before;
 
-    log::info("PMM frames: ", frames_before, " -> ", frames_after,
-        " (+", frames_after - frames_before, ")");
-    log::info("Slabs: ", slabs_before, " -> ", slabs_after);
-    log::info("========================================");
+    log::infof("PMM frames: {} -> {} (+{})", frames_before, frames_after, frames_diff);
+    log::infof("Slabs: {} -> {}", slabs_before, slabs_after);
+    log::infof("========================================");
+}
+
+Process::~Process()
+{
+    terminate();
 }
 
 }

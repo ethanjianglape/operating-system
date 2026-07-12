@@ -14,6 +14,21 @@ void info(Ts... args)
     kprintln("[INFO] ", args...);
 }
 
+inline void infof(kstring_view format)
+{
+    kprint("[INFO] ");
+    kprint(format);
+    kprintln();
+}
+
+template <typename T, typename... Rest>
+void infof(kstring_view format, T first, Rest... rest)
+{
+    kprint("[INFO] ");
+    kprintf(format, first, rest...);
+    kprintln();
+}
+
 template <typename... Ts>
 void init_start(Ts... args)
 {

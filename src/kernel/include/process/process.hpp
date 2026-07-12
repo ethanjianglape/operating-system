@@ -39,7 +39,11 @@ struct ProcessAllocation {
     }
 };
 
-struct Process {
+struct Process final {
+private:
+    void terminate();
+
+public:
     // Process meta info
     int pid;
 
@@ -84,13 +88,29 @@ struct Process {
 
     std::uint64_t fs_base; // For thread local storage (TLS)
     int* tidptr;
+
+    ~Process();
+
+    bool is_running() const;
+    bool is_ready() const;
+    bool is_zombie() const;
+    bool is_dead() const;
+    bool is_blocked() const;
+    bool is_waiting_for(WaitReason reason) const;
+    bool is_waiting_for_child(int pid) const;
+
+    void wake();
+    void pause();
+    void resume();
+    void kill();
+    void wait_for(WaitReason reason);
+    void wait_for_child(int child_pid);
+    void sleep_until(std::uint64_t wake_time_ms);
 };
 
 Process* create_process(std::uint8_t* buffer, std::size_t size);
 Process* fork_process(Process* p, arch::trap::SyscallFrame* syscall_frame);
 
 Process* create_kthread(void (*entry)());
-
-void terminate_process(Process* process);
 
 }

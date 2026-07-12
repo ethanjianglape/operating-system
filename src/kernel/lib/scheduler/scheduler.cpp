@@ -1,7 +1,4 @@
-#include "arch/x64/percpu/percpu.hpp"
-#include "fmt/fmt.hpp"
 #include <arch.hpp>
-#include <cerrno>
 #include <exclusive/kspinlock_irqsave.hpp>
 #include <kassert/kassert.hpp>
 #include <kpanic/kpanic.hpp>
@@ -10,6 +7,7 @@
 #include <scheduler/scheduler.hpp>
 #include <timer/timer.hpp>
 
+#include <cerrno>
 #include <cstdint>
 
 namespace scheduler {
@@ -42,12 +40,17 @@ void wake_single(process::WaitReason wait_reason)
 
         kassert_not_null(p);
 
-        if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
-            p->state = process::ProcessState::READY;
-            p->wait_reason = process::WaitReason::NONE;
-            p->wake_time_ms = 0;
-            goto cleanup;
+        if (!p->is_blocked()) {
+            continue;
         }
+
+        if (!p->is_waiting_for(wait_reason)) {
+            continue;
+        }
+
+        p->wake();
+
+        goto cleanup;
     }
 
 cleanup:
@@ -67,11 +70,15 @@ void wake_all(process::WaitReason wait_reason)
 
         kassert_not_null(p);
 
-        if (p->state == process::ProcessState::BLOCKED && p->wait_reason == wait_reason) {
-            p->state = process::ProcessState::READY;
-            p->wait_reason = process::WaitReason::NONE;
-            p->wake_time_ms = 0;
+        if (!p->is_blocked()) {
+            continue;
         }
+
+        if (!p->is_waiting_for(wait_reason)) {
+            continue;
+        }
+
+        p->wake();
     }
 
     g_processes_lock.unlock();
@@ -84,21 +91,15 @@ static void wake_all_parents(int pid)
 
         kassert_not_null(p);
 
-        if (p->state != process::ProcessState::BLOCKED) {
+        if (!p->is_blocked()) {
             continue;
         }
 
-        if (p->wait_reason != process::WaitReason::CHILD_PROCESS) {
+        if (!p->is_waiting_for_child(pid)) {
             continue;
         }
 
-        if (p->wait_pid != pid && p->wait_pid != -1) {
-            continue;
-        }
-
-        p->state = process::ProcessState::READY;
-        p->wait_reason = process::WaitReason::NONE;
-        p->wait_pid = -1;
+        p->wake();
     }
 }
 
@@ -113,11 +114,19 @@ static void wake_sleeping_processes()
 
         kassert_not_null(p);
 
-        if (p->state == process::ProcessState::BLOCKED && p->wait_reason == process::WaitReason::SLEEP && p->wake_time_ms > 0 && ticks > p->wake_time_ms) {
-            p->state = process::ProcessState::READY;
-            p->wait_reason = process::WaitReason::NONE;
-            p->wake_time_ms = 0;
+        if (p->state != process::ProcessState::BLOCKED) {
+            continue;
         }
+
+        if (p->wait_reason != process::WaitReason::SLEEP) {
+            continue;
+        }
+
+        if (p->wake_time_ms == 0 || ticks < p->wake_time_ms) {
+            continue;
+        }
+
+        p->wake();
     }
 }
 
@@ -139,7 +148,7 @@ static process::Process* select_next_ready_process()
 
         kassert_not_null(p);
 
-        if (p->state == process::ProcessState::READY || p->state == process::ProcessState::NEW) {
+        if (p->is_ready()) {
             g_processes.rotate_next();
             return p;
         }
@@ -163,7 +172,7 @@ static process::Process* find_child(process::Process* parent, int pid)
             continue;
         }
 
-        if (p->state == process::ProcessState::ZOMBIE) {
+        if (p->is_zombie()) {
             return p;
         }
 
@@ -196,8 +205,6 @@ static void activate_process(process::Process* p)
     arch::gdt::set_kernel_stack(p->kernel_rsp);
 }
 
-constexpr std::uint64_t REAP_INTERVAL_MS = 50;
-
 /// @brief Periodically terminate DEAD processes
 ///
 /// @return this function should never return
@@ -205,6 +212,8 @@ constexpr std::uint64_t REAP_INTERVAL_MS = 50;
 [[noreturn]]
 static void reaper_kthread()
 {
+    constexpr std::uint64_t REAP_INTERVAL_MS = 100;
+
     while (true) {
         g_processes_lock.lock();
 
@@ -215,17 +224,17 @@ static void reaper_kthread()
 
             kassert_not_null(p);
 
+            if (!p->is_dead()) {
+                continue;
+            }
+
             // the reaper_kthread should never attempt to terminate itself,
             // even if it gets marked DEAD for some reason
             if (p == self) {
-                continue;
+                kpanic("reaper_kthread wants to kill itself");
             }
 
-            if (p->state != process::ProcessState::DEAD) {
-                continue;
-            }
-
-            process::terminate_process(p);
+            delete p;
 
             g_processes.erase(i--);
         }
@@ -238,7 +247,7 @@ static void reaper_kthread()
     // The reaper kthread should never finish, its responsible for terminating DEAD
     // processes, so if it stopped running, DEAD processes would continue to
     // accumulate, wasting resources
-    kpanic("reaper kthread terminated");
+    kpanic("reaper_kthread terminated");
 }
 
 /// @brief interrupt the current process to schedule a new one
@@ -267,27 +276,20 @@ void preempt()
     g_processes_lock.lock();
 
     process::Process* current = arch::percpu::current_process();
-    process::Process* p = select_next_ready_process();
+    process::Process* next = select_next_ready_process();
 
     // We never want a process to context switch to itself, so we can
     // just leave early if a process wants to switch to itself, after
     // releasing our spinlock of course
-    if (p == current) {
+    if (current == next) {
         g_processes_lock.unlock();
         return;
     }
 
-    // The process that was interrupted might be blocked, so only set it
-    // to ready if it was actively running
-    if (current->state == process::ProcessState::RUNNING) {
-        current->state = process::ProcessState::READY;
-    }
-
-    activate_process(p);
-
+    current->pause();
+    activate_process(next);
     g_processes_lock.unlock();
-
-    context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
+    context_switch(&current->kernel_rsp_saved, next->kernel_rsp_saved);
 }
 
 /// @brief mark the current process as DEAD and schedule a new one
@@ -344,31 +346,42 @@ void yield_zombie()
     kpanic("Context switch back to zombie process");
 }
 
-int yield_to_child(int pid)
+/// blocks the current process until child_pid exits
+///
+/// @param child_pid the child pid
+///
+/// @return the exit status of the child
+///
+int yield_to_child(int child_pid)
 {
+    // loop forever until a zombie child is found, this is by design, if a
+    // parent calls wait() and its child never exits, the parent will never run again
     while (true) {
         g_processes_lock.lock();
 
         process::Process* parent = arch::percpu::current_process();
-        process::Process* child = find_child(parent, pid);
+        process::Process* child = find_child(parent, child_pid);
 
+        // return early if a parent calls wake() but has no children to wait on
         if (child == nullptr) {
             log::warn("yield_to_child() found no children");
             g_processes_lock.unlock();
             return -ECHILD;
         }
 
-        if (child->state == process::ProcessState::ZOMBIE) {
-            child->state = process::ProcessState::DEAD;
-            parent->wait_reason = process::WaitReason::NONE;
-            parent->wait_pid = -1;
+        // once we find a zombie child we no longer need to block anymore,
+        // mark the child as dead so that it can be freed and resume the parent
+        if (child->is_zombie()) {
+            const int exit_status = child->exit_status;
+
+            child->kill();
+            parent->resume();
             g_processes_lock.unlock();
-            return child->exit_status;
+
+            return exit_status;
         }
 
-        parent->state = process::ProcessState::BLOCKED;
-        parent->wait_reason = process::WaitReason::CHILD_PROCESS;
-        parent->wait_pid = pid;
+        parent->wait_for_child(child_pid);
 
         process::Process* p = select_next_ready_process();
 
@@ -385,7 +398,7 @@ int yield_to_child(int pid)
 void yield_sleep(std::uint64_t sleep_time_ms)
 {
     process::Process* current = arch::percpu::current_process();
-    current->wake_time_ms = timer::get_ticks() + sleep_time_ms;
+    current->sleep_until(timer::get_ticks() + sleep_time_ms);
     yield_blocked(process::WaitReason::SLEEP);
 }
 
@@ -399,24 +412,23 @@ void yield_blocked(process::WaitReason wait_reason)
 
     process::Process* current = arch::percpu::current_process();
 
-    current->state = process::ProcessState::BLOCKED;
-    current->wait_reason = wait_reason;
+    current->wait_for(wait_reason);
 
-    process::Process* p = select_next_ready_process();
+    process::Process* next = select_next_ready_process();
 
-    // find_ready_process() wakes all sleeping processes that are past
+    // find_next_ready_process() wakes all sleeping processes that are past
     // their wake time, which could include this very process that is
     // trying to yield itself while sleeping. We do not want to context
     // switch a process to itself, so simply set its state back to RUNNING and carry on
-    if (p == current) {
-        current->state = process::ProcessState::RUNNING;
+    if (current == next) {
+        current->resume();
         g_processes_lock.unlock();
         return;
     }
 
-    activate_process(p);
+    activate_process(next);
     g_processes_lock.unlock();
-    context_switch(&current->kernel_rsp_saved, p->kernel_rsp_saved);
+    context_switch(&current->kernel_rsp_saved, next->kernel_rsp_saved);
 }
 
 /// @brief add a new process to the scheduler
