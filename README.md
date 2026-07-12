@@ -1,6 +1,8 @@
 # *hlt*OS
 
-A hobby operating system for x86_64 architecture, written in C++23 and assembly.
+An x86_64 operating system for hobbyists, learning, and teaching. Written in C++23 and assembly.
+
+![hltOS running in QEMU](images/hltos.png)
 
 ## Disclaimer
 
