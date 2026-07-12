@@ -13,4 +13,4 @@ else
     exit 1
 fi
 
-qemu-system-x86_64 -accel kvm -cpu host,+invtsc,migratable=no -bios ${BIOS} -serial stdio -m 512M -cdrom myos.iso
+qemu-system-x86_64 -accel kvm -cpu host,+invtsc,migratable=no -bios ${BIOS} -serial stdio -m 512M -cdrom hltos.iso

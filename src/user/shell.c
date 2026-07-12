@@ -1,5 +1,5 @@
 /**
- * Userspace shell for MyOS
+ * Userspace shell for hltOS
  *
  * A simple interactive shell demonstrating syscall usage.
  * Compiled with musl libc for standard C library support.
@@ -216,9 +216,19 @@ void process_command(char* cmd)
 // Entry point
 // ============================================================================
 
+static const char* BANNER =
+    "               ____   _____\n"
+    " _     _ _    / __ \\ / ____|\n"
+    "| |__ | | |_ | |  | | (___\n"
+    "| '_ \\| | __|| |  | |\\___ \\\n"
+    "| | | | | |_ | |__| |____) |\n"
+    "|_| |_|_|\\__| \\____/|_____/\n"
+    "\n";
+
 int main(void)
 {
-    puts("Welcome to MyOS!");
+    fputs(BANNER, stdout);
+    puts("Welcome to hltOS!");
     puts("Type 'help' for available commands.\n");
 
     char buf[256];
