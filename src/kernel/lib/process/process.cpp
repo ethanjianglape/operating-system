@@ -1,3 +1,7 @@
+#include "arch/x64/cpu/cpu.hpp"
+#include "arch/x64/memory/vmm.hpp"
+#include "arch/x64/trap/syscall_entry.hpp"
+#include "kpanic/kpanic.hpp"
 #include <arch.hpp>
 #include <crt/crt.h>
 #include <exclusive/katomic.hpp>
@@ -50,82 +54,94 @@ static void kthread_entry_trampoline()
     scheduler::yield_dead();
 }
 
-static void log_user_process(Process* p)
+void Process::log() const
 {
     log::debugf("**** User process ****");
-    log::debugf("* pid = {}", p->pid);
-    log::debugf("* kernel_stack  @ {}", fmt::hex{p->kernel_stack});
-    log::debugf("* kernel_rsp    @ {}", fmt::hex{p->kernel_rsp});
-    log::debugf("* syscall_frame @ {}", fmt::hex{p->syscall_frame});
-    log::debugf("* context_frame @ {}", fmt::hex{p->context_frame});
-    log::debugf("* k rsp saved   @ {}", fmt::hex{p->kernel_rsp_saved});
-    // log::debugf("* context_frame->r15 = {}", fmt::hex{p->context_frame->r15});
+    log::debugf("* pid = {}", pid);
+    log::debugf("* kernel_stack  @ {}", fmt::hex{kernel_stack});
+    log::debugf("* kernel_rsp    @ {}", fmt::hex{kernel_rsp});
+    log::debugf("* syscall_frame @ {}", fmt::hex{syscall_frame});
+    log::debugf("* context_frame @ {}", fmt::hex{context_frame});
+    log::debugf("* k rsp saved   @ {}", fmt::hex{kernel_rsp_saved});
 }
 
-Process* create_kthread(void (*entry)())
+KThread::KThread(void (*func)())
 {
-    auto* p = new Process{};
+    pid = g_pid++;
+    parent = nullptr;
+    state = ProcessState::NEW;
+    wait_reason = WaitReason::NONE;
+    exit_status = 0;
+    heap_break = 0;
+    pml4 = arch::vmm::get_kernel_pml4();
+    fd_table = {};
+    kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+    kernel_rsp = reinterpret_cast<std::uintptr_t>(kernel_stack + KERNEL_STACK_SIZE);
+    wake_time_ms = 0;
+    mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
+    fs_base = 0;
+    tidptr = 0;
+    cwd_inode = nullptr;
+    entry = reinterpret_cast<std::uintptr_t>(func);
 
-    p->pid = g_pid++;
-    p->parent = nullptr;
-    p->state = ProcessState::NEW;
-    p->wait_reason = WaitReason::NONE;
-    p->exit_status = 0;
-    p->heap_break = 0;
-    p->pml4 = arch::vmm::get_kernel_pml4();
-    p->fd_table = {};
-    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
-    p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
-    p->wake_time_ms = 0;
-    p->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
-    p->fs_base = 0;
-    p->tidptr = 0;
-    p->cwd_inode = nullptr;
-    p->entry = reinterpret_cast<std::uintptr_t>(entry);
+    context_frame = reinterpret_cast<arch::context::ContextFrame*>(kernel_rsp - sizeof(arch::context::ContextFrame));
+    context_frame->r15 = 0x15151515; // Magic numbers to help with debugging
+    context_frame->r14 = 0x14141414;
+    context_frame->r13 = 0x13131313;
+    context_frame->r12 = 0x12121212;
+    context_frame->rbp = 0x77777777;
+    context_frame->rbx = 0x12345678;
+    context_frame->rip = reinterpret_cast<std::uintptr_t>(kthread_entry_trampoline);
 
-    p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
-    p->context_frame->r15 = 0x15151515; // Magic numbers to help with debugging
-    p->context_frame->r14 = 0x14141414;
-    p->context_frame->r13 = 0x13131313;
-    p->context_frame->r12 = 0x12121212;
-    p->context_frame->rbp = 0x77777777;
-    p->context_frame->rbx = 0x12345678;
-    p->context_frame->rip = reinterpret_cast<std::uintptr_t>(kthread_entry_trampoline);
-
-    p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
-
-    return p;
+    kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(context_frame);
 }
 
-Process* load_elf(std::uint8_t* buffer, std::size_t size)
+void Process::exec_elf64(std::uint8_t* buffer, std::size_t size, char* const argv[], char* const envp[])
 {
+    (void)argv;
+    (void)envp;
+
     elf::Elf64_File file = elf::parse_file(buffer, size);
 
     if (!file.is_valid_elf) {
-        return nullptr;
+        kpanic("attempted to load an invalid ELF64 file");
     }
 
-    arch::vmm::PML4E* pml4 = arch::vmm::create_user_pml4();
-    arch::vmm::switch_pml4(pml4);
+    int argc = 0;
+    kvector<kstring> argv_strs{};
+
     arch::cpu::stac();
 
-    auto* p = new Process{};
+    log::debug("**************** execve args ****************");
 
-    p->pid = g_pid++;
-    p->state = ProcessState::NEW;
-    p->wait_reason = WaitReason::NONE;
-    p->exit_status = 0;
-    p->heap_break = 0;
-    p->pml4 = pml4;
-    p->fd_table = {};
-    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
-    p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
-    p->wake_time_ms = 0;
-    p->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
-    p->fs_base = 0;
-    p->tidptr = 0;
-    p->cwd_inode = nullptr;
-    p->uheap = arch::vmm::create_user_heap(pml4);
+    while (true) {
+        const char* arg = argv[argc];
+
+        if (arg == nullptr) {
+            break;
+        }
+
+        kstring str = kstring::from_userspace(arg);
+        log::debugf("argv[{}] = {}", argc, str);
+        argv_strs.push_back(str);
+        argc++;
+    }
+
+    log::debug("done");
+
+    arch::vmm::PML4E* new_pml4 = arch::vmm::create_user_pml4();
+    arch::vmm::switch_pml4(new_pml4);
+
+    state = ProcessState::BLOCKED;
+    wait_reason = WaitReason::NONE;
+    exit_status = 0;
+    heap_break = 0;
+    kernel_rsp = reinterpret_cast<std::uintptr_t>(kernel_stack + KERNEL_STACK_SIZE);
+    wake_time_ms = 0;
+    mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
+    fs_base = 0;
+    tidptr = 0;
+    uheap = arch::vmm::create_user_heap(new_pml4);
 
     for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
         auto virt = header.p_vaddr;
@@ -135,9 +151,7 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
         log::debugf("mapping user mem at {} len = {}", fmt::hex{virt}, mem_size);
 
-        std::size_t code_pages = arch::vmm::map_pages(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
-
-        p->allocations.emplace_back(virt & ~0xFFFUL, code_pages);
+        arch::vmm::map_user_pages(new_pml4, virt, mem_size);
 
         memcpy(reinterpret_cast<void*>(virt),
             reinterpret_cast<void*>(buffer + offset),
@@ -149,14 +163,98 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
 
         std::uintptr_t segment_end = virt + mem_size;
 
-        if (segment_end > p->heap_break) {
-            p->heap_break = (segment_end + 0xFFF) & ~0xFFF;
+        if (segment_end > heap_break) {
+            heap_break = (segment_end + 0xFFF) & ~0xFFF;
         }
     }
 
-    std::size_t stack_pages = arch::vmm::map_pages(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+    arch::vmm::map_user_pages(new_pml4, USER_STACK_BASE, USER_STACK_SIZE);
+    arch::vmm::free_user_pml4(pml4);
 
-    p->allocations.emplace_back(USER_STACK_BASE, stack_pages);
+    pml4 = new_pml4;
+
+    // Set up initial stack for Linux ABI compatibility
+    // musl libc expects: argc, argv[], NULL, envp[], NULL, auxv[], AT_NULL
+    // All zeros: argc=0, argv/envp terminated by NULL, auxv terminated by AT_NULL(0,0)
+    // 6 entries = 48 bytes ensures 16-byte alignment (required by System V ABI)
+    auto* stack = reinterpret_cast<std::uint64_t*>(USER_STACK_TOP);
+    *(--stack) = 0; // padding for 16-byte alignment
+    *(--stack) = 0; // AT_NULL value
+    *(--stack) = 0; // AT_NULL type
+    *(--stack) = 0; // envp terminator (NULL)
+    *(--stack) = 0; // argv terminator (NULL)
+    *(--stack) = 0; // argc
+
+    context_frame = reinterpret_cast<arch::context::ContextFrame*>(kernel_rsp - sizeof(arch::context::ContextFrame));
+    context_frame->r15 = file.entry;
+    context_frame->r14 = reinterpret_cast<std::uintptr_t>(stack);
+    context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
+    context_frame->r12 = 0xABABABAB;
+    context_frame->rbp = 0x77777777;
+    context_frame->rbx = 0x12345678;
+    context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
+    kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(context_frame);
+
+    log();
+
+    arch::vmm::switch_kernel_pml4();
+    arch::cpu::clac();
+}
+
+ELF64Process::ELF64Process(std::uint8_t* buffer, std::size_t size)
+{
+    elf::Elf64_File file = elf::parse_file(buffer, size);
+
+    if (!file.is_valid_elf) {
+        kpanic("attempted to load an invalid ELF64 file");
+    }
+
+    arch::vmm::PML4E* pml4 = arch::vmm::create_user_pml4();
+    arch::vmm::switch_pml4(pml4);
+    arch::cpu::stac();
+
+    pid = g_pid++;
+    state = ProcessState::NEW;
+    wait_reason = WaitReason::NONE;
+    exit_status = 0;
+    heap_break = 0;
+    this->pml4 = pml4;
+    fd_table = {};
+    kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+    kernel_rsp = reinterpret_cast<std::uintptr_t>(kernel_stack + KERNEL_STACK_SIZE);
+    wake_time_ms = 0;
+    mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
+    fs_base = 0;
+    tidptr = 0;
+    cwd_inode = nullptr;
+    uheap = arch::vmm::create_user_heap(pml4);
+
+    for (const elf::Elf64_ProgramHeader& header : file.program_headers) {
+        auto virt = header.p_vaddr;
+        auto file_size = header.p_filesz;
+        auto mem_size = header.p_memsz;
+        auto offset = header.p_offset;
+
+        log::debugf("mapping user mem at {} len = {}", fmt::hex{virt}, mem_size);
+
+        arch::vmm::map_pages(pml4, virt, mem_size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
+
+        memcpy(reinterpret_cast<void*>(virt),
+            reinterpret_cast<void*>(buffer + offset),
+            file_size);
+
+        if (mem_size > file_size) {
+            memset(reinterpret_cast<void*>(virt + file_size), 0, mem_size - file_size);
+        }
+
+        std::uintptr_t segment_end = virt + mem_size;
+
+        if (segment_end > heap_break) {
+            heap_break = (segment_end + 0xFFF) & ~0xFFF;
+        }
+    }
+
+    arch::vmm::map_pages(pml4, USER_STACK_BASE, USER_STACK_SIZE, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
     // Set up initial stack for Linux ABI compatibility
     // musl libc expects: argc, argv[], NULL, envp[], NULL, auxv[], AT_NULL
@@ -170,139 +268,123 @@ Process* load_elf(std::uint8_t* buffer, std::size_t size)
     *(--stack) = 0; // argv terminator (NULL)
     *(--stack) = 0; // argc = 0
 
-    p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(p->kernel_rsp - sizeof(arch::context::ContextFrame));
-    p->context_frame->r15 = file.entry;
-    p->context_frame->r14 = reinterpret_cast<std::uintptr_t>(stack);
-    p->context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
-    p->context_frame->r12 = 0xABABABAB;
-    p->context_frame->rbp = 0x77777777;
-    p->context_frame->rbx = 0x12345678;
-    p->context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
-    p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+    context_frame = reinterpret_cast<arch::context::ContextFrame*>(kernel_rsp - sizeof(arch::context::ContextFrame));
+    context_frame->r15 = file.entry;
+    context_frame->r14 = reinterpret_cast<std::uintptr_t>(stack);
+    context_frame->r13 = 0xDEADBEEF; // Magic numbers to help with debugging
+    context_frame->r12 = 0xABABABAB;
+    context_frame->rbp = 0x77777777;
+    context_frame->rbx = 0x12345678;
+    context_frame->rip = reinterpret_cast<std::uintptr_t>(userspace_entry_trampoline);
+    kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(context_frame);
 
     fs::FileDescriptor* stdin = fs::open("/dev/tty1", fs::O_RDONLY);
     fs::FileDescriptor* stdout = fs::open("/dev/tty1", fs::O_WRONLY);
     fs::FileDescriptor* stderr = fs::open("/dev/tty1", fs::O_WRONLY);
 
-    p->fd_table.push_back(stdin);
-    p->fd_table.push_back(stdout);
-    p->fd_table.push_back(stderr);
+    fd_table.push_back(stdin);
+    fd_table.push_back(stdout);
+    fd_table.push_back(stderr);
 
-    log_user_process(p);
+    log();
 
     arch::vmm::switch_kernel_pml4();
     arch::cpu::clac();
-
-    return p;
 }
 
-Process* create_process(std::uint8_t* buffer, std::size_t size)
-{
-    if (buffer == nullptr) {
-        log::error("Attempt to load program at NULL");
-        return nullptr;
-    }
-
-    Process* elf = load_elf(buffer, size);
-
-    return elf;
-}
-
-void log_syscall_frame(arch::trap::SyscallFrame* frame)
+void Process::log_syscall_frame() const
 {
     log::debugf("**** SYSCALL FRAME ****");
-    log::debugf("* r15 = {}", fmt::hex{frame->r15});
-    log::debugf("* r14 = {}", fmt::hex{frame->r14});
-    log::debugf("* r13 = {}", fmt::hex{frame->r13});
-    log::debugf("* r12 = {}", fmt::hex{frame->r12});
-    log::debugf("* r11 = {}", fmt::hex{frame->r11});
-    log::debugf("* r10 = {}", fmt::hex{frame->r10});
-    log::debugf("* r9  = {}", fmt::hex{frame->r9});
-    log::debugf("* r8  = {}", fmt::hex{frame->r8});
-    log::debugf("* rpb = {}", fmt::hex{frame->rbp});
-    log::debugf("* rdi = {}", fmt::hex{frame->rdi});
-    log::debugf("* rsi = {}", fmt::hex{frame->rsi});
-    log::debugf("* rdx = {}", fmt::hex{frame->rdx});
-    log::debugf("* rcx = {}", fmt::hex{frame->rcx});
-    log::debugf("* rbx = {}", fmt::hex{frame->rbx});
-    log::debugf("* rax = {}", fmt::hex{frame->rax});
-    log::debugf("* rsp = {}", fmt::hex{frame->rsp});
+    log::debugf("* r15 = {}", fmt::hex{syscall_frame->r15});
+    log::debugf("* r14 = {}", fmt::hex{syscall_frame->r14});
+    log::debugf("* r13 = {}", fmt::hex{syscall_frame->r13});
+    log::debugf("* r12 = {}", fmt::hex{syscall_frame->r12});
+    log::debugf("* r11 = {}", fmt::hex{syscall_frame->r11});
+    log::debugf("* r10 = {}", fmt::hex{syscall_frame->r10});
+    log::debugf("* r9  = {}", fmt::hex{syscall_frame->r9});
+    log::debugf("* r8  = {}", fmt::hex{syscall_frame->r8});
+    log::debugf("* rpb = {}", fmt::hex{syscall_frame->rbp});
+    log::debugf("* rdi = {}", fmt::hex{syscall_frame->rdi});
+    log::debugf("* rsi = {}", fmt::hex{syscall_frame->rsi});
+    log::debugf("* rdx = {}", fmt::hex{syscall_frame->rdx});
+    log::debugf("* rcx = {}", fmt::hex{syscall_frame->rcx});
+    log::debugf("* rbx = {}", fmt::hex{syscall_frame->rbx});
+    log::debugf("* rax = {}", fmt::hex{syscall_frame->rax});
+    log::debugf("* rsp = {}", fmt::hex{syscall_frame->rsp});
     log::debugf("***********************");
 }
 
-Process* fork_process(Process* current, arch::trap::SyscallFrame* syscall_frame)
+Process* Process::fork(arch::trap::SyscallFrame* parent_frame)
 {
-    kassert_not_null(current);
+    kassert_not_null(parent_frame);
 
-    arch::vmm::PML4E* pml4 = arch::vmm::clone_user_pml4(current->pml4);
-    arch::vmm::switch_pml4(pml4);
+    arch::vmm::PML4E* cloned_pml4 = arch::vmm::clone_user_pml4(pml4);
+    arch::vmm::switch_pml4(cloned_pml4);
     arch::cpu::stac();
 
-    auto* p = new Process{};
+    auto* forked = new Process{};
 
-    p->pid = g_pid++;
-    p->parent = current;
-    p->state = process::ProcessState::NEW;
-    p->wait_reason = current->wait_reason;
-    p->exit_status = current->exit_status;
-    p->heap_break = current->heap_break;
-    p->pml4 = pml4;
-    p->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
-    p->kernel_rsp = reinterpret_cast<std::uintptr_t>(p->kernel_stack + KERNEL_STACK_SIZE);
-    p->wake_time_ms = current->wake_time_ms;
-    p->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
-    p->fs_base = current->fs_base;
-    p->tidptr = current->tidptr;
-    p->cwd_inode = current->cwd_inode;
-    p->uheap = arch::vmm::clone_user_heap(&current->uheap, pml4);
+    forked->pid = g_pid++;
+    forked->parent = this;
+    forked->state = process::ProcessState::NEW;
+    forked->wait_reason = wait_reason;
+    forked->exit_status = exit_status;
+    forked->heap_break = heap_break;
+    forked->pml4 = cloned_pml4;
+    forked->kernel_stack = new std::uint8_t[KERNEL_STACK_SIZE];
+    forked->kernel_rsp = reinterpret_cast<std::uintptr_t>(forked->kernel_stack + KERNEL_STACK_SIZE);
+    forked->wake_time_ms = wake_time_ms;
+    forked->mmap_min_addr = DEFAULT_MMAP_MIN_ADDR;
+    forked->fs_base = fs_base;
+    forked->tidptr = tidptr;
+    forked->cwd_inode = cwd_inode;
+    forked->uheap = arch::vmm::clone_user_heap(&uheap, cloned_pml4);
 
-    p->syscall_frame = reinterpret_cast<arch::trap::SyscallFrame*>(p->kernel_rsp - sizeof(arch::trap::SyscallFrame));
+    forked->syscall_frame = reinterpret_cast<arch::trap::SyscallFrame*>(forked->kernel_rsp - sizeof(arch::trap::SyscallFrame));
 
-    p->syscall_frame->r15 = syscall_frame->r15;
-    p->syscall_frame->r14 = syscall_frame->r14;
-    p->syscall_frame->r13 = syscall_frame->r13;
-    p->syscall_frame->r12 = syscall_frame->r12;
-    p->syscall_frame->r11 = syscall_frame->r11;
-    p->syscall_frame->r10 = syscall_frame->r10;
-    p->syscall_frame->r9 = syscall_frame->r9;
-    p->syscall_frame->r8 = syscall_frame->r8;
+    forked->syscall_frame->r15 = parent_frame->r15;
+    forked->syscall_frame->r14 = parent_frame->r14;
+    forked->syscall_frame->r13 = parent_frame->r13;
+    forked->syscall_frame->r12 = parent_frame->r12;
+    forked->syscall_frame->r11 = parent_frame->r11;
+    forked->syscall_frame->r10 = parent_frame->r10;
+    forked->syscall_frame->r9 = parent_frame->r9;
+    forked->syscall_frame->r8 = parent_frame->r8;
 
-    p->syscall_frame->rbp = syscall_frame->rbp;
-    p->syscall_frame->rdi = syscall_frame->rdi;
-    p->syscall_frame->rsi = syscall_frame->rsi;
-    p->syscall_frame->rdx = syscall_frame->rdx;
-    p->syscall_frame->rcx = syscall_frame->rcx;
-    p->syscall_frame->rbx = syscall_frame->rbx;
-    p->syscall_frame->rax = syscall_frame->rax;
-    p->syscall_frame->rsp = syscall_frame->rsp;
+    forked->syscall_frame->rbp = parent_frame->rbp;
+    forked->syscall_frame->rdi = parent_frame->rdi;
+    forked->syscall_frame->rsi = parent_frame->rsi;
+    forked->syscall_frame->rdx = parent_frame->rdx;
+    forked->syscall_frame->rcx = parent_frame->rcx;
+    forked->syscall_frame->rbx = parent_frame->rbx;
+    forked->syscall_frame->rax = parent_frame->rax;
+    forked->syscall_frame->rsp = parent_frame->rsp;
 
-    log_syscall_frame(p->syscall_frame);
-
-    p->context_frame = reinterpret_cast<arch::context::ContextFrame*>(
-        p->kernel_rsp - sizeof(arch::trap::SyscallFrame) - sizeof(arch::context::ContextFrame));
-    p->context_frame->r15 = 0x15151515; // Magic numbers to help with debugging
-    p->context_frame->r14 = 0x14141414;
-    p->context_frame->r13 = 0x13131313;
-    p->context_frame->r12 = 0x12121212;
-    p->context_frame->rbp = 0xA000000A;
-    p->context_frame->rbx = 0xB000000B;
-    p->context_frame->rip = reinterpret_cast<std::uintptr_t>(forked_entry_trampoline);
-    p->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(p->context_frame);
+    forked->context_frame = reinterpret_cast<arch::context::ContextFrame*>(
+        forked->kernel_rsp - sizeof(arch::trap::SyscallFrame) - sizeof(arch::context::ContextFrame));
+    forked->context_frame->r15 = 0x15151515; // Magic numbers to help with debugging
+    forked->context_frame->r14 = 0x14141414;
+    forked->context_frame->r13 = 0x13131313;
+    forked->context_frame->r12 = 0x12121212;
+    forked->context_frame->rbp = 0xA000000A;
+    forked->context_frame->rbx = 0xB000000B;
+    forked->context_frame->rip = reinterpret_cast<std::uintptr_t>(forked_entry_trampoline);
+    forked->kernel_rsp_saved = reinterpret_cast<std::uintptr_t>(forked->context_frame);
 
     fs::FileDescriptor* stdin = fs::open("/dev/tty1", fs::O_RDONLY);
     fs::FileDescriptor* stdout = fs::open("/dev/tty1", fs::O_WRONLY);
     fs::FileDescriptor* stderr = fs::open("/dev/tty1", fs::O_WRONLY);
 
-    p->fd_table.push_back(stdin);
-    p->fd_table.push_back(stdout);
-    p->fd_table.push_back(stderr);
+    forked->fd_table.push_back(stdin);
+    forked->fd_table.push_back(stdout);
+    forked->fd_table.push_back(stderr);
 
-    log_user_process(p);
+    forked->log();
 
-    arch::vmm::switch_pml4(current->pml4);
+    arch::vmm::switch_pml4(pml4);
     arch::cpu::clac();
 
-    return p;
+    return forked;
 }
 
 bool Process::is_running() const
@@ -369,6 +451,11 @@ void Process::kill()
     state = ProcessState::DEAD;
 }
 
+void Process::zombify()
+{
+    state = ProcessState::ZOMBIE;
+}
+
 void Process::wait_for(WaitReason reason)
 {
     state = ProcessState::BLOCKED;
@@ -400,11 +487,7 @@ void Process::terminate()
         fd->inode->close(fd);
     }
 
-    for (auto& allocation : allocations) {
-        arch::vmm::unmap_mem_at(pml4, allocation.virt_addr, allocation.num_pages);
-    }
-
-    arch::vmm::free_page_tables(pml4);
+    arch::vmm::free_user_pml4(pml4);
     delete[] kernel_stack;
 
     const auto frames_after = pmm::get_free_frames();

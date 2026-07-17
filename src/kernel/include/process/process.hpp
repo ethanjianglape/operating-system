@@ -1,6 +1,5 @@
 #pragma once
 
-#include "arch/x64/memory/vmm.hpp"
 #include <arch.hpp>
 #include <containers/kvector.hpp>
 #include <fs/fs.hpp>
@@ -28,31 +27,19 @@ enum class WaitReason : std::uint8_t {
     CHILD_PROCESS = 4
 };
 
-struct ProcessAllocation {
-    std::uintptr_t virt_addr;
-    std::size_t num_pages;
-
-    ProcessAllocation(std::uintptr_t addr, std::size_t pages)
-        : virt_addr{addr}
-        , num_pages{pages}
-    {
-    }
-};
-
-struct Process final {
+struct Process {
 private:
     void terminate();
 
 public:
     // Process meta info
     int pid;
-
     Process* parent;
-
     ProcessState state;
     WaitReason wait_reason;
     int wait_pid;
     int exit_status;
+    std::uint64_t wake_time_ms;
 
     fs::Inode* cwd_inode;
 
@@ -65,31 +52,28 @@ public:
 
     std::uint8_t* kernel_stack;      // Base of kernel stack
     std::uintptr_t kernel_rsp;       // Top of stack (initially)
-    std::uintptr_t kernel_rsp_saved; // The ONLY resume point — every
-                                     // suspension (preemptive or
-                                     // cooperative) goes through
-                                     // context_switch() against this.
-    arch::context::ContextFrame* context_frame;
+    std::uintptr_t kernel_rsp_saved; // Kernel rsp used during context_switch
 
+    arch::context::ContextFrame* context_frame;
     arch::trap::SyscallFrame* syscall_frame;
 
-    // VMM page info
-    kvector<ProcessAllocation> allocations;
-
-    kvector<void*> uheap_allocations;
-
-    // File Descriptors
     kvector<fs::FileDescriptor*> fd_table;
-
-    // Sleep
-    std::uint64_t wake_time_ms;
 
     std::uintptr_t entry;
 
     std::uint64_t fs_base; // For thread local storage (TLS)
     int* tidptr;
 
-    ~Process();
+    Process() = default;
+    virtual ~Process();
+
+    Process(const Process&) = delete;
+    Process(Process&&) = delete;
+
+    Process& operator=(const Process&) = delete;
+    Process& operator=(Process&&) = delete;
+
+    Process* fork(arch::trap::SyscallFrame* parent_frame);
 
     bool is_running() const;
     bool is_ready() const;
@@ -99,18 +83,29 @@ public:
     bool is_waiting_for(WaitReason reason) const;
     bool is_waiting_for_child(int pid) const;
 
+    void log() const;
+    void log_syscall_frame() const;
+
     void wake();
     void pause();
     void resume();
     void kill();
+    void zombify();
     void wait_for(WaitReason reason);
     void wait_for_child(int child_pid);
     void sleep_until(std::uint64_t wake_time_ms);
+
+    void exec_elf64(std::uint8_t* buffer, std::size_t size, char* const argv[], char* const envp[]);
 };
 
-Process* create_process(std::uint8_t* buffer, std::size_t size);
-Process* fork_process(Process* p, arch::trap::SyscallFrame* syscall_frame);
+struct KThread final : public Process {
+public:
+    KThread(void (*func)());
+};
 
-Process* create_kthread(void (*entry)());
+struct ELF64Process final : public Process {
+public:
+    ELF64Process(std::uint8_t* buffer, std::size_t size);
+};
 
 }

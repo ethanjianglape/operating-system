@@ -233,6 +233,30 @@ static void populate_pte(PTE& pte, std::uint64_t phys_frame, int flags)
     pte.nx = (flags & PAGE_NX) ? 1 : 0;
 }
 
+static void free_pml4e(PML4E& pml4e)
+{
+    pmm::free_frame(pml4e.addr << 12);
+    pml4e.p = 0;
+}
+
+static void free_pdpte(PDPTE& pdpte)
+{
+    pmm::free_frame(pdpte.addr << 12);
+    pdpte.p = 0;
+}
+
+static void free_pde(PDE& pde)
+{
+    pmm::free_frame(pde.addr << 12);
+    pde.p = 0;
+}
+
+static void free_pte(PTE& pte)
+{
+    pmm::free_frame(pte.addr << 12);
+    pte.p = 0;
+}
+
 static void zero_page(std::uintptr_t* virt)
 {
     kassert_not_null(virt);
@@ -353,7 +377,7 @@ static void map_page_to_frame(PML4E* pml4, std::uintptr_t virt_page, std::uintpt
  * @param flags Page flags (PAGE_USER, PAGE_WRITE, etc.).
  * @return Number of pages mapped (needed for unmap_mem_at).
  */
-std::size_t map_pages(PML4E* pml4, std::uintptr_t virt_addr, std::size_t bytes, int flags)
+void map_pages(PML4E* pml4, std::uintptr_t virt_addr, std::size_t bytes, int flags)
 {
     kassert_not_null(pml4);
     kassert(bytes > 0);
@@ -376,8 +400,11 @@ std::size_t map_pages(PML4E* pml4, std::uintptr_t virt_addr, std::size_t bytes, 
     }
 
     g_vmm_lock.unlock();
+}
 
-    return num_pages;
+void map_user_pages(PML4E* pml4, std::uintptr_t virt, std::size_t bytes)
+{
+    map_pages(pml4, virt, bytes, PAGE_USER | PAGE_WRITE);
 }
 
 /**
@@ -539,51 +566,6 @@ void unmap_mem_at(PML4E* pml4, std::uintptr_t virt_page, std::size_t num_pages)
     g_vmm_lock.unlock();
 }
 
-/**
- * @brief Frees all user-space page table structures for a process.
- *
- * Walks the user half of the address space (entries 0 to kernel_pml4_idx-1)
- * and frees all intermediate page table frames (PT, PD, PDPT) as well as
- * the PML4 itself. Does NOT free the kernel half (shared mappings).
- *
- * @pre Leaf physical frames should already be freed via unmap_mem_at().
- * @param pml4 The top-level page table to free.
- */
-void free_page_tables(PML4E* pml4)
-{
-    std::size_t kernel_pml4_idx = get_kernel_pml4_index();
-
-    for (std::size_t pml4_idx = 0; pml4_idx < kernel_pml4_idx; pml4_idx++) {
-        if (!pml4[pml4_idx].p) {
-            continue;
-        }
-
-        PDPTE* pdpt = get_pdpt(pml4[pml4_idx]);
-
-        for (std::size_t pdpt_idx = 0; pdpt_idx < NUM_PT_ENTRIES; pdpt_idx++) {
-            if (!pdpt[pdpt_idx].p) {
-                continue;
-            }
-
-            PDE* pd = get_pd(pdpt[pdpt_idx]);
-
-            for (std::size_t pd_idx = 0; pd_idx < NUM_PT_ENTRIES; pd_idx++) {
-                if (!pd[pd_idx].p) {
-                    continue;
-                }
-
-                pmm::free_frame(pd[pd_idx].addr << 12);
-            }
-
-            pmm::free_frame(pdpt[pdpt_idx].addr << 12);
-        }
-
-        pmm::free_frame(pml4[pml4_idx].addr << 12);
-    }
-
-    pmm::free_frame(hhdm_vtop(pml4));
-}
-
 // Set our local pml4 to point to the pml4 created by Limine which
 // is stored in cr3 as a physical address
 static void init_pml4()
@@ -652,6 +634,58 @@ PML4E* create_user_pml4()
     }
 
     return new_pml4;
+}
+
+void free_user_pml4(PML4E* pml4)
+{
+    g_vmm_lock.lock();
+
+    std::size_t kernel_start = get_kernel_pml4_index();
+
+    for (std::size_t pml4_idx = 0; pml4_idx < kernel_start; pml4_idx++) {
+        if (!pml4[pml4_idx].p) {
+            continue;
+        }
+
+        PDPTE* pdpt = get_pdpt(pml4[pml4_idx]);
+
+        for (std::size_t pdpt_idx = 0; pdpt_idx < NUM_PT_ENTRIES; pdpt_idx++) {
+            if (!pdpt[pdpt_idx].p) {
+                continue;
+            }
+
+            PDE* pd = get_pd(pdpt[pdpt_idx]);
+
+            for (std::size_t pd_idx = 0; pd_idx < NUM_PT_ENTRIES; pd_idx++) {
+                if (!pd[pd_idx].p) {
+                    continue;
+                }
+
+                PTE* pt = get_pt(pd[pd_idx]);
+
+                for (std::size_t pt_idx = 0; pt_idx < NUM_PT_ENTRIES; pt_idx++) {
+                    if (!pt[pt_idx].p) {
+                        continue;
+                    }
+
+                    log::debugf("freeing PTE at pml4={} pdpt={} pd={} pt={}", pml4_idx, pdpt_idx, pd_idx, pt_idx);
+
+                    free_pte(pt[pt_idx]);
+                }
+
+                free_pde(pd[pd_idx]);
+            }
+
+            free_pdpte(pdpt[pdpt_idx]);
+        }
+
+        free_pml4e(pml4[pml4_idx]);
+    }
+
+    zero_page(reinterpret_cast<std::uintptr_t*>(pml4));
+    pmm::free_frame(hhdm_vtop(pml4));
+
+    g_vmm_lock.unlock();
 }
 
 PML4E* clone_user_pml4(PML4E* pml4)

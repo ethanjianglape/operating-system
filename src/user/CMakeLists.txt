@@ -25,3 +25,4 @@ endfunction()
 # Add userspace programs
 add_musl_program(shell shell.c)
 add_musl_program(musl musl.c)
+add_musl_program(ls ls.c)

@@ -26,5 +26,8 @@ void yield_blocked(process::WaitReason wait_reason);
 
 int yield_to_child(int child_pid);
 
+[[noreturn]]
+void yield_new_process();
+
 void add_process(process::Process* p);
 }

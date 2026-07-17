@@ -176,6 +176,8 @@ static const char* syscall_name(std::uint64_t syscall_num)
         return "vfork";
     case linux::SYS_WAIT4:
         return "wait4";
+    case linux::SYS_EXECVE:
+        return "execve";
     default:
         return "unknown syscall";
     }
@@ -264,6 +266,8 @@ extern "C" std::uint64_t syscall_dispatcher(x64::trap::SyscallFrame* frame)
         return syscall::sys_vfork();
     case linux::SYS_WAIT4:
         return syscall::sys_wait4(arg1, reinterpret_cast<int*>(arg2), arg3, reinterpret_cast<void*>(arg4));
+    case linux::SYS_EXECVE:
+        return syscall::sys_execve(reinterpret_cast<const char*>(arg1), reinterpret_cast<char** const>(arg2), nullptr);
     default:
         log::error("Unsupported syscall: ", syscall_num);
         return -ENOSYS;
