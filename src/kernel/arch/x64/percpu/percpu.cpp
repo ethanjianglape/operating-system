@@ -122,7 +122,7 @@ void init()
     per_cpu_data->self = per_cpu_data; // For C++ access via get()
     per_cpu_data->kernel_rsp = 0;      // Set by scheduler before running process
     per_cpu_data->user_rsp = 0;        // Saved by syscall_entry
-    per_cpu_data->idle_process = process::create_kthread(idle_process_kthread);
+    per_cpu_data->idle_process = new process::KThread(idle_process_kthread);
     per_cpu_data->process = per_cpu_data->idle_process;
     per_cpu_data->preemption_enabled = true;
 

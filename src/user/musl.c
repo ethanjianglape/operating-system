@@ -5,20 +5,22 @@
 
 int main(void)
 {
-    int pid = fork();
+    /* int pid = fork(); */
 
-    printf("pid = %d\n", pid);
+    /* printf("pid = %d\n", pid); */
 
-    if (pid == 0) {
-        puts("hello from child");
-        exit(0);
-    } else {
-        puts("parent waiting for child...");
+    /* if (pid == 0) { */
+    /* puts("hello from child"); */
+    /* exit(0); */
+    /* } else { */
+    /* puts("parent waiting for child..."); */
 
-        int status;
+    /* int status; */
 
-        wait4(pid, &status, 0, NULL);
-    }
+    /* wait4(pid, &status, 0, NULL); */
+    /* } */
+
+    puts("hello from musl.c!");
 
     return 0;
 

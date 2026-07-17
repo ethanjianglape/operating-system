@@ -52,14 +52,17 @@ void cmd_cd(const char* path)
     }
 }
 
-void cmd_ls(const char* path)
+void cmd_ls(char* path)
 {
-    DIR* dir = opendir(path);
+    int pid = fork();
 
-    struct dirent* entry;
-
-    while ((entry = readdir(dir)) != NULL) {
-        printf("%s\n", entry->d_name);
+    if (pid == 0) {
+        printf("child path = %s", path);
+        char* argv[] = {"ls", path, NULL};
+        execve("/bin/ls", argv, NULL);
+    } else {
+        int status;
+        wait4(pid, &status, 0, NULL);
     }
 }
 
@@ -90,15 +93,11 @@ void cmd_fork(void)
     int pid = fork();
 
     if (pid == 0) {
-        puts("hello from the child!");
+        syscall(59, "/bin/musl");
     } else {
-        puts("hello from the parent! waiting on child...");
         int status;
         wait(&status);
-        puts("returning to parent");
     }
-
-    puts("");
 }
 
 void cmd_mmap(void)
@@ -216,14 +215,13 @@ void process_command(char* cmd)
 // Entry point
 // ============================================================================
 
-static const char* BANNER =
-    "               ____   _____\n"
-    " _     _ _    / __ \\ / ____|\n"
-    "| |__ | | |_ | |  | | (___\n"
-    "| '_ \\| | __|| |  | |\\___ \\\n"
-    "| | | | | |_ | |__| |____) |\n"
-    "|_| |_|_|\\__| \\____/|_____/\n"
-    "\n";
+static const char* BANNER = "                ____   _____\n"
+                            "  _     _ _    / __ \\ / ____|\n"
+                            " | |__ | | |_ | |  | | (___\n"
+                            " | '_ \\| | __|| |  | |\\___ \\\n"
+                            " | | | | | |_ | |__| |____) |\n"
+                            " |_| |_|_|\\__| \\____/|_____/\n"
+                            "\n";
 
 int main(void)
 {

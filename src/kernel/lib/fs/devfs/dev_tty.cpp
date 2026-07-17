@@ -368,9 +368,7 @@ void run_tty_program(const kstring& name)
 
     fd->inode->read(fd, data, size);
 
-    process::Process* p = process::create_process(data, size);
-
-    scheduler::add_process(p);
+    scheduler::add_process(new process::ELF64Process{data, size});
 }
 
 void init_tty()

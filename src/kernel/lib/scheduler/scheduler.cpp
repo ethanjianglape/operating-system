@@ -331,7 +331,7 @@ void yield_zombie()
     g_processes_lock.lock();
 
     process::Process* current = arch::percpu::current_process();
-    current->state = process::ProcessState::ZOMBIE;
+    current->zombify();
 
     wake_all_parents(current->pid);
 
@@ -431,6 +431,26 @@ void yield_blocked(process::WaitReason wait_reason)
     context_switch(&current->kernel_rsp_saved, next->kernel_rsp_saved);
 }
 
+void yield_new_process()
+{
+    g_processes_lock.lock();
+
+    process::Process* current = arch::percpu::current_process();
+    process::Process* next = select_next_ready_process();
+
+    kassert(current != next);
+
+    current->wake();
+    activate_process(next);
+    g_processes_lock.unlock();
+
+    std::uintptr_t throwaway;
+
+    context_switch(&throwaway, next->kernel_rsp_saved);
+
+    kpanic("yield_new_process should not return");
+}
+
 /// @brief add a new process to the scheduler
 ///
 /// @param p the process
@@ -449,7 +469,7 @@ void init()
     log::init_start("Scheduler");
     log::info("Registering schedulers...");
 
-    add_process(process::create_kthread(reaper_kthread));
+    add_process(new process::KThread(reaper_kthread));
 
     log::init_end("Scheduler");
 }

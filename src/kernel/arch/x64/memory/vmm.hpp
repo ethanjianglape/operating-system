@@ -142,6 +142,7 @@ std::uintptr_t map_phys(std::uintptr_t phys, int flags = 0);
 // Create a new user-space page table, copying in the kernel mappings.
 PML4E* create_user_pml4();
 PML4E* clone_user_pml4(PML4E* pml4);
+void free_user_pml4(PML4E* pml4);
 
 // Initialize a heap cursor for a user address space.
 Heap create_user_heap(PML4E* pml4);
@@ -151,13 +152,11 @@ Heap clone_user_heap(Heap* existing, PML4E* pml4);
 void* map_heap_pages(PML4E* pml4, Heap* heap, std::size_t bytes, int flags);
 
 // Low-level: map bytes at a specific virtual address with explicit flags.
-std::size_t map_pages(PML4E* pml4, std::uintptr_t virt, std::size_t bytes, int flags);
+void map_pages(PML4E* pml4, std::uintptr_t virt, std::size_t bytes, int flags);
+void map_user_pages(PML4E* pml4, std::uintptr_t virt, std::size_t bytes);
 
 // Unmap num_pages pages starting at virt, freeing their physical frames.
 void unmap_mem_at(PML4E* pml4, std::uintptr_t virt, std::size_t num_pages);
-
-// Free all page table structures for a user address space.
-void free_page_tables(PML4E* pml4);
 
 // Switch the active address space.
 void switch_pml4(PML4E* pml4);

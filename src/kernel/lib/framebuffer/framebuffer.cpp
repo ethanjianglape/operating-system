@@ -83,7 +83,7 @@ void init(const FrameBufferInfo& info)
     vram_buff = kalloc<std::uint8_t>(vram_size);
     vram_buff_end = vram_buff + vram_size;
 
-    scheduler::add_process(process::create_kthread(redraw_kthread));
+    scheduler::add_process(new process::KThread(redraw_kthread));
 
     log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
     log::info("Framebuffer # pixels: ", fb_num_pixels);

@@ -21,10 +21,9 @@ std::uintptr_t sys_brk(void* addr)
     }
 
     std::uintptr_t size = hb_end - hb_start;
-    std::size_t pages = arch::vmm::map_pages(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
 
+    arch::vmm::map_pages(proc->pml4, hb_start, size, arch::vmm::PAGE_USER | arch::vmm::PAGE_WRITE);
     proc->heap_break = hb_end;
-    proc->allocations.emplace_back(hb_start, pages);
 
     return hb_end;
 }
@@ -44,8 +43,6 @@ std::uintptr_t sys_mmap(void*, std::size_t length, int, int flags, int, std::siz
     void* virt_addr = arch::vmm::map_heap_pages(proc->pml4, &proc->uheap, length, vmm_flags);
 
     log::debugf("sys_mmap virt = {}", virt_addr);
-
-    proc->uheap_allocations.push_back(virt_addr);
 
     return reinterpret_cast<std::uintptr_t>(virt_addr);
 }
