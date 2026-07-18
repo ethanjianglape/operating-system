@@ -1,20 +1,19 @@
-#include "arch/x64/cpu/cpu.hpp"
-#include "containers/kstring_view.hpp"
-#include "linux/ioctl.hpp"
-#include "memory/memory.hpp"
-#include "timer/timer.hpp"
 #include <arch.hpp>
-#include <cerrno>
 #include <console/console.hpp>
 #include <containers/kstring.hpp>
+#include <containers/kstring_view.hpp>
 #include <containers/kvector.hpp>
 #include <crt/crt.h>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/fs.hpp>
 #include <fs/fs_file_ops.hpp>
+#include <linux/ioctl.hpp>
 #include <log/log.hpp>
+#include <memory/memory.hpp>
 #include <process/process.hpp>
 #include <scheduler/scheduler.hpp>
+
+#include <cerrno>
 
 namespace fs::devfs {
 

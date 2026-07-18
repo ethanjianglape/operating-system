@@ -47,6 +47,13 @@ struct Stat {
 struct DirEntry {
     kstring name;
     FileType type;
+
+    DirEntry() {}
+    DirEntry(kstring n, FileType t)
+        : name{n}
+        , type{t}
+    {
+    }
 };
 
 /**
@@ -110,6 +117,18 @@ public:
     virtual int readdir(kvector<DirEntry>&) { return -ENOTDIR; }
     virtual int mkdir(const char*, int) { return -ENOTDIR; }
     virtual int create(const char*, int) { return -ENOTDIR; }
+};
+
+class ReadOnlyInode : public Inode {
+public:
+    ReadOnlyInode(MountPoint* mp);
+    virtual ~ReadOnlyInode() = default;
+
+    int open(FileDescriptor*, int) override { return 0; }
+    int write(FileDescriptor*, const void*, std::size_t) final override { return -EROFS; }
+    int close(FileDescriptor*) override { return 0; }
+    int lseek(FileDescriptor*, int, int) override { return 0; }
+    int stat(Stat*) override { return 0; }
 };
 
 class DirectoryInode : public Inode {

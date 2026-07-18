@@ -94,6 +94,8 @@ int sys_readv(int fd, const linux::iovec* iov, int iovcnt)
 
     int total = 0;
 
+    arch::cpu::stac();
+
     for (int i = 0; i < iovcnt; i++) {
         if (iov[i].iov_len == 0) {
             continue;
@@ -107,6 +109,8 @@ int sys_readv(int fd, const linux::iovec* iov, int iovcnt)
 
         total += read;
     }
+
+    arch::cpu::clac();
 
     return total;
 }

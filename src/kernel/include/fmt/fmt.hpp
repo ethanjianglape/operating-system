@@ -45,10 +45,6 @@ enum class NumberFormat : std::uint32_t {
     OCT = 4
 };
 
-// static char buffer[128] = {'\0'};
-
-static std::size_t index = 0;
-
 inline bool is_numeric(char c)
 {
     return c >= '0' && c <= '9';
@@ -75,7 +71,7 @@ inline int number_format_divisor(NumberFormat format)
     }
 }
 
-inline void insert(char (&buffer)[32], std::size_t pos, std::size_t num, char pad)
+inline void insert(char (&buffer)[32], std::size_t pos, std::size_t index, std::size_t num, char pad)
 {
     if (pos >= index) {
         return;
@@ -118,7 +114,7 @@ inline char number_format_char(int i, NumberFormat format)
 
 inline const char* to_string(std::uintmax_t unum, char (&buffer)[32], NumberFormat format = NumberFormat::DEC)
 {
-    index = 0;
+    std::size_t index = 0;
 
     if (unum == 0) {
         buffer[index++] = '0';
@@ -158,7 +154,7 @@ inline const char* to_string(std::uintmax_t unum, char (&buffer)[32], NumberForm
         std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
-        insert(buffer, 2, zeros, '0');
+        insert(buffer, 2, index, zeros, '0');
     }
 
     buffer[index] = '\0';
@@ -168,7 +164,7 @@ inline const char* to_string(std::uintmax_t unum, char (&buffer)[32], NumberForm
 
 inline const char* to_string(std::intmax_t num, char (&buffer)[32], NumberFormat format = NumberFormat::DEC)
 {
-    index = 0;
+    std::size_t index = 0;
     std::uintmax_t unum;
 
     if (num < 0) {
@@ -216,7 +212,7 @@ inline const char* to_string(std::intmax_t num, char (&buffer)[32], NumberFormat
         std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
-        insert(buffer, 2, zeros, '0');
+        insert(buffer, 2, index, zeros, '0');
     }
 
     buffer[index] = '\0';
@@ -268,6 +264,11 @@ inline const char* to_string(const kstring& str, char (&)[32])
     return str.c_str();
 }
 
+inline const char* to_string(const char* str, char (&)[32])
+{
+    return str;
+}
+
 inline std::uintmax_t parse_uint(const char* str, std::size_t len, NumberFormat format = NumberFormat::DEC)
 {
     const auto divisor = number_format_divisor(format);
@@ -289,6 +290,30 @@ inline std::uintmax_t parse_uint(const kstring& str, NumberFormat format = Numbe
 inline int parse_int(char c)
 {
     return c - '0';
+}
+
+inline kstring sprintf(kstring_view format)
+{
+    return format;
+}
+
+template <typename T, typename... Rest>
+inline kstring sprintf(kstring_view format, T&& first, Rest&&... rest)
+{
+    const auto pos = format.find("{}");
+
+    if (pos == kstring_view::npos) {
+        return format;
+    }
+
+    kstring str{};
+    char buffer[32];
+
+    str += format.substr(0, pos);
+    str += to_string(first, buffer);
+    str += sprintf(format.substr(pos + 2), rest...);
+
+    return str;
 }
 
 }

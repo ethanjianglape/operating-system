@@ -39,6 +39,7 @@ public:
     WaitReason wait_reason;
     int wait_pid;
     int exit_status;
+    std::uint64_t context_switches;
     std::uint64_t wake_time_ms;
 
     fs::Inode* cwd_inode;
@@ -74,6 +75,8 @@ public:
     Process& operator=(Process&&) = delete;
 
     Process* fork(arch::trap::SyscallFrame* parent_frame);
+
+    const char* get_state_str() const;
 
     bool is_running() const;
     bool is_ready() const;

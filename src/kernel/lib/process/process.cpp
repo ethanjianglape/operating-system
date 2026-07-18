@@ -387,6 +387,26 @@ Process* Process::fork(arch::trap::SyscallFrame* parent_frame)
     return forked;
 }
 
+const char* Process::get_state_str() const
+{
+    switch (state) {
+    case ProcessState::READY:
+        return "READY";
+    case ProcessState::NEW:
+        return "NEW";
+    case ProcessState::RUNNING:
+        return "RUNNING";
+    case ProcessState::DEAD:
+        return "DEAD";
+    case ProcessState::ZOMBIE:
+        return "ZOMBIE";
+    case ProcessState::BLOCKED:
+        return "BLOCKED";
+    default:
+        kpanic("unknown process state");
+    }
+}
+
 bool Process::is_running() const
 {
     return state == ProcessState::RUNNING;

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "arch/x64/drivers/keyboard/ps2.hpp"
-#include "containers/kstring.hpp"
 #include <arch.hpp>
+#include <containers/kstring.hpp>
 #include <fs/fs.hpp>
 
 namespace process {

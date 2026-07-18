@@ -196,6 +196,7 @@ static void activate_process(process::Process* p)
     kassert_not_null(p);
 
     p->state = process::ProcessState::RUNNING;
+    p->context_switches++;
 
     cpu->process = p;
     cpu->kernel_rsp = p->kernel_rsp;

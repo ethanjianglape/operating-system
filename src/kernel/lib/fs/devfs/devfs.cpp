@@ -34,9 +34,9 @@ Inode* DevDirectoryInode::lookup(const char* name)
 
 int DevDirectoryInode::readdir(kvector<DirEntry>& entries)
 {
-    entries.push_back(DirEntry{.name = "null", .type = FileType::CHAR_DEVICE});
-    entries.push_back(DirEntry{.name = "tty1", .type = FileType::CHAR_DEVICE});
-    entries.push_back(DirEntry{.name = "tty2", .type = FileType::CHAR_DEVICE});
+    entries.emplace_back("null", FileType::CHAR_DEVICE);
+    entries.emplace_back("tty1", FileType::CHAR_DEVICE);
+    entries.emplace_back("tty2", FileType::CHAR_DEVICE);
 
     return entries.size();
 }

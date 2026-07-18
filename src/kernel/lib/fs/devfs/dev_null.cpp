@@ -2,10 +2,11 @@
 #include <fs/fs.hpp>
 
 namespace fs::devfs {
+
 DevNullInode::DevNullInode(MountPoint* mp, Inode* parent, int ino)
-    : Inode(mp)
+    : Inode{mp}
 {
-    type = FileType::CHAR_DEVICE;
+    this->type = FileType::CHAR_DEVICE;
     this->parent = parent;
     this->ino = ino;
 }
@@ -42,4 +43,5 @@ int DevNullInode::stat(Stat* stat)
 
     return 0;
 }
+
 }
