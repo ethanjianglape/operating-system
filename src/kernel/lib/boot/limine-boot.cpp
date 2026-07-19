@@ -1,6 +1,7 @@
 #include "arch/x64/percpu/percpu.hpp"
 #include "fs/fs.hpp"
 #include "kassert/kassert.hpp"
+#include "scheduler/scheduler.hpp"
 #include <boot/boot.hpp>
 #include <boot/limine.h>
 
@@ -161,6 +162,8 @@ void init_memory()
     // Initialize VMM with the Higher Half Direct Map offset
     std::uint64_t hhdm_offset = hhdm_request.response->offset;
     arch::vmm::init(hhdm_offset);
+
+    scheduler::init();
 }
 
 void init_acpi()

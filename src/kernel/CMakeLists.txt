@@ -76,6 +76,7 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/syscall/sys_prctl.cpp
   ${LIB_DIR}/syscall/sys_thread.cpp
   ${LIB_DIR}/scheduler/scheduler.cpp
+  ${LIB_DIR}/scheduler/RoundRobinScheduler.cpp
 )
 
 # Test sources (only compiled when KERNEL_TESTS is ON)

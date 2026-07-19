@@ -6,7 +6,7 @@ namespace syscall {
 
 int sys_sleep_ms(std::uint64_t ms)
 {
-    scheduler::yield_sleep(ms);
+    scheduler::get_scheduler()->yield_sleep(ms);
 
     return 0;
 }

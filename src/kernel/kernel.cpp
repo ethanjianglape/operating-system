@@ -64,7 +64,6 @@ void kernel_main()
 
     console::init();
     fs::devfs::init_tty();
-    scheduler::init();
 
     kstring sprintf_test = fmt::sprintf("******** a = {} b = {} c = {} d = {}", 100, -1459, fmt::bin{5439}, "hello world");
 

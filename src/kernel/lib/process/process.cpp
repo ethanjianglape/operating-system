@@ -51,7 +51,7 @@ static void kthread_entry_trampoline()
 
     entry_func();
 
-    scheduler::yield_dead();
+    scheduler::get_scheduler()->yield_dead();
 }
 
 void Process::log() const

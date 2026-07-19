@@ -464,7 +464,12 @@ void apic_timer_handler(irq::InterruptFrame* frame)
 {
     send_eoi();
     timer::tick(frame);
-    scheduler::preempt();
+
+    scheduler::Scheduler* sched = scheduler::get_scheduler();
+
+    if (sched != nullptr) {
+        sched->preempt();
+    }
 }
 
 /**

@@ -367,7 +367,7 @@ void run_tty_program(const kstring& name)
 
     fd->inode->read(fd, data, size);
 
-    scheduler::add_process(new process::ELF64Process{data, size});
+    scheduler::get_scheduler()->add_process(new process::ELF64Process{data, size});
 }
 
 void init_tty()
@@ -437,7 +437,7 @@ int DevTtyInode::read(FileDescriptor*, void* buff, std::size_t count)
             console::redraw();
         }
 
-        scheduler::yield_blocked(process::WaitReason::KEYBOARD);
+        scheduler::get_scheduler()->yield_blocked(process::WaitReason::KEYBOARD);
     }
 }
 
