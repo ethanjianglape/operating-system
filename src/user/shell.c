@@ -71,6 +71,7 @@ void cmd_cat(const char* path)
     FILE* file = fopen(path, "r");
 
     if (!file) {
+        puts("file not found!");
         return;
     }
 

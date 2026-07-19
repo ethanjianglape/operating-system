@@ -65,6 +65,8 @@ set(LIB_KERNEL_SOURCES
   ${LIB_DIR}/fs/devfs/dev_tty.cpp
   ${LIB_DIR}/fs/devfs/dev_null.cpp
   ${LIB_DIR}/fs/tmpfs/tmpfs.cpp
+  ${LIB_DIR}/fs/procfs/procfs.cpp
+  ${LIB_DIR}/fs/procfs/proc_self.cpp
   ${LIB_DIR}/process/elf.cpp
   ${LIB_DIR}/process/process.cpp
   ${LIB_DIR}/syscall/sys_fd.cpp

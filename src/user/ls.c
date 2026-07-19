@@ -4,8 +4,6 @@
 
 int main(int argc, char** argv)
 {
-    printf("ls argc = %d\n\n", argc);
-
     DIR* dir = opendir("./");
 
     struct dirent* entry;

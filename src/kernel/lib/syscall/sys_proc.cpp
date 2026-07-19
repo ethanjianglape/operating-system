@@ -29,7 +29,7 @@ int sys_fork(arch::trap::SyscallFrame* syscall_frame)
     return created->pid;
 }
 
-int sys_execve(const char* path, char* const argv[], char* const envp[])
+int sys_execve(const char* path, char* argv[], char* envp[])
 {
     kstring path_str = kstring::from_userspace(path);
     fs::FileDescriptor* fd = fs::open(path_str, 0);

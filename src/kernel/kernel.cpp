@@ -1,3 +1,4 @@
+#include "fmt/fmt.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
@@ -14,6 +15,7 @@
 #include <framebuffer/framebuffer.hpp>
 #include <fs/devfs/dev_tty.hpp>
 #include <fs/devfs/devfs.hpp>
+#include <fs/procfs/procfs.hpp>
 #include <fs/tmpfs/tmpfs.hpp>
 #include <log/log.hpp>
 #include <scheduler/scheduler.hpp>
@@ -50,9 +52,11 @@ void kernel_main()
 
     auto* devfs = new fs::devfs::DevFileSystem{};
     auto* tmpfs = new fs::tmpfs::TmpFileSystem{};
+    auto* procfs = new fs::procfs::ProcFileSystem{};
 
     fs::mount("/dev", devfs, nullptr);
     fs::mount("/tmp", tmpfs, nullptr);
+    fs::mount("/proc", procfs, nullptr);
 
 #ifdef KERNEL_TESTS
     test::run_all();
@@ -61,6 +65,10 @@ void kernel_main()
     console::init();
     fs::devfs::init_tty();
     scheduler::init();
+
+    kstring sprintf_test = fmt::sprintf("******** a = {} b = {} c = {} d = {}", 100, -1459, fmt::bin{5439}, "hello world");
+
+    log::debug(sprintf_test);
 
     x64::percpu::enable_preemption();
     x64::cpu::sti();

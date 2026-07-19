@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fmt/fmt.hpp"
+#include <concepts>
 #include <containers/klist.hpp>
 #include <containers/kstring.hpp>
 #include <containers/kvector.hpp>
@@ -71,6 +72,18 @@ kstring join(const klist<T>& list, char delim = ' ')
     }
 
     return result;
+}
+
+template <std::integral T>
+T max(T a, T b)
+{
+    return a > b ? a : b;
+}
+
+template <std::integral T>
+T min(T a, T b)
+{
+    return a < b ? a : b;
 }
 
 }

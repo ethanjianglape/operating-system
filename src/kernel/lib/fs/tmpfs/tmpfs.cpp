@@ -149,12 +149,8 @@ int TmpDirectoryInode::readdir(kvector<DirEntry>& entries)
 {
     for (std::size_t i = 0; i < children.size(); i++) {
         Inode* inode = children[i];
-        DirEntry entry{};
 
-        entry.name = inode->name;
-        entry.type = inode->type;
-
-        entries.push_back(entry);
+        entries.emplace_back(inode->name, inode->type);
     }
 
     return children.size();

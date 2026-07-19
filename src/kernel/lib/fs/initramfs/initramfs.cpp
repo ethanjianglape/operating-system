@@ -40,12 +40,8 @@ int InitramfsDirectoryInode::readdir(kvector<DirEntry>& entries)
 {
     for (std::size_t i = 0; i < children.size(); i++) {
         Inode* child = children[i];
-        DirEntry entry{};
 
-        entry.name = child->name;
-        entry.type = child->type;
-
-        entries.push_back(entry);
+        entries.emplace_back(child->name, child->type);
     }
 
     return children.size();
@@ -72,8 +68,6 @@ int InitramfsFileInode::open(FileDescriptor*, int) { return 0; }
 
 int InitramfsFileInode::read(FileDescriptor*, void* buf, std::size_t count)
 {
-    log::debugf("initramfs read is user = {}", arch::vmm::is_user_addr(buf));
-
     if (arch::vmm::is_user_addr(buf)) {
         kcopy_to_user(buf, tar_data, count);
     } else {
