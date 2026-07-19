@@ -78,6 +78,8 @@ public:
 
     const char* get_state_str() const;
 
+    kstring to_string() const;
+
     bool is_running() const;
     bool is_ready() const;
     bool is_zombie() const;

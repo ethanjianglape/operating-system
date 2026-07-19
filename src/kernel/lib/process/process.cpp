@@ -407,6 +407,30 @@ const char* Process::get_state_str() const
     }
 }
 
+kstring Process::to_string() const
+{
+    kstring cwd = fs::getcwd(cwd_inode);
+    kstring format = "pid = {}\n"
+                     "cwd = {}\n"
+                     "state = {}\n"
+                     "pml4         @ {}\n"
+                     "kernel stack @ {}\n"
+                     "kernel rsp   @ {}\n"
+                     "entry rip    @ {}\n"
+                     "context switch count = {}";
+
+    return fmt::sprintf(
+        format,
+        pid,
+        cwd,
+        get_state_str(),
+        fmt::hex{pml4},
+        fmt::hex{kernel_stack},
+        fmt::hex{kernel_rsp},
+        fmt::hex{entry},
+        context_switches);
+}
+
 bool Process::is_running() const
 {
     return state == ProcessState::RUNNING;
