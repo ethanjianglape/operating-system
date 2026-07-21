@@ -67,6 +67,12 @@ inline std::uint32_t inl(const std::uint16_t port)
 }
 
 [[gnu::always_inline]]
+inline void cpuid(std::uint32_t code, std::uint32_t* a)
+{
+    asm volatile("cpuid" : "=a"(*a) : "a"(code) : "ebx", "ecx", "memory");
+}
+
+[[gnu::always_inline]]
 inline void cpuid(std::uint32_t code, std::uint32_t* a, std::uint32_t* d)
 {
     asm volatile("cpuid" : "=a"(*a), "=d"(*d) : "a"(code) : "ebx", "ecx", "memory");

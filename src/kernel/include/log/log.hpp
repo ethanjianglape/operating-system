@@ -83,7 +83,9 @@ inline void debugf(kstring_view format)
 template <typename T, typename... Rest>
 void debugf(kstring_view format, T first, Rest... rest)
 {
-    kprint("[DEBUG] ");
+    const auto ns = arch::drivers::tsc::get_time_ns();
+
+    kprintf("[{}] {}", ns, "[DEBUG] ");
     kprintf(format, first, rest...);
     kprintln();
 }

@@ -71,10 +71,10 @@ inline int number_format_divisor(NumberFormat format)
     }
 }
 
-inline void insert(char (&buffer)[32], std::size_t pos, std::size_t index, std::size_t num, char pad)
+inline std::size_t insert(char (&buffer)[32], std::size_t pos, std::size_t index, std::size_t num, char pad)
 {
     if (pos >= index) {
-        return;
+        return 0;
     }
 
     std::size_t i = index - 1;
@@ -93,7 +93,7 @@ inline void insert(char (&buffer)[32], std::size_t pos, std::size_t index, std::
         buffer[i++] = pad;
     }
 
-    index += num;
+    return num;
 }
 
 inline char number_format_char(int i, NumberFormat format)
@@ -154,7 +154,7 @@ inline const char* to_string(std::uintmax_t unum, char (&buffer)[32], NumberForm
         std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
-        insert(buffer, 2, index, zeros, '0');
+        index += insert(buffer, 2, index, zeros, '0');
     }
 
     buffer[index] = '\0';
@@ -212,7 +212,7 @@ inline const char* to_string(std::intmax_t num, char (&buffer)[32], NumberFormat
         std::size_t len = index - 2;
         std::size_t zeros = (8 - len) & 7;
 
-        insert(buffer, 2, index, zeros, '0');
+        index += insert(buffer, 2, index, zeros, '0');
     }
 
     buffer[index] = '\0';

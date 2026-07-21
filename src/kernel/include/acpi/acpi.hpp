@@ -3,6 +3,7 @@
 #include <cstdint>
 
 namespace acpi {
+
 struct [[gnu::packed]] XSDP {
     char signature[8];
     std::uint8_t checksum;
@@ -28,6 +29,7 @@ struct [[gnu::packed]] ACPIHeader {
 };
 
 constexpr const char* SIG_MADT = "APIC";
+constexpr const char* SIG_HPET = "HPET";
 
 struct [[gnu::packed]] XSDT {
     ACPIHeader header;
@@ -35,4 +37,5 @@ struct [[gnu::packed]] XSDT {
 };
 
 void init(void* rsdp_addr);
+
 }

@@ -5,6 +5,7 @@
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
 #include <arch/x64/drivers/serial/serial.hpp>
+#include <arch/x64/drivers/tsc/tsc.hpp>
 #include <arch/x64/gdt/gdt.hpp>
 #include <arch/x64/memory/vmm.hpp>
 #include <arch/x64/percpu/percpu.hpp>

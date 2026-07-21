@@ -409,6 +409,16 @@ void RoundRobinScheduler::add_process(process::Process* p)
     _processes_lock.unlock();
 }
 
+void tick()
+{
+    if (g_scheduler == nullptr) {
+        return;
+    }
+
+    g_scheduler->wake_sleepers();
+    g_scheduler->preempt();
+}
+
 void init()
 {
     log::init_start("Scheduler");

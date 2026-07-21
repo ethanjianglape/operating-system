@@ -1,10 +1,20 @@
 #include "tsc.hpp"
-#include "log/log.hpp"
-#include <cpuid.h>
+#include <arch/x64/cpu/cpu.hpp>
+#include <arch/x64/drivers/pit/pit.hpp>
+#include <kpanic/kpanic.hpp>
+#include <log/log.hpp>
+
 #include <cstdint>
 
 namespace x64::drivers::tsc {
-std::uint64_t rdtsc()
+
+constexpr std::uint32_t CPUID_FEAT_EDX_INVARIANT_TSC = (1 << 8); // Invariant TSC available
+
+static std::uint64_t boot_tsc = 0;
+static std::uint64_t tsc_freq = 0;
+
+[[gnu::always_inline]]
+static inline std::uint64_t rdtsc()
 {
     std::uint64_t rax;
     std::uint64_t rdx;
@@ -15,4 +25,70 @@ std::uint64_t rdtsc()
 
     return tsc;
 }
+
+std::uint64_t get_ticks()
+{
+    return rdtsc() - boot_tsc;
+}
+
+std::uint64_t get_time_ns()
+{
+    const std::uint64_t delta = get_ticks();
+    const std::uint64_t secs = delta / tsc_freq;
+    const std::uint64_t remainder_cycles = delta % tsc_freq;
+
+    return secs * 1000000000ULL + (remainder_cycles * 1000000000ULL) / tsc_freq;
+}
+
+std::uint64_t get_time_us()
+{
+    return get_time_ns() / 1000ULL;
+}
+
+std::uint64_t get_time_ms()
+{
+    return get_time_ns() / 1000000ULL;
+}
+
+static bool check_support()
+{
+    std::uint32_t eax;
+    std::uint32_t edx;
+
+    cpu::cpuid(0x80000007, &eax, &edx);
+
+    return (edx & CPUID_FEAT_EDX_INVARIANT_TSC) != 0;
+}
+
+void init()
+{
+    if (!check_support()) {
+        kpanic("Invariant TSC not available - required for this kernel");
+    }
+
+    std::uint32_t eax;
+    std::uint32_t ebx;
+    std::uint32_t ecx;
+
+    cpu::cpuid(0x15, &eax, &ebx, &ecx);
+
+    boot_tsc = rdtsc();
+
+    const auto t0 = boot_tsc;
+    const auto sleep_ms = 20;
+    const auto total_ms = 100;
+
+    // sleep for a total of 100ms (5 x 20ms)
+    // note: the PIT physically cannot sleep for longer than ~54ms at a time
+    for (int i = 0; i < total_ms / sleep_ms; i++) {
+        x64::drivers::pit::sleep_ms(sleep_ms);
+    }
+
+    const auto t1 = rdtsc();
+
+    tsc_freq = ((t1 - t0) * 1000) / total_ms;
+
+    log::debugf("TSC frequency = {}", tsc_freq);
+}
+
 }

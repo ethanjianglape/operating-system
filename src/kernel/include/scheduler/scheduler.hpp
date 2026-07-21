@@ -73,4 +73,6 @@ Scheduler* get_scheduler();
 
 void init();
 
+void tick();
+
 }

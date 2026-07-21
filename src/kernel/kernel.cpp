@@ -1,9 +1,9 @@
-#include "fmt/fmt.hpp"
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/apic/apic.hpp>
 #include <arch/x64/drivers/keyboard/keyboard.hpp>
 #include <arch/x64/drivers/pic/pic.hpp>
 #include <arch/x64/drivers/serial/serial.hpp>
+#include <arch/x64/drivers/tsc/tsc.hpp>
 #include <arch/x64/gdt/gdt.hpp>
 #include <arch/x64/interrupts/idt.hpp>
 #include <arch/x64/percpu/percpu.hpp>
@@ -31,6 +31,7 @@ void kernel_main()
     x64::cpu::init();
     x64::percpu::early_init();
     x64::drivers::serial::init();
+    x64::drivers::tsc::init();
 
     log::info("hltOS booted into kernel_main() using Limine.");
     log::info("Serial ouput on COM1 initialized");
@@ -64,10 +65,6 @@ void kernel_main()
 
     console::init();
     fs::devfs::init_tty();
-
-    kstring sprintf_test = fmt::sprintf("******** a = {} b = {} c = {} d = {}", 100, -1459, fmt::bin{5439}, "hello world");
-
-    log::debug(sprintf_test);
 
     x64::percpu::enable_preemption();
     x64::cpu::sti();

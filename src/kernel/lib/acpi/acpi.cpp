@@ -24,8 +24,8 @@
  * parsers (e.g., madt.cpp) based on the 4-byte signature.
  */
 
-#include "arch/x64/memory/vmm.hpp"
 #include <acpi/acpi.hpp>
+#include <acpi/hpet.hpp>
 #include <acpi/madt.hpp>
 #include <arch.hpp>
 #include <fmt/fmt.hpp>
@@ -183,12 +183,6 @@ static void parse_xsdt(const XSDT* xsdt)
     int entries = (xsdt->header.length - sizeof(ACPIHeader)) / sizeof(std::uint64_t);
 
     for (int i = 0; i < entries; i++) {
-        log::debugf("xsdt header[{}] addr = {}", i, fmt::hex{xsdt->other_headers[i]});
-    }
-
-    for (int i = 0; i < entries; i++) {
-        log::debugf("xsdt header[{}] addr = {}", i, fmt::hex{xsdt->other_headers[i]});
-
         ACPIHeader* header = get_acpi_header(xsdt->other_headers[i]);
         kstring_view sig{header->signature, 4};
 
@@ -197,6 +191,8 @@ static void parse_xsdt(const XSDT* xsdt)
 
         if (sig == SIG_MADT) {
             madt::parse(header);
+        } else if (sig == SIG_HPET) {
+            hpet::parse(header);
         } else {
             log::info("Skipping unhandled ACPI table: ", sig);
         }

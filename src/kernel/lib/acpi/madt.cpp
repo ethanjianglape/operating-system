@@ -26,7 +26,6 @@
  * Each record has a type and length, allowing us to skip unknown types.
  */
 
-#include "arch/x64/memory/vmm.hpp"
 #include <acpi/madt.hpp>
 #include <arch.hpp>
 #include <containers/kvector.hpp>
