@@ -152,8 +152,6 @@ void set_descriptor(std::uint8_t vector, void* isr_ptr, std::uint8_t ist, std::u
  */
 void init()
 {
-    log::init_start("IDT");
-
     // idtr is just a "pointer" to our entire list of 256 entries, we use this
     // when calling the LIDT instruction so the CPU knows where to find them
     idtr.base = reinterpret_cast<std::uint64_t>(&idt_entries[0]);
@@ -170,6 +168,8 @@ void init()
     // this is never called again during the lifecycle of the OS
     asm volatile("lidt %0" : : "m"(idtr));
 
-    log::init_end("IDT");
+    log::infof("IDT: idtr.base @ {}", fmt::hex{idtr.base});
+    log::infof("IDT: idtr.limit = {}", idtr.limit);
 }
+
 }

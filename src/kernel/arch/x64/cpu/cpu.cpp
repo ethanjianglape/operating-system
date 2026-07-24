@@ -39,21 +39,9 @@ static inline std::uint64_t read_cr3()
     return value;
 }
 
-static inline std::uint64_t read_cr4()
-{
-    std::uint64_t value;
-    asm volatile("mov %%cr4, %0" : "=r"(value));
-    return value;
-}
-
 static inline void write_cr0(std::uint64_t cr0)
 {
     asm volatile("mov %0, %%cr0" : : "r"(cr0));
-}
-
-static inline void write_cr4(std::uint64_t cr4)
-{
-    asm volatile("mov %0, %%cr4" : : "r"(cr4));
 }
 
 static inline std::uint16_t read_cs()

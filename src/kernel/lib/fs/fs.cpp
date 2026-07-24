@@ -124,11 +124,6 @@ void register_mount(const char* path, MountPoint* mp)
     }
 
     g_mountpoints.push_back(mp);
-
-    for (MountPoint* mp : g_mountpoints) {
-        log::debugf("mp = {}", mp->path);
-    }
-
     g_fs_spinlock.unlock();
 }
 
@@ -136,8 +131,6 @@ void mount(const char* path, FileSystem* fs, const char* source)
 {
     MountPoint* mp = fs->mount(source);
     mp->mounted_on = resolve_path(path);
-
-    log::debugf("&&&&&&&& mounting on {}, mounted on addr {}", path, fmt::hex{mp->mounted_on});
 
     mp->root_inode->parent = mp->mounted_on;
     register_mount(path, mp);
@@ -188,8 +181,6 @@ int readdir(const kstring& path, kvector<DirEntry>& out)
 
     auto* dir = static_cast<DirectoryInode*>(inode);
 
-    log::debugf("reading dir {}", path);
-
     return dir->readdir(out);
 }
 
@@ -214,4 +205,5 @@ int mkdir(const kstring& path, int mode)
 
     return dir->mkdir(new_dir.c_str(), mode);
 }
+
 }

@@ -284,8 +284,6 @@ namespace x64::trap {
  */
 void init()
 {
-    log::init_start("Syscall");
-
     // STAR MSR encodes segment selectors for both SYSCALL and SYSRET:
     //   [63:48] = 0x13: SYSRET base. CPU computes CS=base+16=0x23, SS=base+8=0x1B
     //   [47:32] = 0x08: SYSCALL target. CS=0x08 (kernel code), SS=CS+8=0x10 (kernel data)
@@ -301,11 +299,9 @@ void init()
     cpu::wrmsr(MSR_SFMASK, sfmask);
     cpu::wrmsr(MSR_EFER, efer);
 
-    log::info("STAR   = ", fmt::hex{star});
-    log::info("LSTAR  = ", fmt::hex{lstar});
-    log::info("SFMASK = ", fmt::hex{sfmask});
-    log::info("EFER   = ", fmt::hex{efer});
-
-    log::init_end("Syscall");
+    log::infof("syscall: STAR   = {}", fmt::hex{star});
+    log::infof("syscall: LSTAR  = {}", fmt::hex{lstar});
+    log::infof("syscall: SFMASK = {}", fmt::hex{sfmask});
+    log::infof("syscall: EFER   = {}", fmt::hex{efer});
 }
 }

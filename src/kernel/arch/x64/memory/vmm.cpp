@@ -29,6 +29,7 @@
  */
 
 #include "vmm.hpp"
+#include "arch/x64/cpu/cpu.hpp"
 
 #include <exclusive/kspinlock_irqsave.hpp>
 #include <fmt/fmt.hpp>
@@ -574,8 +575,6 @@ static void init_pml4()
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
 
     kernel_pml4 = hhdm_ptov<PML4E*>(page_align(cr3));
-
-    log::info("VMM pml4 addr = ", fmt::hex{kernel_pml4});
 }
 
 static void init_kheap()
@@ -605,8 +604,6 @@ static void init_kheap()
     if (bit_47) {
         virt_page |= (0xFFFFUL << 48);
     }
-
-    log::info("VMM heap addr = ", fmt::hex{virt_page});
 }
 
 /**
@@ -837,11 +834,9 @@ static void init_cr4()
     /// userspace mapped pages unless explicitly allowed (stac + clac)
     constexpr std::uint64_t CR4_SMAP = (1ULL << 21);
 
-    std::uint64_t cr4;
-
-    asm volatile("mov %%cr4, %0" : "=r"(cr4));
+    std::uint64_t cr4 = cpu::read_cr4();
     cr4 |= CR4_PGE | CR4_UMIP | CR4_SMEP | CR4_SMAP;
-    asm volatile("mov %0, %%cr4" : : "r"(cr4) : "memory");
+    cpu::write_cr4(cr4);
 
     // we are already in kernel mode, but reload the kernel pml4 to
     // flush the TLB
@@ -854,17 +849,15 @@ static void init_cr4()
  */
 void init(std::uintptr_t offset)
 {
-    log::init_start("VMM");
-
     hhdm_offset = offset;
-
-    log::info("VMM HHDM addr = ", fmt::hex{hhdm_offset});
 
     init_pml4();
     init_kheap();
     init_cr4();
 
-    log::init_end("VMM");
+    log::infof("VMM: Kernel HHDM @ {}", fmt::hex{hhdm_offset});
+    log::infof("VMM: Kernel PML4 @ {}", fmt::hex{kernel_pml4});
+    log::infof("VMM: cr4 = {} ({})", fmt::hex{cpu::read_cr4()}, fmt::bin{cpu::read_cr4()});
 }
 
 } // namespace x64::vmm

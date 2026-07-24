@@ -54,7 +54,7 @@
 #include "pic.hpp"
 
 #include <arch/x64/cpu/cpu.hpp>
-#include <kpanic/kpanic.hpp>
+#include <kassert/kassert.hpp>
 #include <log/log.hpp>
 
 namespace x64::drivers::pic {
@@ -68,24 +68,20 @@ namespace x64::drivers::pic {
  */
 bool init()
 {
-    log::init_start("Legacy PIC");
-
     // Mask all IRQs on both PICs (0xFF = all 8 bits set = all IRQs masked)
     cpu::outb(PIC1_DATA, 0xFF);
     cpu::outb(PIC2_DATA, 0xFF);
 
     // Verify the masks were set correctly
-    const auto master = cpu::inb(PIC1_DATA);
-    const auto slave = cpu::inb(PIC2_DATA);
-    const auto success = master == 0xFF && slave == 0xFF;
+    const std::uint8_t master = cpu::inb(PIC1_DATA);
+    const std::uint8_t slave = cpu::inb(PIC2_DATA);
+    const bool success = master == 0xFF && slave == 0xFF;
 
-    if (!success) {
-        kpanic("Failed to disable legacy PIC");
-    }
+    kassert(success, "Failed to disable PIC");
 
-    log::info("Legacy PIC has been disabled");
-    log::init_end("Legacy PIC");
+    log::info("PIC: disabled");
 
     return success;
 }
+
 }

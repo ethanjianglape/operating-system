@@ -421,13 +421,10 @@ void tick()
 
 void init()
 {
-    log::init_start("Scheduler");
-    log::info("Registering schedulers...");
+    log::info("scheduler: Round Robin scheduler initialized");
 
     g_scheduler = new RoundRobinScheduler{};
     g_scheduler->add_process(new process::KThread(reaper_kthread));
-
-    log::init_end("Scheduler");
 }
 
 }

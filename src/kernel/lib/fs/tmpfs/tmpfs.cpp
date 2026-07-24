@@ -50,16 +50,12 @@ int TmpFileInode::write(FileDescriptor* fd, const void* voidp, std::size_t count
 
     size = data.size();
 
-    log::debugf("tmpfs::write size={}", size);
-
     return count;
 }
 
 int TmpFileInode::read(FileDescriptor* fd, void* voidp, std::size_t count)
 {
     auto* buff = static_cast<std::uint8_t*>(voidp);
-
-    log::debugf("tmpfs::read() offset={}, size={}, count={}", fd->offset, data.size(), count);
 
     if (fd->offset >= data.size()) {
         return 0;
@@ -160,8 +156,6 @@ int TmpDirectoryInode::mkdir(const char* name, int)
 {
     TmpDirectoryInode* parent = this;
     Inode* existing = parent->lookup(name);
-
-    log::debugf("tmp mkdir name={}", name);
 
     if (existing) {
         return -1;

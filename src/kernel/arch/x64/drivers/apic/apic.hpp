@@ -18,8 +18,9 @@ constexpr std::uint32_t LAPIC_TIMER_CURRENT = 0x0390;    // Timer Current Count
 constexpr std::uint32_t LAPIC_TIMER_DIVIDE = 0x03E0;     // Timer Divide Configuration
 constexpr std::uint32_t APIC_LVT_INT_MASKED = 0x10000;
 
-constexpr std::uint32_t TIMER_MODE_PERIODIC = 0x20000;
-constexpr std::uint32_t TIMER_MODE_ONESHOT = 0x00000;
+constexpr std::uint32_t TIMER_MODE_ONESHOT = 0;
+constexpr std::uint32_t TIMER_MODE_PERIODIC = (1 << 17); // 0x20000;
+constexpr std::uint32_t TIMER_MODE_TSC_DEADLINE = (1 << 18);
 constexpr std::uint32_t TIMER_DIV_BY_16 = 0x3;
 
 // LAPIC base address (standard location)
@@ -31,6 +32,8 @@ constexpr std::uint32_t LAPIC_SPURIOUS_ENABLE = 0x100; // Bit 8: APIC Software E
 // MSR for APIC base address
 constexpr std::uint32_t MSR_APIC_BASE = 0x1B;
 constexpr std::uint32_t MSR_APIC_BASE_ENABLE = 0x800; // Bit 11: Enable Local APIC
+
+constexpr std::uint32_t IA32_TSC_DEADLINE = 0x6E0;
 
 // CPUID feature flags
 constexpr std::uint32_t CPUID_FEAT_EDX_APIC = (1 << 9); // APIC available

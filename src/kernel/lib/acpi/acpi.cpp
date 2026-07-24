@@ -74,7 +74,7 @@ static void validate_xsdp(const XSDP* xsdp)
         kpanic("XSDP legacy checksum invalid: ", legacy_sum);
     }
 
-    log::success("XSDP legacy checksum valid");
+    log::info("XSDP legacy checksum valid");
 
     if (xsdp->revision >= 2) {
         std::uint8_t extended_sum = compute_checksum(xsdp, xsdp->length);
@@ -83,7 +83,7 @@ static void validate_xsdp(const XSDP* xsdp)
             kpanic("XSDP extended checksum invalid: ", extended_sum);
         }
 
-        log::success("XSDP extended checksum valid");
+        log::info("XSDP extended checksum valid");
     }
 }
 
@@ -103,7 +103,7 @@ static void validate_acpi_header(const ACPIHeader* header)
         kpanic("ACPI table checksum invalid: sig=", sig, " sum=", sum);
     }
 
-    log::success("ACPI table checksum valid: ", sig);
+    log::info("ACPI table checksum valid: ", sig);
 }
 
 static void log_xsdp(const XSDP* xsdp)
@@ -223,12 +223,11 @@ static XSDT* get_xsdt(void* rsdp_addr)
 
 void init(void* rsdp_addr)
 {
-    log::init_start("ACPI");
+    log::info("Parsing ACPI headers:");
     log::info("RSDP address: ", rsdp_addr);
 
     XSDT* xsdt = get_xsdt(rsdp_addr);
     parse_xsdt(xsdt);
-
-    log::init_end("ACPI");
 }
+
 }

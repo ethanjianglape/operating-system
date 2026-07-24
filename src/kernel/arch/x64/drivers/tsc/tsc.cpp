@@ -1,4 +1,5 @@
 #include "tsc.hpp"
+
 #include <arch/x64/cpu/cpu.hpp>
 #include <arch/x64/drivers/pit/pit.hpp>
 #include <kpanic/kpanic.hpp>
@@ -13,8 +14,7 @@ constexpr std::uint32_t CPUID_FEAT_EDX_INVARIANT_TSC = (1 << 8); // Invariant TS
 static std::uint64_t boot_tsc = 0;
 static std::uint64_t tsc_freq = 0;
 
-[[gnu::always_inline]]
-static inline std::uint64_t rdtsc()
+inline std::uint64_t rdtsc()
 {
     std::uint64_t rax;
     std::uint64_t rdx;
@@ -50,6 +50,11 @@ std::uint64_t get_time_ms()
     return get_time_ns() / 1000000ULL;
 }
 
+std::uint64_t get_tsc_freq()
+{
+    return tsc_freq;
+}
+
 static bool check_support()
 {
     std::uint32_t eax;
@@ -63,14 +68,8 @@ static bool check_support()
 void init()
 {
     if (!check_support()) {
-        kpanic("Invariant TSC not available - required for this kernel");
+        kpanic("Invariant TSC not available");
     }
-
-    std::uint32_t eax;
-    std::uint32_t ebx;
-    std::uint32_t ecx;
-
-    cpu::cpuid(0x15, &eax, &ebx, &ecx);
 
     boot_tsc = rdtsc();
 
@@ -88,7 +87,7 @@ void init()
 
     tsc_freq = ((t1 - t0) * 1000) / total_ms;
 
-    log::debugf("TSC frequency = {}", tsc_freq);
+    log::infof("TSC: frequency = {}hz ({}Mhz)", tsc_freq, tsc_freq / 1000000);
 }
 
 }

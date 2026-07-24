@@ -68,8 +68,6 @@ static void redraw_kthread()
 
 void init(const FrameBufferInfo& info)
 {
-    log::init_start("Framebuffer");
-
     fb_width = info.width;
     fb_height = info.height;
     fb_num_pixels = fb_width * fb_height;
@@ -85,14 +83,10 @@ void init(const FrameBufferInfo& info)
 
     scheduler::get_scheduler()->add_process(new process::KThread(redraw_kthread));
 
-    log::info("Framebuffer: ", fb_width, "x", fb_height, " @ ", fb_bpp, " bpp (pitch=", fb_pitch, ")");
-    log::info("Framebuffer # pixels: ", fb_num_pixels);
-    log::info("VRAM: ", fmt::hex{vram});
-    log::info("VRAM Back Buffer = ", fmt::hex{vram_buff});
-    log::info("VRAME Back Buffer End = ", fmt::hex{vram_buff_end});
-    log::info("VRAM Size: ", vram_size);
-
-    log::init_end("Framebuffer");
+    log::infof("Framebuffer: {}x{} @ {} bpp (pitch={})", fb_width, fb_height, fb_bpp, fb_pitch);
+    log::infof("Framebuffer: {} total pixels", fb_num_pixels);
+    log::infof("Framebuffer: VRAM @ [{} - {}] ({} bytes)", fmt::hex{vram}, fmt::hex{vram_end}, vram_size);
+    log::infof("Framebuffer: VRAM double buffer @ [{}-{}]", fmt::hex{vram_buff}, fmt::hex{vram_buff_end});
 }
 
 static std::uint32_t get_pixel(std::uint32_t x, std::uint32_t y)

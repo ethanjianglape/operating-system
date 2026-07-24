@@ -154,4 +154,18 @@ inline void write_rflags(std::uint64_t rflags)
     asm volatile("push %%rax; popfq" : : "a"(rflags) : "memory", "cc");
 }
 
+[[gnu::always_inline]]
+inline std::uint64_t read_cr4()
+{
+    std::uint64_t cr4;
+    asm volatile("mov %%cr4, %0" : "=r"(cr4));
+    return cr4;
+}
+
+[[gnu::always_inline]]
+inline void write_cr4(std::uint64_t cr4)
+{
+    asm volatile("mov %0, %%cr4" : : "r"(cr4) : "memory");
+}
+
 }

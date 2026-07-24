@@ -95,6 +95,8 @@
  */
 
 #include "apic.hpp"
+#include "arch/x64/drivers/tsc/tsc.hpp"
+#include "kassert/kassert.hpp"
 #include <acpi/madt.hpp>
 #include <scheduler/scheduler.hpp>
 #include <timer/timer.hpp>
@@ -109,6 +111,9 @@
 #include <kpanic/kpanic.hpp>
 
 namespace x64::drivers::apic {
+
+static std::uint64_t interrupt_deadline;
+static std::uint64_t interrupt_delta;
 
 // =========================================================================
 // LAPIC/IOAPIC Base Address Management
@@ -386,17 +391,13 @@ void ioapic_route_irq(std::uint8_t irq, std::uint8_t vector)
  */
 void init()
 {
-    log::init_start("APIC");
-
     if (!check_support()) {
         kpanic("APIC not supported - required for this kernel");
     }
 
     set_lapic_addr();
 
-    if (lapic_virt_base == nullptr) {
-        kpanic("LAPIC physical addresses have not been mapped yet!");
-    }
+    kassert_not_null(lapic_virt_base);
 
     // Step 1: Enable the APIC globally via the MSR
     enable_apic();
@@ -434,8 +435,6 @@ void init()
 
     // Step 4: Set up the LAPIC timer for periodic ticks
     timer_init();
-
-    log::init_end("APIC");
 }
 
 /**
@@ -462,6 +461,9 @@ void init()
  */
 void apic_timer_handler(irq::InterruptFrame* frame)
 {
+    interrupt_deadline += interrupt_delta;
+    cpu::wrmsr(IA32_TSC_DEADLINE, interrupt_deadline);
+
     send_eoi();
     timer::tick(frame);
     scheduler::tick();
@@ -502,29 +504,6 @@ void apic_timer_handler(irq::InterruptFrame* frame)
  */
 void timer_init()
 {
-    constexpr std::uint32_t initial_count = 0xFFFFFFFF; // Max value
-    constexpr std::uint32_t calibration_ms = 1;         // Calibrate over 1ms
-
-    // Step 1: Configure divider and start counting
-    //
-    // The divider slows down the timer. With DIV_BY_16, the timer counts
-    // at (bus clock / 16). This gives us more precision for slower tick rates.
-    lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
-    lapic_write(LAPIC_TIMER_INIT_COUNT, initial_count);
-
-    // Step 2: Wait a known amount of time using the PIT
-    //
-    // The PIT is our "reference clock" - it's the only timer with a known,
-    // fixed frequency. During this wait, the LAPIC timer is counting down.
-    pit::sleep_ms(calibration_ms);
-
-    // Step 3: Stop the timer and read how many ticks elapsed
-    //
-    // We mask the timer (disable interrupts) while reading. The difference
-    // between initial and current count tells us ticks per calibration_ms.
-    lapic_write(LAPIC_TIMER, APIC_LVT_INT_MASKED);
-    const std::uint32_t ticks_elapsed = initial_count - lapic_read(LAPIC_TIMER_CURRENT);
-
     // Step 4: Configure periodic mode with calibrated count
     //
     // We now know that 'ticks_elapsed' ticks = calibration_ms milliseconds.
@@ -533,16 +512,23 @@ void timer_init()
     //
     // In periodic mode, the counter automatically reloads when it hits 0,
     // generating a continuous stream of interrupts at our desired rate.
-    lapic_write(LAPIC_TIMER, irq::VECTOR_TIMER | TIMER_MODE_PERIODIC);
-    lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
-    lapic_write(LAPIC_TIMER_INIT_COUNT, ticks_elapsed);
+    lapic_write(LAPIC_TIMER, irq::VECTOR_TIMER | TIMER_MODE_TSC_DEADLINE);
+    // lapic_write(LAPIC_TIMER_DIVIDE, TIMER_DIV_BY_16);
+    // lapic_write(LAPIC_TIMER_INIT_COUNT, ticks_elapsed);
+
+    constexpr std::uint64_t interrupt_duration_ms = 1;
+    constexpr std::uint64_t interrupt_duration_ns = interrupt_duration_ms * 1000000;
+
+    interrupt_delta = (tsc::get_tsc_freq() * interrupt_duration_ns) / 1000000000;
+    interrupt_deadline = interrupt_delta;
 
     // Step 5: Register our handler for timer interrupts.
     // From this point on, apic_timer_handler is called every calibration_ms (10ms)
     // automatically - the hardware generates interrupts on its own, no polling needed.
     // This is the heartbeat that drives preemptive scheduling.
     irq::register_irq_handler(irq::VECTOR_TIMER, apic_timer_handler);
+    cpu::wrmsr(IA32_TSC_DEADLINE, interrupt_deadline);
 
-    log::info("APIC timer: ", ticks_elapsed, " ticks per ", calibration_ms, "ms");
+    log::infof("APIC: TSC deadline mode delta = {}", interrupt_delta);
 }
 }
